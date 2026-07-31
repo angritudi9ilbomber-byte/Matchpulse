@@ -15465,3 +15465,11230 @@ if (!window.MP_CLUB_ESCAPE_READY) {
   window.mpClubMemberCard =
     mpClubMemberCard;
 })();
+
+/* =========================================================
+   MATCHPULSE CLUB
+   NUOVA CARTA + STATISTICHE PUBBLICHE FACOLTATIVE
+   ========================================================= */
+
+(function () {
+  if (window.MP_CLUB_CAREER_CARD_READY) {
+    return;
+  }
+
+  window.MP_CLUB_CAREER_CARD_READY = true;
+
+  const MP_CAREER_PUBLIC_KEY =
+    "matchpulse_club_career_public_v1";
+
+
+  /* =======================================================
+     FUNZIONI GENERALI
+     ======================================================= */
+
+  function mpCareerEscape(value) {
+    if (
+      typeof mpClubEscape === "function"
+    ) {
+      return mpClubEscape(value);
+    }
+
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function mpCareerNumber(
+    value,
+    fallback = 0
+  ) {
+    const number = Number(
+      String(value ?? "")
+        .replace(",", ".")
+    );
+
+    return Number.isFinite(number)
+      ? number
+      : fallback;
+  }
+
+  function mpCareerClamp(
+    value,
+    min,
+    max
+  ) {
+    return Math.max(
+      min,
+      Math.min(
+        max,
+        mpCareerNumber(value, min)
+      )
+    );
+  }
+
+  function mpCareerIsPublic() {
+    return (
+      localStorage.getItem(
+        MP_CAREER_PUBLIC_KEY
+      ) === "true"
+    );
+  }
+
+  function mpCareerSetPublic(value) {
+    localStorage.setItem(
+      MP_CAREER_PUBLIC_KEY,
+      value ? "true" : "false"
+    );
+  }
+
+
+  /* =======================================================
+     CALCOLO GOL, ASSIST E VALUTAZIONE MEDIA
+     ======================================================= */
+
+  function mpCareerGetMatches() {
+    if (
+      typeof getMatches === "function"
+    ) {
+      try {
+        const matches = getMatches();
+
+        return Array.isArray(matches)
+          ? matches
+          : [];
+      } catch (error) {
+        console.warn(error);
+      }
+    }
+
+    try {
+      return JSON.parse(
+        localStorage.getItem(
+          "matchpulse.matches.v1"
+        ) || "[]"
+      );
+    } catch (error) {
+      return [];
+    }
+  }
+
+  function mpCareerSummary() {
+    const matches =
+      mpCareerGetMatches();
+
+    const goals =
+      matches.reduce(
+        (total, match) =>
+          total +
+          mpCareerNumber(
+            match?.goals,
+            0
+          ),
+        0
+      );
+
+    const assists =
+      matches.reduce(
+        (total, match) =>
+          total +
+          mpCareerNumber(
+            match?.assists,
+            0
+          ),
+        0
+      );
+
+    const ratings =
+      matches
+        .map(match =>
+          mpCareerNumber(
+            match?.rating,
+            0
+          )
+        )
+        .filter(rating =>
+          rating > 0
+        );
+
+    const ratingTotal =
+      ratings.reduce(
+        (total, rating) =>
+          total + rating,
+        0
+      );
+
+    const averageRating =
+      ratings.length
+        ? Number(
+            (
+              ratingTotal /
+              ratings.length
+            ).toFixed(1)
+          )
+        : null;
+
+    return {
+      played: matches.length,
+      goals: Math.round(goals),
+      assists: Math.round(assists),
+      averageRating
+    };
+  }
+
+
+  /* =======================================================
+     DATI DA INVIARE AL CLUB
+     ======================================================= */
+
+  function mpCareerSharedCardStats() {
+    let baseStats = {};
+
+    if (
+      typeof mpClubGetCardStats ===
+      "function"
+    ) {
+      baseStats =
+        mpClubGetCardStats();
+    } else if (
+      typeof getCardStats ===
+      "function"
+    ) {
+      baseStats =
+        getCardStats();
+    }
+
+    const isPublic =
+      mpCareerIsPublic();
+
+    const career =
+      mpCareerSummary();
+
+    return {
+      ...baseStats,
+
+      careerStatsVisible:
+        isPublic,
+
+      careerMatches:
+        isPublic
+          ? career.played
+          : 0,
+
+      careerGoals:
+        isPublic
+          ? career.goals
+          : null,
+
+      careerAssists:
+        isPublic
+          ? career.assists
+          : null,
+
+      careerAvgRating:
+        isPublic
+          ? career.averageRating
+          : null
+    };
+  }
+
+
+  /* =======================================================
+     ESTENDE LA SINCRONIZZAZIONE ESISTENTE
+     SENZA ROMPERE FOTO, PLAYSTYLES O PROFILO
+     ======================================================= */
+
+  const mpCareerPreviousSync =
+    window.mpSyncMyClubProfile;
+
+  async function mpSyncClubCareerStats(
+    clubId
+  ) {
+    let previousResult = null;
+
+    if (
+      typeof mpCareerPreviousSync ===
+      "function"
+    ) {
+      previousResult =
+        await mpCareerPreviousSync(
+          clubId
+        );
+    }
+
+    const user =
+      await mpEnsureClubAuth();
+
+    const sharedCardStats =
+      mpCareerSharedCardStats();
+
+    const {
+      error
+    } = await matchpulseSupabase
+      .from(
+        "matchpulse_club_members"
+      )
+      .update({
+        card_stats:
+          sharedCardStats,
+
+        last_seen_at:
+          new Date().toISOString()
+      })
+      .eq(
+        "club_id",
+        clubId
+      )
+      .eq(
+        "user_id",
+        user.id
+      );
+
+    if (error) {
+      throw error;
+    }
+
+    return {
+      ...(previousResult || {}),
+      card_stats:
+        sharedCardStats
+    };
+  }
+
+  mpSyncMyClubProfile =
+    mpSyncClubCareerStats;
+
+  window.mpSyncMyClubProfile =
+    mpSyncClubCareerStats;
+
+
+  /* =======================================================
+     ATTIVA / DISATTIVA LA CONDIVISIONE
+     ======================================================= */
+
+  async function mpToggleClubCareerStats() {
+    const club =
+      MP_CLUB_CURRENT;
+
+    if (!club?.club_id) {
+      mpClubToast(
+        "Club non disponibile"
+      );
+      return;
+    }
+
+    const oldValue =
+      mpCareerIsPublic();
+
+    const newValue =
+      !oldValue;
+
+    const button =
+      document.querySelector(
+        "#mpClubCareerPrivacyButton"
+      );
+
+    if (button) {
+      button.disabled = true;
+      button.textContent =
+        "SALVATAGGIO...";
+    }
+
+    mpCareerSetPublic(
+      newValue
+    );
+
+    try {
+      await mpSyncMyClubProfile(
+        club.club_id
+      );
+
+      mpClubToast(
+        newValue
+          ? "Statistiche visibili nel Club"
+          : "Statistiche rese private"
+      );
+
+      await renderLockerRoom();
+    } catch (error) {
+      mpCareerSetPublic(
+        oldValue
+      );
+
+      console.error(
+        "ERRORE PRIVACY STATISTICHE:",
+        error
+      );
+
+      mpClubToast(
+        error?.message ||
+        "Impossibile modificare la privacy"
+      );
+
+      if (button) {
+        button.disabled = false;
+        button.textContent =
+          oldValue
+            ? "STATISTICHE VISIBILI"
+            : "STATISTICHE PRIVATE";
+      }
+    }
+  }
+
+  window.mpToggleClubCareerStats =
+    mpToggleClubCareerStats;
+
+
+  /* =======================================================
+     PULSANTE NELLA PAGINA CLUB
+     ======================================================= */
+
+  const mpCareerPreviousRenderClub =
+    typeof mpRenderClub === "function"
+      ? mpRenderClub
+      : window.mpRenderClub;
+
+  function mpRenderClubWithPrivacy(
+    club,
+    members
+  ) {
+    mpCareerPreviousRenderClub(
+      club,
+      members
+    );
+
+    const actions =
+      document.querySelector(
+        ".mp-club-dashboard-actions"
+      );
+
+    if (
+      !actions ||
+      actions.querySelector(
+        "#mpClubCareerPrivacyButton"
+      )
+    ) {
+      return;
+    }
+
+    const isPublic =
+      mpCareerIsPublic();
+
+    actions.insertAdjacentHTML(
+      "afterbegin",
+      `
+        <button
+          id="mpClubCareerPrivacyButton"
+          type="button"
+          class="
+            mp-club-career-privacy
+            ${isPublic
+              ? "is-public"
+              : "is-private"}
+          "
+          onclick="
+            mpToggleClubCareerStats()
+          "
+        >
+          <span>
+            ${isPublic ? "●" : "○"}
+          </span>
+
+          ${
+            isPublic
+              ? "STATISTICHE VISIBILI"
+              : "STATISTICHE PRIVATE"
+          }
+        </button>
+      `
+    );
+  }
+
+  mpRenderClub =
+    mpRenderClubWithPrivacy;
+
+  window.mpRenderClub =
+    mpRenderClubWithPrivacy;
+
+
+  /* =======================================================
+     RARITÀ DELLA CARTA
+     ======================================================= */
+
+  function mpCareerRarity(ovr) {
+    const value =
+      mpCareerClamp(
+        ovr,
+        0,
+        99
+      );
+
+    if (value <= 64) {
+      return "bronze";
+    }
+
+    if (value <= 74) {
+      return "silver";
+    }
+
+    if (value <= 89) {
+      return "gold";
+    }
+
+    return "icon";
+  }
+
+
+  /* =======================================================
+     FOTO DEL MEMBRO
+     ======================================================= */
+
+  function mpCareerPhotoUrl(member) {
+    if (
+      typeof window
+        .mpV3PublicAvatarUrl ===
+      "function"
+    ) {
+      const url =
+        window.mpV3PublicAvatarUrl(
+          member
+        );
+
+      if (url) {
+        return url;
+      }
+    }
+
+    if (
+      typeof window
+        .mpClubAvatarPublicUrl ===
+      "function"
+    ) {
+      const url =
+        window.mpClubAvatarPublicUrl(
+          member
+        );
+
+      if (url) {
+        return url;
+      }
+    }
+
+    const path =
+      String(
+        member?.avatar_path || ""
+      );
+
+    if (
+      !path ||
+      !matchpulseSupabase
+    ) {
+      return "";
+    }
+
+    const result =
+      matchpulseSupabase
+        .storage
+        .from(
+          "matchpulse-avatars"
+        )
+        .getPublicUrl(path);
+
+    return (
+      result?.data?.publicUrl ||
+      ""
+    );
+  }
+
+  function mpCareerPhotoHtml(member) {
+    const url =
+      mpCareerPhotoUrl(member);
+
+    const initials =
+      typeof mpClubInitials ===
+      "function"
+        ? mpClubInitials(
+            member.player_name
+          )
+        : "MP";
+
+    if (!url) {
+      return `
+        <div class="mp-club-showcase-initials">
+          ${mpCareerEscape(initials)}
+        </div>
+      `;
+    }
+
+    const photoX =
+      mpCareerNumber(
+        member.photo_x,
+        50
+      );
+
+    const photoY =
+      mpCareerNumber(
+        member.photo_y,
+        50
+      );
+
+    const photoZoom =
+      mpCareerNumber(
+        member.photo_zoom,
+        1
+      );
+
+    return `
+      <img
+        src="${mpCareerEscape(url)}"
+        alt="${mpCareerEscape(
+          member.player_name ||
+          "Giocatore"
+        )}"
+        style="
+          object-position:
+            ${photoX}% ${photoY}%;
+
+          transform:
+            scale(${photoZoom});
+        "
+        onerror="
+          this.remove();
+
+          this.parentElement.innerHTML =
+            '<div class=&quot;mp-club-showcase-initials&quot;>${mpCareerEscape(
+              initials
+            )}</div>';
+        "
+      >
+    `;
+  }
+
+
+  /* =======================================================
+     STATISTICHE PUBBLICHE DEL MEMBRO
+     ======================================================= */
+
+  function mpCareerMemberRecord(
+    member
+  ) {
+    const stats =
+      member?.card_stats || {};
+
+    const visible =
+      stats.careerStatsVisible ===
+      true;
+
+    if (!visible) {
+      return {
+        visible: false,
+        goals: "—",
+        assists: "—",
+        averageRating: "—"
+      };
+    }
+
+    const rating =
+      mpCareerNumber(
+        stats.careerAvgRating,
+        0
+      );
+
+    return {
+      visible: true,
+
+      goals:
+        Math.round(
+          mpCareerNumber(
+            stats.careerGoals,
+            0
+          )
+        ),
+
+      assists:
+        Math.round(
+          mpCareerNumber(
+            stats.careerAssists,
+            0
+          )
+        ),
+
+      averageRating:
+        rating > 0
+          ? rating.toFixed(1)
+          : "—"
+    };
+  }
+
+  function mpCareerCoreStat(
+    label,
+    value
+  ) {
+    return `
+      <div class="mp-club-showcase-stat">
+        <strong>
+          ${Math.round(
+            mpCareerClamp(
+              value,
+              0,
+              99
+            )
+          )}
+        </strong>
+
+        <span>${label}</span>
+      </div>
+    `;
+  }
+
+
+  /* =======================================================
+     NUOVA CARTA DEL CLUB
+     ======================================================= */
+
+  function mpCareerClubMemberCard(
+    member,
+    ownerId
+  ) {
+    const stats =
+      member.card_stats || {};
+
+    const record =
+      mpCareerMemberRecord(
+        member
+      );
+
+    const ovr =
+      Math.round(
+        mpCareerClamp(
+          member.ovr,
+          0,
+          99
+        )
+      );
+
+    const rarity =
+      mpCareerRarity(ovr);
+
+    const isFounder =
+      member.user_id === ownerId;
+
+    const canKick =
+      MP_CLUB_CURRENT?.is_owner ===
+        true &&
+      !isFounder &&
+      typeof window
+        .mpKickClubMember ===
+        "function";
+
+    const weakFoot =
+      Math.round(
+        mpCareerClamp(
+          member.weak_foot ?? 3,
+          1,
+          5
+        )
+      );
+
+    const skillMoves =
+      Math.round(
+        mpCareerClamp(
+          member.skill_moves ?? 3,
+          1,
+          5
+        )
+      );
+
+    return `
+      <article
+        class="
+          mp-club-showcase-card
+          mp-club-showcase-${rarity}
+        "
+        tabindex="0"
+        role="button"
+
+        onclick="
+          mpOpenClubMember(
+            '${member.user_id}'
+          )
+        "
+
+        onkeydown="
+          if (
+            event.key === 'Enter' ||
+            event.key === ' '
+          ) {
+            event.preventDefault();
+
+            mpOpenClubMember(
+              '${member.user_id}'
+            );
+          }
+        "
+      >
+        <div class="mp-club-showcase-shine"></div>
+
+        <header class="mp-club-showcase-top">
+          <div class="mp-club-showcase-rating">
+            <strong>${ovr}</strong>
+            <span>OVERALL</span>
+          </div>
+
+          <div class="mp-club-showcase-role">
+            ${mpCareerEscape(
+              member.role || "CC"
+            )}
+          </div>
+
+          <div class="mp-club-showcase-tools">
+            ${
+              isFounder
+                ? `
+                  <span class="mp-club-showcase-founder">
+                    FONDATORE
+                  </span>
+                `
+                : ""
+            }
+
+            ${
+              canKick
+                ? `
+                  <button
+                    type="button"
+                    class="mp-club-showcase-kick"
+                    title="Rimuovi dal Club"
+
+                    onclick="
+                      event.preventDefault();
+                      event.stopPropagation();
+
+                      mpKickClubMember(
+                        '${member.user_id}'
+                      );
+                    "
+
+                    onkeydown="
+                      event.stopPropagation();
+                    "
+                  >
+                    ×
+                  </button>
+                `
+                : ""
+            }
+          </div>
+        </header>
+
+        <section class="mp-club-showcase-hero">
+          <div class="
+            mp-club-showcase-wing
+            mp-club-showcase-wing-left
+            ${record.visible
+              ? ""
+              : "is-private"}
+          ">
+            <span>
+              ${
+                record.visible
+                  ? "GOL"
+                  : "RECORD"
+              }
+            </span>
+
+            <strong>
+              ${
+                record.visible
+                  ? record.goals
+                  : "—"
+              }
+            </strong>
+          </div>
+
+          <div class="mp-club-showcase-photo">
+            ${mpCareerPhotoHtml(member)}
+          </div>
+
+          <div class="
+            mp-club-showcase-wing
+            mp-club-showcase-wing-right
+            ${record.visible
+              ? ""
+              : "is-private"}
+          ">
+            <span>
+              ${
+                record.visible
+                  ? "ASSIST"
+                  : "PRIVATO"
+              }
+            </span>
+
+            <strong>
+              ${
+                record.visible
+                  ? record.assists
+                  : "—"
+              }
+            </strong>
+          </div>
+
+          <div class="
+            mp-club-showcase-average
+            ${record.visible
+              ? ""
+              : "is-private"}
+          ">
+            <span>
+              ${
+                record.visible
+                  ? "VALUTAZIONE MEDIA"
+                  : "STATISTICHE NON CONDIVISE"
+              }
+            </span>
+
+            ${
+              record.visible
+                ? `
+                  <strong>
+                    ${record.averageRating}
+                  </strong>
+
+                  <small>/10</small>
+                `
+                : `
+                  <strong>PRIVATE</strong>
+                `
+            }
+          </div>
+        </section>
+
+        <h3 class="mp-club-showcase-name">
+          ${mpCareerEscape(
+            member.player_name ||
+            "PLAYER"
+          )}
+        </h3>
+
+        <div class="mp-club-showcase-abilities">
+          <span>
+            PIEDE DEBOLE
+            <strong>${weakFoot}★</strong>
+          </span>
+
+          <span>
+            MOSSE ABILITÀ
+            <strong>${skillMoves}★</strong>
+          </span>
+        </div>
+
+        <section class="mp-club-showcase-stats">
+          ${mpCareerCoreStat(
+            "PAC",
+            stats.pac ?? 60
+          )}
+
+          ${mpCareerCoreStat(
+            "SHO",
+            stats.sho ?? 60
+          )}
+
+          ${mpCareerCoreStat(
+            "PAS",
+            stats.pas ?? 60
+          )}
+
+          ${mpCareerCoreStat(
+            "DRI",
+            stats.dri ?? 60
+          )}
+
+          ${mpCareerCoreStat(
+            "DEF",
+            stats.def ?? 60
+          )}
+
+          ${mpCareerCoreStat(
+            "PHY",
+            stats.phy ?? 60
+          )}
+        </section>
+
+        <footer class="mp-club-showcase-open">
+          <span>PROFILO GIOCATORE</span>
+          <strong>APRI</strong>
+        </footer>
+      </article>
+    `;
+  }
+
+  mpClubMemberCard =
+    mpCareerClubMemberCard;
+
+  window.mpClubMemberCard =
+    mpCareerClubMemberCard;
+})();
+
+/* =========================================================
+   MATCHPULSE
+   CARTA FIFA NEL CLUB + NUOVA PAGINA STATISTICHE
+   ========================================================= */
+
+(function () {
+  if (window.MP_FIFA_CLUB_STATS_V3) {
+    return;
+  }
+
+  window.MP_FIFA_CLUB_STATS_V3 = true;
+
+
+  /* =======================================================
+     FUNZIONI GENERALI
+     ======================================================= */
+
+  function mpFifaEscape(value) {
+    if (typeof mpClubEscape === "function") {
+      return mpClubEscape(value);
+    }
+
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function mpFifaNumber(value, fallback = 0) {
+    const number = Number(
+      String(value ?? "")
+        .replace(",", ".")
+    );
+
+    return Number.isFinite(number)
+      ? number
+      : fallback;
+  }
+
+  function mpFifaClamp(value, min, max) {
+    return Math.max(
+      min,
+      Math.min(
+        max,
+        mpFifaNumber(value, min)
+      )
+    );
+  }
+
+  function mpFifaRarity(ovr) {
+    const value = mpFifaClamp(
+      ovr,
+      0,
+      99
+    );
+
+    if (value <= 64) return "bronze";
+    if (value <= 74) return "silver";
+    if (value <= 89) return "gold";
+
+    return "icon";
+  }
+
+  function mpFifaTierLabel(rarity) {
+    return {
+      bronze: "Bronzo",
+      silver: "Argento",
+      gold: "Oro",
+      icon: "Icona"
+    }[rarity] || "Bronzo";
+  }
+
+  function mpFifaInitials(name) {
+    const words = String(name || "MP")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+
+    if (!words.length) {
+      return "MP";
+    }
+
+    if (words.length === 1) {
+      return words[0]
+        .slice(0, 2)
+        .toUpperCase();
+    }
+
+    return (
+      words[0][0] +
+      words[words.length - 1][0]
+    ).toUpperCase();
+  }
+
+
+  /* =======================================================
+     FOTO ONLINE DEL MEMBRO
+     ======================================================= */
+
+  function mpFifaMemberPhotoUrl(member) {
+    if (
+      typeof window.mpV3PublicAvatarUrl ===
+      "function"
+    ) {
+      const url =
+        window.mpV3PublicAvatarUrl(member);
+
+      if (url) {
+        return url;
+      }
+    }
+
+    if (
+      typeof window.mpClubAvatarPublicUrl ===
+      "function"
+    ) {
+      const url =
+        window.mpClubAvatarPublicUrl(member);
+
+      if (url) {
+        return url;
+      }
+    }
+
+    const path = String(
+      member?.avatar_path || ""
+    );
+
+    if (!path || !matchpulseSupabase) {
+      return "";
+    }
+
+    const result =
+      matchpulseSupabase
+        .storage
+        .from("matchpulse-avatars")
+        .getPublicUrl(path);
+
+    return (
+      result?.data?.publicUrl ||
+      ""
+    );
+  }
+
+
+  /* =======================================================
+     PLAYSTYLE+ DEL MEMBRO
+     ======================================================= */
+
+  function mpFifaMemberPlusIcons(member) {
+    const saved =
+      member?.playstyles &&
+      typeof member.playstyles === "object"
+        ? member.playstyles
+        : {};
+
+    const catalog =
+      typeof MP_PLAYSTYLES !== "undefined" &&
+      Array.isArray(MP_PLAYSTYLES)
+        ? MP_PLAYSTYLES
+        : [];
+
+    return catalog
+      .filter(playStyle =>
+        saved[playStyle.id] === "plus"
+      )
+      .slice(0, 3);
+  }
+
+  function mpFifaPlusIcon(playStyle) {
+    if (!playStyle?.plusIcon) {
+      return "";
+    }
+
+    return `
+      <img
+        class="card-ps-plus-icon"
+        src="${mpFifaEscape(
+          playStyle.plusIcon
+        )}"
+        alt="${mpFifaEscape(
+          playStyle.name
+        )}"
+      >
+    `;
+  }
+
+
+  /* =======================================================
+     STELLE PIEDE DEBOLE E MOSSE ABILITÀ
+     ======================================================= */
+
+  function mpFifaStars(value) {
+    const amount = Math.round(
+      mpFifaClamp(value, 1, 5)
+    );
+
+    let html = "";
+
+    for (
+      let index = 1;
+      index <= 5;
+      index++
+    ) {
+      html += `
+        <span class="
+          mp-club-fifa-star
+          ${index <= amount
+            ? "is-active"
+            : ""}
+        ">★</span>
+      `;
+    }
+
+    return html;
+  }
+
+
+  /* =======================================================
+     STATISTICHE PUBBLICHE DEL CLUB
+     ======================================================= */
+
+  function mpFifaCareerRecord(member) {
+    const stats =
+      member?.card_stats || {};
+
+    const visible =
+      stats.careerStatsVisible === true;
+
+    return {
+      visible,
+
+      goals: visible
+        ? Math.round(
+            mpFifaNumber(
+              stats.careerGoals,
+              0
+            )
+          )
+        : "—",
+
+      assists: visible
+        ? Math.round(
+            mpFifaNumber(
+              stats.careerAssists,
+              0
+            )
+          )
+        : "—",
+
+      rating:
+        visible &&
+        mpFifaNumber(
+          stats.careerAvgRating,
+          0
+        ) > 0
+          ? mpFifaNumber(
+              stats.careerAvgRating,
+              0
+            ).toFixed(1)
+          : "—"
+    };
+  }
+
+  function mpFifaCardStat(label, value) {
+    return `
+      <div>
+        <strong>
+          ${Math.round(
+            mpFifaClamp(
+              value,
+              0,
+              99
+            )
+          )}
+        </strong>
+
+        <span>${label}</span>
+      </div>
+    `;
+  }
+
+
+  /* =======================================================
+     CARTA CLUB IDENTICA ALLA HOME
+     ======================================================= */
+
+  function mpFifaClubMemberCard(
+    member,
+    ownerId
+  ) {
+    const stats =
+      member.card_stats || {};
+
+    const ovr = Math.round(
+      mpFifaClamp(
+        member.ovr,
+        0,
+        99
+      )
+    );
+
+    const rarity =
+      mpFifaRarity(ovr);
+
+    const tierLabel =
+      mpFifaTierLabel(rarity);
+
+    const plusIcons =
+      mpFifaMemberPlusIcons(member);
+
+    const record =
+      mpFifaCareerRecord(member);
+
+    const photoUrl =
+      mpFifaMemberPhotoUrl(member);
+
+    const initials =
+      mpFifaInitials(
+        member.player_name
+      );
+
+    const isFounder =
+      member.user_id === ownerId;
+
+    const canKick =
+      MP_CLUB_CURRENT?.is_owner ===
+        true &&
+      !isFounder &&
+      typeof window.mpKickClubMember ===
+        "function";
+
+    const photoX =
+      mpFifaNumber(
+        member.photo_x,
+        50
+      );
+
+    const photoY =
+      mpFifaNumber(
+        member.photo_y,
+        8
+      );
+
+    const photoZoom =
+      mpFifaNumber(
+        member.photo_zoom,
+        1.02
+      );
+
+    return `
+      <div
+        class="
+          featured-card-wrap
+          mp-club-fifa-wrap
+        "
+      >
+        <article
+          class="
+            player-card
+            card-${rarity}
+            tier-${rarity}
+            mp-club-home-card
+          "
+
+          aria-label="Carta di ${
+            mpFifaEscape(
+              member.player_name
+            )
+          }"
+
+          tabindex="0"
+
+          onclick="
+            mpOpenClubMember(
+              '${member.user_id}'
+            )
+          "
+
+          onkeydown="
+            if (
+              event.key === 'Enter' ||
+              event.key === ' '
+            ) {
+              event.preventDefault();
+
+              mpOpenClubMember(
+                '${member.user_id}'
+              );
+            }
+          "
+
+          style="
+            --photo-x: ${photoX}%;
+            --photo-y: ${photoY}%;
+            --photo-zoom: ${photoZoom};
+          "
+        >
+          <div class="player-card-glow"></div>
+
+          <div class="
+            mp-card-ability-stars
+            mp-club-fifa-abilities
+          ">
+            <div>
+              <span>PIEDE DEBOLE</span>
+
+              <strong>
+                ${mpFifaStars(
+                  member.weak_foot ?? 3
+                )}
+              </strong>
+            </div>
+
+            <div>
+              <span>MOSSE ABILITÀ</span>
+
+              <strong>
+                ${mpFifaStars(
+                  member.skill_moves ?? 3
+                )}
+              </strong>
+            </div>
+          </div>
+
+          <div class="player-top">
+            <div>
+              <strong class="card-ovr">
+                ${ovr}
+              </strong>
+
+              <span>OVERALL</span>
+            </div>
+
+            <div>
+              <b>
+                ${mpFifaEscape(
+                  member.role || "CC"
+                )}
+              </b>
+
+              <span>
+                ${mpFifaEscape(
+                  tierLabel
+                )}
+              </span>
+            </div>
+          </div>
+
+          <div class="player-card-side-info">
+            <div>
+              ${mpFifaPlusIcon(
+                plusIcons[0]
+              )}
+
+              <span>MAGLIA</span>
+
+              <strong>
+                #${mpFifaEscape(
+                  member.shirt_number ||
+                  "10"
+                )}
+              </strong>
+            </div>
+
+            <div>
+              ${mpFifaPlusIcon(
+                plusIcons[1]
+              )}
+
+              <span>PIEDE</span>
+
+              <strong>
+                ${mpFifaEscape(
+                  String(
+                    member.preferred_foot ||
+                    "Destro"
+                  ).toUpperCase()
+                )}
+              </strong>
+            </div>
+
+            <div>
+              ${mpFifaPlusIcon(
+                plusIcons[2]
+              )}
+
+              <span>STILE</span>
+
+              <strong>
+                ${mpFifaEscape(
+                  String(
+                    member.profile_style ||
+                    "Equilibrato"
+                  ).toUpperCase()
+                )}
+              </strong>
+            </div>
+          </div>
+
+          <div class="
+            mp-club-fifa-career
+            ${record.visible
+              ? "is-visible"
+              : "is-private"}
+          ">
+            <div>
+              <span>GOL</span>
+              <strong>${record.goals}</strong>
+            </div>
+
+            <div>
+              <span>ASSIST</span>
+              <strong>${record.assists}</strong>
+            </div>
+
+            <div>
+              <span>MEDIA</span>
+              <strong>${record.rating}</strong>
+            </div>
+          </div>
+
+          <div class="player-photo-wrap">
+            ${
+              photoUrl
+                ? `
+                  <img
+                    class="player-photo"
+                    src="${mpFifaEscape(
+                      photoUrl
+                    )}"
+                    alt="Foto di ${mpFifaEscape(
+                      member.player_name ||
+                      "giocatore"
+                    )}"
+
+                    style="
+                      object-position:
+                        ${photoX}% ${photoY}%;
+
+                      transform:
+                        scale(${photoZoom});
+                    "
+
+                    onerror="
+                      this.style.display =
+                        'none';
+
+                      this.nextElementSibling
+                        .style.display =
+                        'grid';
+                    "
+                  >
+
+                  <div
+                    class="mp-club-fifa-initials"
+                  >
+                    ${mpFifaEscape(
+                      initials
+                    )}
+                  </div>
+                `
+                : `
+                  <div
+                    class="
+                      mp-club-fifa-initials
+                      is-visible
+                    "
+                  >
+                    ${mpFifaEscape(
+                      initials
+                    )}
+                  </div>
+                `
+            }
+          </div>
+
+          <h3>
+            ${mpFifaEscape(
+              member.player_name ||
+              "PLAYER"
+            )}
+          </h3>
+
+          <div class="player-stats">
+            ${mpFifaCardStat(
+              "PAC",
+              stats.pac ?? 60
+            )}
+
+            ${mpFifaCardStat(
+              "SHO",
+              stats.sho ?? 60
+            )}
+
+            ${mpFifaCardStat(
+              "PAS",
+              stats.pas ?? 60
+            )}
+
+            ${mpFifaCardStat(
+              "DRI",
+              stats.dri ?? 60
+            )}
+
+            ${mpFifaCardStat(
+              "DEF",
+              stats.def ?? 60
+            )}
+
+            ${mpFifaCardStat(
+              "PHY",
+              stats.phy ?? 60
+            )}
+          </div>
+
+          ${
+            isFounder
+              ? `
+                <span class="
+                  mp-club-fifa-founder
+                ">
+                  FONDATORE
+                </span>
+              `
+              : ""
+          }
+
+          ${
+            canKick
+              ? `
+                <button
+                  type="button"
+                  class="
+                    mp-club-fifa-kick
+                  "
+                  title="Rimuovi dal Club"
+
+                  onclick="
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    mpKickClubMember(
+                      '${member.user_id}'
+                    );
+                  "
+                >
+                  ×
+                </button>
+              `
+              : ""
+          }
+        </article>
+
+        <button
+          type="button"
+          class="mp-club-fifa-open"
+          onclick="
+            mpOpenClubMember(
+              '${member.user_id}'
+            )
+          "
+        >
+          APRI PROFILO
+        </button>
+      </div>
+    `;
+  }
+
+  mpClubMemberCard =
+    mpFifaClubMemberCard;
+
+  window.mpClubMemberCard =
+    mpFifaClubMemberCard;
+
+
+  /* =======================================================
+     NUOVA PAGINA STATISTICHE
+     ======================================================= */
+
+  function mpStatsDate(value) {
+    if (!value) {
+      return "Senza data";
+    }
+
+    const date = new Date(
+      `${value}T12:00:00`
+    );
+
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+
+    return date.toLocaleDateString(
+      "it-IT",
+      {
+        day: "2-digit",
+        month: "short",
+        year: "numeric"
+      }
+    );
+  }
+
+  function mpStatsOutcomeType(value) {
+    const outcome = String(
+      value || ""
+    ).toLowerCase();
+
+    if (
+      outcome.includes("vitt")
+    ) {
+      return "win";
+    }
+
+    if (
+      outcome.includes("sconf")
+    ) {
+      return "loss";
+    }
+
+    if (
+      outcome.includes("pare")
+    ) {
+      return "draw";
+    }
+
+    return "neutral";
+  }
+
+  function mpStatsOutcomeLabel(value) {
+    return String(value || "Partita")
+      .toUpperCase();
+  }
+
+  function mpStatsKpi(
+    label,
+    value,
+    sublabel,
+    accent = ""
+  ) {
+    return `
+      <article class="
+        mp-stats-kpi
+        ${accent}
+      ">
+        <span>${label}</span>
+
+        <strong>${value}</strong>
+
+        <small>${sublabel}</small>
+      </article>
+    `;
+  }
+
+  function mpStatsTrendSection(matches) {
+    const ordered = [...matches]
+      .sort(
+        (a, b) =>
+          String(a.date || "")
+            .localeCompare(
+              String(b.date || "")
+            )
+      );
+
+    if (ordered.length < 2) {
+      return `
+        <section class="
+          mp-stats-panel
+          mp-stats-trend-empty
+        ">
+          <div class="mp-stats-panel-head">
+            <div>
+              <span>PERFORMANCE TRACKER</span>
+              <h3>Andamento</h3>
+            </div>
+
+            <strong>0${ordered.length}</strong>
+          </div>
+
+          <div class="mp-stats-empty-graph">
+            <div class="mp-stats-empty-line"></div>
+
+            <p>
+              Salva almeno 2 partite
+              per vedere i grafici
+              dell’andamento.
+            </p>
+          </div>
+        </section>
+      `;
+    }
+
+    const charts = [
+      {
+        key: "rating",
+        title: "Valutazione",
+        suffix: "/10"
+      },
+      {
+        key: "goals",
+        title: "Gol",
+        suffix: ""
+      },
+      {
+        key: "assists",
+        title: "Assist",
+        suffix: ""
+      }
+    ];
+
+    return `
+      <section class="mp-stats-trend-zone">
+        <div class="mp-stats-section-head">
+          <div>
+            <span>PERFORMANCE TRACKER</span>
+            <h3>Andamento</h3>
+          </div>
+
+          <p>
+            Solo le statistiche principali,
+            partita dopo partita.
+          </p>
+        </div>
+
+        <div class="
+          grid
+          trend-grid
+          mp-stats-trend-grid
+        ">
+          ${charts
+            .map(config =>
+              trendCard(
+                ordered,
+                config
+              )
+            )
+            .join("")}
+        </div>
+      </section>
+    `;
+  }
+
+  function mpStatsRecentMatch(match) {
+    const outcomeType =
+      mpStatsOutcomeType(
+        match.outcome
+      );
+
+    return `
+      <article class="mp-stats-match">
+        <div class="mp-stats-match-main">
+          <span>
+            ${mpStatsDate(
+              match.date
+            )}
+          </span>
+
+          <strong>
+            ${mpFifaEscape(
+              match.result ||
+              "Risultato non inserito"
+            )}
+          </strong>
+        </div>
+
+        <span class="
+          mp-stats-outcome
+          ${outcomeType}
+        ">
+          ${mpFifaEscape(
+            mpStatsOutcomeLabel(
+              match.outcome
+            )
+          )}
+        </span>
+
+        <div class="mp-stats-match-role">
+          ${mpFifaEscape(
+            match.role || "—"
+          )}
+        </div>
+
+        <div class="mp-stats-match-numbers">
+          <span>
+            <strong>
+              ${Math.round(
+                mpFifaNumber(
+                  match.goals,
+                  0
+                )
+              )}
+            </strong>
+            GOL
+          </span>
+
+          <span>
+            <strong>
+              ${Math.round(
+                mpFifaNumber(
+                  match.assists,
+                  0
+                )
+              )}
+            </strong>
+            ASSIST
+          </span>
+
+          <span>
+            <strong>
+              ${
+                mpFifaNumber(
+                  match.rating,
+                  0
+                ) > 0
+                  ? mpFifaNumber(
+                      match.rating,
+                      0
+                    ).toFixed(1)
+                  : "—"
+              }
+            </strong>
+            VOTO
+          </span>
+        </div>
+      </article>
+    `;
+  }
+
+  function mpRenderStatsFifa() {
+    const matches =
+      typeof getMatches === "function"
+        ? getMatches()
+        : [];
+
+    const ordered = [...matches]
+      .sort(
+        (a, b) =>
+          String(b.date || "")
+            .localeCompare(
+              String(a.date || "")
+            )
+      );
+
+    const played =
+      matches.length;
+
+    const goals =
+      matches.reduce(
+        (total, match) =>
+          total +
+          mpFifaNumber(
+            match.goals,
+            0
+          ),
+        0
+      );
+
+    const assists =
+      matches.reduce(
+        (total, match) =>
+          total +
+          mpFifaNumber(
+            match.assists,
+            0
+          ),
+        0
+      );
+
+    const ratings =
+      matches
+        .map(match =>
+          mpFifaNumber(
+            match.rating,
+            0
+          )
+        )
+        .filter(value =>
+          value > 0
+        );
+
+    const averageRating =
+      ratings.length
+        ? (
+            ratings.reduce(
+              (total, rating) =>
+                total + rating,
+              0
+            ) /
+            ratings.length
+          ).toFixed(1)
+        : "—";
+
+    const bestRating =
+      ratings.length
+        ? Math.max(
+            ...ratings
+          ).toFixed(1)
+        : "—";
+
+    const recentRatings =
+      ordered
+        .slice(0, 5)
+        .map(match =>
+          mpFifaNumber(
+            match.rating,
+            0
+          )
+        )
+        .filter(value =>
+          value > 0
+        );
+
+    const recentAverage =
+      recentRatings.length
+        ? (
+            recentRatings.reduce(
+              (total, rating) =>
+                total + rating,
+              0
+            ) /
+            recentRatings.length
+          ).toFixed(1)
+        : "—";
+
+    const wins =
+      matches.filter(
+        match =>
+          mpStatsOutcomeType(
+            match.outcome
+          ) === "win"
+      ).length;
+
+    const draws =
+      matches.filter(
+        match =>
+          mpStatsOutcomeType(
+            match.outcome
+          ) === "draw"
+      ).length;
+
+    const losses =
+      matches.filter(
+        match =>
+          mpStatsOutcomeType(
+            match.outcome
+          ) === "loss"
+      ).length;
+
+    const contributions =
+      goals + assists;
+
+    const contributionsPerMatch =
+      played
+        ? (
+            contributions /
+            played
+          ).toFixed(2)
+        : "—";
+
+    const winRate =
+      played
+        ? Math.round(
+            wins /
+            played *
+            100
+          )
+        : 0;
+
+    app.innerHTML = `
+      <section class="
+        section
+        mp-stats-page
+      ">
+        <header class="mp-stats-hero">
+          <div class="mp-stats-hero-copy">
+            <span>
+              MATCHPULSE ANALYTICS
+            </span>
+
+            <h2>
+              Le tue statistiche
+            </h2>
+
+            <p>
+              Forma, gol, assist e
+              valutazioni. 
+            </p>
+          </div>
+
+          <div class="mp-stats-hero-rating">
+            <span>MEDIA</span>
+
+            <strong>
+              ${averageRating}
+            </strong>
+
+            <small>
+              ${ratings.length}
+              ${
+                ratings.length === 1
+                  ? "partita valutata"
+                  : "partite valutate"
+              }
+            </small>
+          </div>
+        </header>
+
+        <div class="mp-stats-kpi-grid">
+          ${mpStatsKpi(
+            "PARTITE",
+            played,
+            "Totale registrate",
+            "is-green"
+          )}
+
+          ${mpStatsKpi(
+            "GOL",
+            Math.round(goals),
+            played
+              ? `${(
+                  goals /
+                  played
+                ).toFixed(2)} a partita`
+              : "Nessuna partita",
+            "is-orange"
+          )}
+
+          ${mpStatsKpi(
+            "ASSIST",
+            Math.round(assists),
+            played
+              ? `${(
+                  assists /
+                  played
+                ).toFixed(2)} a partita`
+              : "Nessuna partita",
+            "is-blue"
+          )}
+
+          ${mpStatsKpi(
+            "CONTRIBUTI",
+            Math.round(
+              contributions
+            ),
+            `${contributionsPerMatch} a partita`,
+            "is-purple"
+          )}
+        </div>
+
+        ${mpStatsTrendSection(
+          matches
+        )}
+
+        ${
+          played
+            ? `
+              <div class="mp-stats-dashboard-grid">
+                <section class="mp-stats-panel">
+                  <div class="mp-stats-panel-head">
+                    <div>
+                      <span>FORMA GENERALE</span>
+                      <h3>Rendimento</h3>
+                    </div>
+
+                    <strong>
+                      ${averageRating}
+                    </strong>
+                  </div>
+
+                  <div class="mp-stats-performance-grid">
+                    <div>
+                      <span>Miglior voto</span>
+                      <strong>
+                        ${bestRating}
+                      </strong>
+                    </div>
+
+                    <div>
+                      <span>Media ultime 5</span>
+                      <strong>
+                        ${recentAverage}
+                      </strong>
+                    </div>
+
+                    <div>
+                      <span>Contributi</span>
+                      <strong>
+                        ${contributionsPerMatch}
+                      </strong>
+                    </div>
+
+                    <div>
+                      <span>Percentuale vittorie</span>
+                      <strong>
+                        ${winRate}%
+                      </strong>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="mp-stats-panel">
+                  <div class="mp-stats-panel-head">
+                    <div>
+                      <span>RISULTATI</span>
+                      <h3>Esiti partite</h3>
+                    </div>
+
+                    <strong>
+                      ${played}
+                    </strong>
+                  </div>
+
+                  <div class="mp-stats-results">
+                    <div class="win">
+                      <span>VITTORIE</span>
+                      <strong>${wins}</strong>
+                    </div>
+
+                    <div class="draw">
+                      <span>PAREGGI</span>
+                      <strong>${draws}</strong>
+                    </div>
+
+                    <div class="loss">
+                      <span>SCONFITTE</span>
+                      <strong>${losses}</strong>
+                    </div>
+                  </div>
+
+                  <div class="mp-stats-win-bar">
+                    <i
+                      style="
+                        width: ${winRate}%;
+                      "
+                    ></i>
+                  </div>
+
+                  <p class="mp-stats-win-copy">
+                    Hai vinto il
+                    <strong>${winRate}%</strong>
+                    delle partite registrate.
+                  </p>
+                </section>
+              </div>
+
+              <section class="mp-stats-recent">
+                <div class="mp-stats-section-head">
+                  <div>
+                    <span>ULTIME PRESTAZIONI</span>
+                    <h3>Forma recente</h3>
+                  </div>
+
+                  <p>
+                    Le ultime cinque partite.
+                  </p>
+                </div>
+
+                <div class="mp-stats-recent-list">
+                  ${ordered
+                    .slice(0, 5)
+                    .map(
+                      mpStatsRecentMatch
+                    )
+                    .join("")}
+                </div>
+              </section>
+            `
+            : `
+              <section class="mp-stats-no-matches">
+                <div>
+                  <span>NESSUN DATO</span>
+
+                  <h3>
+                    Registra la prima partita
+                  </h3>
+
+                  <p>
+                    Gol, assist, valutazione
+                    e grafici compariranno qui.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  class="primary-btn"
+                  onclick="setRoute('new')"
+                >
+                  NUOVA PARTITA
+                </button>
+              </section>
+            `
+        }
+
+        ${
+          played
+            ? `
+              <section class="mp-stats-data-control">
+                <div>
+                  <span>GESTIONE DATI</span>
+
+                  <strong>
+                    ${played}
+                    ${
+                      played === 1
+                        ? "partita salvata"
+                        : "partite salvate"
+                    }
+                  </strong>
+                </div>
+
+                <button
+                  type="button"
+                  class="danger-btn"
+                  onclick="deleteAllMatches()"
+                >
+                  ELIMINA STORICO
+                </button>
+              </section>
+            `
+            : ""
+        }
+      </section>
+    `;
+  }
+
+  renderStats =
+    mpRenderStatsFifa;
+
+  window.renderStats =
+    mpRenderStatsFifa;
+})();
+
+/* =========================================================
+   MATCHPULSE
+   RIPRISTINO CARTA CLUB PERSONALIZZATA
+   ========================================================= */
+
+(function () {
+  if (window.MP_RESTORE_SHOWCASE_CLUB_CARD) {
+    return;
+  }
+
+  window.MP_RESTORE_SHOWCASE_CLUB_CARD = true;
+
+
+  function mpRestoreEscape(value) {
+    if (typeof mpClubEscape === "function") {
+      return mpClubEscape(value);
+    }
+
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+
+  function mpRestoreNumber(value, fallback = 0) {
+    const number = Number(
+      String(value ?? "")
+        .replace(",", ".")
+    );
+
+    return Number.isFinite(number)
+      ? number
+      : fallback;
+  }
+
+
+  function mpRestoreClamp(value, min, max) {
+    return Math.max(
+      min,
+      Math.min(
+        max,
+        mpRestoreNumber(value, min)
+      )
+    );
+  }
+
+
+  function mpRestoreRarity(ovr) {
+    const value = mpRestoreClamp(
+      ovr,
+      0,
+      99
+    );
+
+    if (value <= 64) return "bronze";
+    if (value <= 74) return "silver";
+    if (value <= 89) return "gold";
+
+    return "icon";
+  }
+
+
+  function mpRestoreInitials(name) {
+    if (typeof mpClubInitials === "function") {
+      return mpClubInitials(name);
+    }
+
+    const words = String(name || "MP")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+
+    if (!words.length) {
+      return "MP";
+    }
+
+    if (words.length === 1) {
+      return words[0]
+        .slice(0, 2)
+        .toUpperCase();
+    }
+
+    return (
+      words[0][0] +
+      words[words.length - 1][0]
+    ).toUpperCase();
+  }
+
+
+  /* =======================================================
+     FOTO DEL MEMBRO
+     ======================================================= */
+
+  function mpRestorePhotoUrl(member) {
+    if (
+      typeof window.mpV3PublicAvatarUrl ===
+      "function"
+    ) {
+      const url =
+        window.mpV3PublicAvatarUrl(member);
+
+      if (url) {
+        return url;
+      }
+    }
+
+    if (
+      typeof window.mpClubAvatarPublicUrl ===
+      "function"
+    ) {
+      const url =
+        window.mpClubAvatarPublicUrl(member);
+
+      if (url) {
+        return url;
+      }
+    }
+
+    const path = String(
+      member?.avatar_path || ""
+    );
+
+    if (!path || !matchpulseSupabase) {
+      return "";
+    }
+
+    const result =
+      matchpulseSupabase
+        .storage
+        .from("matchpulse-avatars")
+        .getPublicUrl(path);
+
+    return (
+      result?.data?.publicUrl ||
+      ""
+    );
+  }
+
+
+  function mpRestorePhotoHtml(member) {
+    const url =
+      mpRestorePhotoUrl(member);
+
+    const initials =
+      mpRestoreInitials(
+        member.player_name
+      );
+
+    if (!url) {
+      return `
+        <div class="mp-club-showcase-initials">
+          ${mpRestoreEscape(initials)}
+        </div>
+      `;
+    }
+
+    const photoX =
+      mpRestoreNumber(
+        member.photo_x,
+        50
+      );
+
+    const photoY =
+      mpRestoreNumber(
+        member.photo_y,
+        50
+      );
+
+    const photoZoom =
+      mpRestoreNumber(
+        member.photo_zoom,
+        1
+      );
+
+    return `
+      <img
+        src="${mpRestoreEscape(url)}"
+        alt="${mpRestoreEscape(
+          member.player_name ||
+          "Giocatore"
+        )}"
+
+        style="
+          object-position:
+            ${photoX}% ${photoY}%;
+
+          transform:
+            scale(${photoZoom});
+        "
+
+        onerror="
+          this.remove();
+
+          this.parentElement.innerHTML =
+            '<div class=&quot;mp-club-showcase-initials&quot;>${mpRestoreEscape(
+              initials
+            )}</div>';
+        "
+      >
+    `;
+  }
+
+
+  /* =======================================================
+     STATISTICHE PUBBLICHE
+     ======================================================= */
+
+  function mpRestoreCareerRecord(member) {
+    const stats =
+      member?.card_stats || {};
+
+    const visible =
+      stats.careerStatsVisible === true;
+
+    const rating =
+      mpRestoreNumber(
+        stats.careerAvgRating,
+        0
+      );
+
+    return {
+      visible,
+
+      goals: visible
+        ? Math.round(
+            mpRestoreNumber(
+              stats.careerGoals,
+              0
+            )
+          )
+        : "—",
+
+      assists: visible
+        ? Math.round(
+            mpRestoreNumber(
+              stats.careerAssists,
+              0
+            )
+          )
+        : "—",
+
+      rating:
+        visible && rating > 0
+          ? rating.toFixed(1)
+          : "—"
+    };
+  }
+
+
+  function mpRestoreCoreStat(
+    label,
+    value
+  ) {
+    return `
+      <div class="mp-club-showcase-stat">
+        <strong>
+          ${Math.round(
+            mpRestoreClamp(
+              value,
+              0,
+              99
+            )
+          )}
+        </strong>
+
+        <span>${label}</span>
+      </div>
+    `;
+  }
+
+
+  /* =======================================================
+     CARTA CLUB RIPRISTINATA
+     ======================================================= */
+
+  function mpRestoredClubMemberCard(
+    member,
+    ownerId
+  ) {
+    const stats =
+      member.card_stats || {};
+
+    const record =
+      mpRestoreCareerRecord(member);
+
+    const ovr = Math.round(
+      mpRestoreClamp(
+        member.ovr,
+        0,
+        99
+      )
+    );
+
+    const rarity =
+      mpRestoreRarity(ovr);
+
+    const isFounder =
+      member.user_id === ownerId;
+
+    const canKick =
+      MP_CLUB_CURRENT?.is_owner ===
+        true &&
+      !isFounder &&
+      typeof window.mpKickClubMember ===
+        "function";
+
+    const weakFoot =
+      Math.round(
+        mpRestoreClamp(
+          member.weak_foot ?? 3,
+          1,
+          5
+        )
+      );
+
+    const skillMoves =
+      Math.round(
+        mpRestoreClamp(
+          member.skill_moves ?? 3,
+          1,
+          5
+        )
+      );
+
+    return `
+      <article
+        class="
+          mp-club-showcase-card
+          mp-club-showcase-${rarity}
+        "
+
+        tabindex="0"
+        role="button"
+
+        onclick="
+          mpOpenClubMember(
+            '${member.user_id}'
+          )
+        "
+
+        onkeydown="
+          if (
+            event.key === 'Enter' ||
+            event.key === ' '
+          ) {
+            event.preventDefault();
+
+            mpOpenClubMember(
+              '${member.user_id}'
+            );
+          }
+        "
+      >
+        <div class="mp-club-showcase-shine"></div>
+
+        <header class="mp-club-showcase-top">
+          <div class="mp-club-showcase-rating">
+            <strong>${ovr}</strong>
+            <span>OVERALL</span>
+          </div>
+
+          <div class="mp-club-showcase-role">
+            ${mpRestoreEscape(
+              member.role || "CC"
+            )}
+          </div>
+
+          <div class="mp-club-showcase-tools">
+            ${
+              isFounder
+                ? `
+                  <span class="mp-club-showcase-founder">
+                    FONDATORE
+                  </span>
+                `
+                : ""
+            }
+
+            ${
+              canKick
+                ? `
+                  <button
+                    type="button"
+                    class="mp-club-showcase-kick"
+                    title="Rimuovi dal Club"
+
+                    onclick="
+                      event.preventDefault();
+                      event.stopPropagation();
+
+                      mpKickClubMember(
+                        '${member.user_id}'
+                      );
+                    "
+                  >
+                    ×
+                  </button>
+                `
+                : ""
+            }
+          </div>
+        </header>
+
+        <section class="mp-club-showcase-hero">
+          <div class="
+            mp-club-showcase-wing
+            mp-club-showcase-wing-left
+            ${record.visible
+              ? ""
+              : "is-private"}
+          ">
+            <span>
+              ${
+                record.visible
+                  ? "GOL"
+                  : "RECORD"
+              }
+            </span>
+
+            <strong>
+              ${record.goals}
+            </strong>
+          </div>
+
+          <div class="mp-club-showcase-photo">
+            ${mpRestorePhotoHtml(member)}
+          </div>
+
+          <div class="
+            mp-club-showcase-wing
+            mp-club-showcase-wing-right
+            ${record.visible
+              ? ""
+              : "is-private"}
+          ">
+            <span>
+              ${
+                record.visible
+                  ? "ASSIST"
+                  : "PRIVATO"
+              }
+            </span>
+
+            <strong>
+              ${record.assists}
+            </strong>
+          </div>
+
+          <div class="
+            mp-club-showcase-average
+            ${record.visible
+              ? ""
+              : "is-private"}
+          ">
+            <span>
+              ${
+                record.visible
+                  ? "VALUTAZIONE MEDIA"
+                  : "STATISTICHE NON CONDIVISE"
+              }
+            </span>
+
+            ${
+              record.visible
+                ? `
+                  <strong>
+                    ${record.rating}
+                  </strong>
+
+                  <small>/10</small>
+                `
+                : `
+                  <strong>PRIVATE</strong>
+                `
+            }
+          </div>
+        </section>
+
+        <h3 class="mp-club-showcase-name">
+          ${mpRestoreEscape(
+            member.player_name ||
+            "PLAYER"
+          )}
+        </h3>
+
+        <div class="mp-club-showcase-abilities">
+          <span>
+            PIEDE DEBOLE
+
+            <strong>
+              ${weakFoot}★
+            </strong>
+          </span>
+
+          <span>
+            MOSSE ABILITÀ
+
+            <strong>
+              ${skillMoves}★
+            </strong>
+          </span>
+        </div>
+
+        <section class="mp-club-showcase-stats">
+          ${mpRestoreCoreStat(
+            "PAC",
+            stats.pac ?? 60
+          )}
+
+          ${mpRestoreCoreStat(
+            "SHO",
+            stats.sho ?? 60
+          )}
+
+          ${mpRestoreCoreStat(
+            "PAS",
+            stats.pas ?? 60
+          )}
+
+          ${mpRestoreCoreStat(
+            "DRI",
+            stats.dri ?? 60
+          )}
+
+          ${mpRestoreCoreStat(
+            "DEF",
+            stats.def ?? 60
+          )}
+
+          ${mpRestoreCoreStat(
+            "PHY",
+            stats.phy ?? 60
+          )}
+        </section>
+
+        <footer class="mp-club-showcase-open">
+          <span>PROFILO GIOCATORE</span>
+          <strong>APRI</strong>
+        </footer>
+      </article>
+    `;
+  }
+
+
+  mpClubMemberCard =
+    mpRestoredClubMemberCard;
+
+  window.mpClubMemberCard =
+    mpRestoredClubMemberCard;
+})();
+
+/* =========================================================
+   MATCHPULSE
+   FIX ULTIMA PARTITA NELLA HOME
+   ========================================================= */
+
+(function () {
+  if (window.MP_HOME_LAST_MATCH_FIX_READY) {
+    return;
+  }
+
+  window.MP_HOME_LAST_MATCH_FIX_READY = true;
+
+  const mpPreviousRenderHomeLastMatch =
+    renderHome;
+
+  function mpHomeLastMatchDate(value) {
+    if (!value) {
+      return "ULTIMA REGISTRATA";
+    }
+
+    const date = new Date(
+      `${value}T12:00:00`
+    );
+
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+
+    return date.toLocaleDateString(
+      "it-IT",
+      {
+        day: "2-digit",
+        month: "2-digit",
+        year: "2-digit"
+      }
+    );
+  }
+
+  function mpRenderHomeWithLastMatch() {
+    mpPreviousRenderHomeLastMatch();
+
+    const matches =
+      typeof getMatches === "function"
+        ? getMatches()
+        : [];
+
+    if (!Array.isArray(matches) || !matches.length) {
+      return;
+    }
+
+    const lastMatch = [...matches].sort(
+      (a, b) =>
+        String(b.date || "")
+          .localeCompare(
+            String(a.date || "")
+          )
+    )[0];
+
+    const lastCard = [
+      ...document.querySelectorAll(
+        ".home-mini-card"
+      )
+    ].find(card => {
+      const label =
+        card.querySelector(
+          ".mini-label"
+        );
+
+      return (
+        label?.textContent
+          ?.trim()
+          .toUpperCase() ===
+        "ULTIMA PARTITA"
+      );
+    });
+
+    if (!lastCard || !lastMatch) {
+      return;
+    }
+
+    const valueElement =
+      lastCard.querySelector(
+        ".mini-value"
+      );
+
+    const subElement =
+      lastCard.querySelector(
+        ".mini-sub"
+      );
+
+    const goals = Math.round(
+      Number(lastMatch.goals) || 0
+    );
+
+    const assists = Math.round(
+      Number(lastMatch.assists) || 0
+    );
+
+    const rating =
+      Number(lastMatch.rating) || 0;
+
+    const mainValue =
+      String(lastMatch.result || "")
+        .trim() ||
+      mpHomeLastMatchDate(
+        lastMatch.date
+      );
+
+    const details = [];
+
+    if (
+      String(lastMatch.outcome || "")
+        .trim()
+    ) {
+      details.push(
+        String(lastMatch.outcome)
+          .trim()
+      );
+    }
+
+    details.push(
+      `G ${goals} · A ${assists}`
+    );
+
+    if (rating > 0) {
+      details.push(
+        `V ${rating.toFixed(1)}`
+      );
+    }
+
+    if (valueElement) {
+      valueElement.textContent =
+        mainValue;
+    }
+
+    if (subElement) {
+      subElement.textContent =
+        details.join(" · ");
+    }
+  }
+
+  renderHome =
+    mpRenderHomeWithLastMatch;
+
+  window.renderHome =
+    mpRenderHomeWithLastMatch;
+})();
+
+/* =========================================================
+   MATCHPULSE
+   CRESCITA CARTA V5 + GRAFICI ULTIME 5 PARTITE
+   ========================================================= */
+
+(function () {
+  if (window.MP_CARD_GROWTH_V5_READY) {
+    return;
+  }
+
+  window.MP_CARD_GROWTH_V5_READY = true;
+
+  const MP_GROWTH_STATS = [
+    "pac",
+    "sho",
+    "pas",
+    "dri",
+    "def",
+    "phy"
+  ];
+
+
+  /* =======================================================
+     FUNZIONI NUMERICHE
+     ======================================================= */
+
+  function mpGrowthNumber(
+    value,
+    fallback = 0
+  ) {
+    const number = Number(
+      String(value ?? "")
+        .replace(",", ".")
+    );
+
+    return Number.isFinite(number)
+      ? number
+      : fallback;
+  }
+
+  function mpGrowthClamp(
+    value,
+    min,
+    max
+  ) {
+    return Math.max(
+      min,
+      Math.min(
+        max,
+        mpGrowthNumber(value, min)
+      )
+    );
+  }
+
+  function mpGrowthRead(
+    match,
+    keys,
+    fallback = 0
+  ) {
+    for (const key of keys) {
+      if (
+        match?.[key] !== undefined &&
+        match?.[key] !== null &&
+        match?.[key] !== ""
+      ) {
+        return mpGrowthNumber(
+          match[key],
+          fallback
+        );
+      }
+    }
+
+    return fallback;
+  }
+
+
+  /* =======================================================
+     STATISTICHE INIZIALI DELLA CARTA
+     ======================================================= */
+
+  function mpGrowthFallbackBase() {
+    let role = "CC";
+
+    try {
+      role = String(
+        getPlayerProfile()?.role || "CC"
+      ).toUpperCase();
+    } catch (error) {
+      role = "CC";
+    }
+
+    const bases = {
+      ATT: {
+        pac: 65,
+        sho: 68,
+        pas: 56,
+        dri: 63,
+        def: 43,
+        phy: 65
+      },
+
+      ALA: {
+        pac: 68,
+        sho: 62,
+        pas: 61,
+        dri: 67,
+        def: 45,
+        phy: 57
+      },
+
+      COC: {
+        pac: 62,
+        sho: 61,
+        pas: 68,
+        dri: 67,
+        def: 45,
+        phy: 57
+      },
+
+      CC: {
+        pac: 60,
+        sho: 56,
+        pas: 66,
+        dri: 63,
+        def: 58,
+        phy: 57
+      },
+
+      CDC: {
+        pac: 55,
+        sho: 48,
+        pas: 64,
+        dri: 58,
+        def: 68,
+        phy: 67
+      },
+
+      DC: {
+        pac: 62,
+        sho: 43,
+        pas: 65,
+        dri: 52,
+        def: 73,
+        phy: 65
+      },
+
+      TERZINO: {
+        pac: 68,
+        sho: 48,
+        pas: 62,
+        dri: 61,
+        def: 66,
+        phy: 55
+      }
+    };
+
+    return {
+      ...(bases[role] || bases.CC)
+    };
+  }
+
+  function mpGrowthBaseStats() {
+    /*
+      Usa il sistema iniziale già presente
+      nell'app, compreso stile e ruolo.
+    */
+
+    try {
+      if (
+        typeof mpFinalBaseStats ===
+        "function"
+      ) {
+        const result =
+          mpFinalBaseStats();
+
+        if (
+          result &&
+          MP_GROWTH_STATS.every(
+            stat =>
+              Number.isFinite(
+                Number(result[stat])
+              )
+          )
+        ) {
+          return {
+            pac: Number(result.pac),
+            sho: Number(result.sho),
+            pas: Number(result.pas),
+            dri: Number(result.dri),
+            def: Number(result.def),
+            phy: Number(result.phy)
+          };
+        }
+      }
+    } catch (error) {
+      console.warn(
+        "Base carta personalizzata non disponibile:",
+        error
+      );
+    }
+
+    return mpGrowthFallbackBase();
+  }
+
+
+  /* =======================================================
+     PESI DEL RUOLO GIOCATO NELLA PARTITA
+     ======================================================= */
+
+  function mpGrowthRoleWeights(role) {
+    const normalized =
+      String(role || "CC")
+        .trim()
+        .toUpperCase();
+
+    const weights = {
+      ATT: {
+        pac: 1.07,
+        sho: 1.12,
+        pas: 0.96,
+        dri: 1.07,
+        def: 0.88,
+        phy: 1.01
+      },
+
+      ALA: {
+        pac: 1.10,
+        sho: 1.04,
+        pas: 1.01,
+        dri: 1.10,
+        def: 0.90,
+        phy: 0.95
+      },
+
+      COC: {
+        pac: 1.00,
+        sho: 1.02,
+        pas: 1.10,
+        dri: 1.09,
+        def: 0.90,
+        phy: 0.93
+      },
+
+      CC: {
+        pac: 0.98,
+        sho: 0.96,
+        pas: 1.08,
+        dri: 1.04,
+        def: 1.00,
+        phy: 0.98
+      },
+
+      CDC: {
+        pac: 0.95,
+        sho: 0.88,
+        pas: 1.05,
+        dri: 0.96,
+        def: 1.10,
+        phy: 1.08
+      },
+
+      DC: {
+        pac: 0.98,
+        sho: 0.88,
+        pas: 1.04,
+        dri: 0.95,
+        def: 1.10,
+        phy: 1.08
+      },
+
+      TERZINO: {
+        pac: 1.08,
+        sho: 0.90,
+        pas: 1.03,
+        dri: 1.02,
+        def: 1.07,
+        phy: 1.02
+      }
+    };
+
+    return (
+      weights[normalized] ||
+      weights.CC
+    );
+  }
+
+
+  /* =======================================================
+     VALUTAZIONE GENERALE
+     ======================================================= */
+
+  function mpGrowthQuality(rating) {
+    const value =
+      mpGrowthClamp(
+        rating,
+        1,
+        10
+      );
+
+    if (value >= 9.75) return 1.35;
+    if (value >= 9) return 1.20;
+    if (value >= 8) return 1.00;
+    if (value >= 7) return 0.72;
+    if (value >= 6) return 0.35;
+    if (value >= 5.5) return 0.12;
+
+    return 0;
+  }
+
+
+  /* =======================================================
+     VALUTAZIONE DELLA SINGOLA STATISTICA
+     ======================================================= */
+
+  function mpGrowthSelfDelta(value) {
+    const rating =
+      mpGrowthClamp(
+        value,
+        1,
+        10
+      );
+
+    /*
+      10 = crescita molto buona
+       9 = crescita buona
+       8 = crescita visibile
+       7 = crescita discreta
+       6 = quasi neutrale
+      <6 = possibile diminuzione
+    */
+
+    if (rating >= 6) {
+      return (
+        0.08 +
+        (rating - 6) * 0.22
+      );
+    }
+
+    return (
+      -(6 - rating) * 0.20
+    );
+  }
+
+
+  /* =======================================================
+     LEGGE LE SEI AUTOVALUTAZIONI
+     ======================================================= */
+
+  function mpGrowthSelfRatings(match) {
+    const generalRating =
+      mpGrowthRead(
+        match,
+        [
+          "rating",
+          "voto",
+          "valutazione",
+          "matchRating"
+        ],
+        6
+      );
+
+    return {
+      pac: mpGrowthRead(
+        match,
+        [
+          "selfPac",
+          "pacRating",
+          "ratingPac"
+        ],
+        generalRating
+      ),
+
+      sho: mpGrowthRead(
+        match,
+        [
+          "selfSho",
+          "shoRating",
+          "ratingSho"
+        ],
+        generalRating
+      ),
+
+      pas: mpGrowthRead(
+        match,
+        [
+          "selfPas",
+          "pasRating",
+          "ratingPas"
+        ],
+        generalRating
+      ),
+
+      dri: mpGrowthRead(
+        match,
+        [
+          "selfDri",
+          "driRating",
+          "ratingDri"
+        ],
+        generalRating
+      ),
+
+      def: mpGrowthRead(
+        match,
+        [
+          "selfDef",
+          "defRating",
+          "ratingDef"
+        ],
+        generalRating
+      ),
+
+      phy: mpGrowthRead(
+        match,
+        [
+          "selfPhy",
+          "phyRating",
+          "ratingPhy"
+        ],
+        generalRating
+      )
+    };
+  }
+
+
+  /* =======================================================
+     APPLICA UNA PARTITA ALLE STATISTICHE
+     ======================================================= */
+
+  function mpGrowthCalculateMatch(
+    oldStats,
+    match
+  ) {
+    const self =
+      mpGrowthSelfRatings(match);
+
+    const selfAverage =
+      MP_GROWTH_STATS.reduce(
+        (total, stat) =>
+          total +
+          mpGrowthClamp(
+            self[stat],
+            1,
+            10
+          ),
+        0
+      ) / MP_GROWTH_STATS.length;
+
+    let overallRating =
+      mpGrowthRead(
+        match,
+        [
+          "rating",
+          "voto",
+          "valutazione",
+          "matchRating"
+        ],
+        0
+      );
+
+    if (overallRating <= 0) {
+      overallRating =
+        selfAverage;
+    }
+
+    overallRating =
+      mpGrowthClamp(
+        overallRating,
+        1,
+        10
+      );
+
+    const matchRole =
+      match?.role ||
+      match?.matchRole ||
+      "CC";
+
+    const roleWeights =
+      mpGrowthRoleWeights(
+        matchRole
+      );
+
+    const quality =
+      mpGrowthQuality(
+        overallRating
+      );
+
+    const goals =
+      Math.max(
+        0,
+        mpGrowthRead(
+          match,
+          [
+            "goals",
+            "goal",
+            "gol"
+          ],
+          0
+        )
+      );
+
+    const assists =
+      Math.max(
+        0,
+        mpGrowthRead(
+          match,
+          [
+            "assists",
+            "assist"
+          ],
+          0
+        )
+      );
+
+    const deltas = {};
+
+    for (
+      const stat of MP_GROWTH_STATS
+    ) {
+      deltas[stat] =
+        mpGrowthSelfDelta(
+          self[stat]
+        ) *
+        quality *
+        roleWeights[stat];
+    }
+
+
+    /*
+      Bonus reali piccoli.
+
+      Non comandano la crescita:
+      servono soltanto a premiare
+      gol e assist senza creare
+      un passaggio da 99 in poche gare.
+    */
+
+    deltas.sho += Math.min(
+      goals * 0.16,
+      0.50
+    );
+
+    deltas.pac += Math.min(
+      goals * 0.04,
+      0.12
+    );
+
+    deltas.pas += Math.min(
+      assists * 0.16,
+      0.50
+    );
+
+    deltas.dri += Math.min(
+      assists * 0.03,
+      0.10
+    );
+
+
+    /*
+      Una valutazione generale bassa
+      applica un malus a tutte le stats.
+    */
+
+    if (overallRating < 6) {
+      const penalty =
+        (6 - overallRating) *
+        0.20;
+
+      for (
+        const stat of MP_GROWTH_STATS
+      ) {
+        deltas[stat] -=
+          penalty *
+          roleWeights[stat];
+      }
+    }
+
+
+    /*
+      Limiti per una singola partita.
+
+      Impediscono crescite assurde,
+      ma un 10 resta ben visibile.
+    */
+
+    for (
+      const stat of MP_GROWTH_STATS
+    ) {
+      deltas[stat] =
+        mpGrowthClamp(
+          deltas[stat],
+          -1.20,
+          1.55
+        );
+    }
+
+    const updated = {};
+
+    for (
+      const stat of MP_GROWTH_STATS
+    ) {
+      updated[stat] =
+        mpGrowthClamp(
+          mpGrowthNumber(
+            oldStats[stat],
+            60
+          ) +
+          deltas[stat],
+          20,
+          99
+        );
+    }
+
+    console.log(
+      "MATCHPULSE_GROWTH_V5",
+      {
+        matchId:
+          match?.id,
+
+        overallRating,
+        matchRole,
+        selfRatings: self,
+        goals,
+        assists,
+        oldStats,
+        deltas,
+        updated
+      }
+    );
+
+    return updated;
+  }
+
+
+  /* =======================================================
+     SOSTITUISCE LA CRESCITA DELLA SINGOLA PARTITA
+     ======================================================= */
+
+  function mpApplyMatchGrowthV5(match) {
+    const currentStats =
+      typeof getCardStats === "function"
+        ? getCardStats()
+        : mpGrowthBaseStats();
+
+    const updatedStats =
+      mpGrowthCalculateMatch(
+        currentStats,
+        match || {}
+      );
+
+    if (
+      typeof saveCardStats ===
+      "function"
+    ) {
+      saveCardStats(
+        updatedStats
+      );
+    }
+
+    if (
+      typeof renderPlayerCardStats ===
+      "function"
+    ) {
+      renderPlayerCardStats();
+    }
+
+    return updatedStats;
+  }
+
+  applyMatchUpgrades =
+    mpApplyMatchGrowthV5;
+
+  window.applyMatchUpgrades =
+    mpApplyMatchGrowthV5;
+
+
+  /* =======================================================
+     RICALCOLA TUTTA LA CARTA DALLO STORICO
+     ======================================================= */
+
+  function mpRebuildCardGrowthV5() {
+    let stats =
+      mpGrowthBaseStats();
+
+    const matches =
+      typeof getMatches === "function"
+        ? getMatches()
+        : [];
+
+    const ordered =
+      Array.isArray(matches)
+        ? [...matches].sort(
+            (a, b) =>
+              String(a.date || "")
+                .localeCompare(
+                  String(b.date || "")
+                )
+          )
+        : [];
+
+    for (
+      const match of ordered
+    ) {
+      stats =
+        mpGrowthCalculateMatch(
+          stats,
+          match
+        );
+    }
+
+    if (
+      typeof saveCardStats ===
+      "function"
+    ) {
+      saveCardStats(stats);
+    }
+
+    if (
+      typeof renderPlayerCardStats ===
+      "function"
+    ) {
+      renderPlayerCardStats();
+    }
+
+    return stats;
+  }
+
+  rebuildCardStatsFromHistory =
+    mpRebuildCardGrowthV5;
+
+  window.rebuildCardStatsFromHistory =
+    mpRebuildCardGrowthV5;
+
+  window.mpRebuildCardGrowthV5 =
+    mpRebuildCardGrowthV5;
+
+
+  /* =======================================================
+     GRAFICI: SOLO LE ULTIME 5 PARTITE
+     ======================================================= */
+
+  const mpOriginalTrendCardV5 =
+    typeof trendCard === "function"
+      ? trendCard
+      : window.trendCard;
+
+  if (
+    typeof mpOriginalTrendCardV5 ===
+    "function"
+  ) {
+    function mpTrendCardLastFive(
+      matches,
+      config
+    ) {
+      const ordered =
+        Array.isArray(matches)
+          ? [...matches].sort(
+              (a, b) =>
+                String(a.date || "")
+                  .localeCompare(
+                    String(b.date || "")
+                  )
+            )
+          : [];
+
+      const latestFive =
+        ordered.slice(-5);
+
+      return mpOriginalTrendCardV5(
+        latestFive,
+        config
+      );
+    }
+
+    trendCard =
+      mpTrendCardLastFive;
+
+    window.trendCard =
+      mpTrendCardLastFive;
+  }
+
+
+  /* =======================================================
+     RICALCOLO IMMEDIATO DELLE PARTITE GIÀ SALVATE
+     ======================================================= */
+
+  setTimeout(() => {
+    try {
+      mpRebuildCardGrowthV5();
+    } catch (error) {
+      console.error(
+        "ERRORE RICALCOLO CARTA V5:",
+        error
+      );
+    }
+  }, 0);
+})();
+
+/* =========================================================
+   MATCHPULSE
+   SISTEMA CARTA DEFINITIVO V6
+
+   - Base diversa per ogni ruolo
+   - Stile profilo modifica la carta iniziale
+   - Totale iniziale sempre 360 = OVR 60
+   - Ogni autovalutazione modifica soltanto la sua statistica
+   - Voto generale controlla la forza della crescita
+   - Gol e assist danno bonus mirati
+   - Ruolo della partita influenza la crescita
+   ========================================================= */
+
+(function () {
+  if (window.MP_CARD_SYSTEM_V6_READY) {
+    return;
+  }
+
+  window.MP_CARD_SYSTEM_V6_READY = true;
+
+  const MP_V6_STATS = [
+    "pac",
+    "sho",
+    "pas",
+    "dri",
+    "def",
+    "phy"
+  ];
+
+
+  /* =======================================================
+     FUNZIONI NUMERICHE
+     ======================================================= */
+
+  function mpV6Number(value, fallback = 0) {
+    const number = Number(
+      String(value ?? "")
+        .replace(",", ".")
+    );
+
+    return Number.isFinite(number)
+      ? number
+      : fallback;
+  }
+
+  function mpV6Clamp(
+    value,
+    min,
+    max
+  ) {
+    return Math.max(
+      min,
+      Math.min(
+        max,
+        mpV6Number(value, min)
+      )
+    );
+  }
+
+  function mpV6Read(
+    object,
+    keys,
+    fallback = 0
+  ) {
+    for (const key of keys) {
+      if (
+        object?.[key] !== undefined &&
+        object?.[key] !== null &&
+        object?.[key] !== ""
+      ) {
+        return mpV6Number(
+          object[key],
+          fallback
+        );
+      }
+    }
+
+    return fallback;
+  }
+
+  function mpV6NormalizeRole(value) {
+    const role = String(
+      value || "CC"
+    )
+      .trim()
+      .toUpperCase();
+
+    const validRoles = [
+      "ATT",
+      "ALA",
+      "COC",
+      "CC",
+      "CDC",
+      "DC",
+      "TERZINO"
+    ];
+
+    return validRoles.includes(role)
+      ? role
+      : "CC";
+  }
+
+  function mpV6NormalizeStyle(value) {
+    const style = String(
+      value || "Equilibrato"
+    )
+      .trim()
+      .toLowerCase();
+
+    const styles = {
+      equilibrato: "Equilibrato",
+      finalizzatore: "Finalizzatore",
+      regista: "Regista",
+      dribblatore: "Dribblatore",
+      difensore: "Difensore",
+      motore: "Motore",
+      velocista: "Velocista",
+      boa: "Boa"
+    };
+
+    return (
+      styles[style] ||
+      "Equilibrato"
+    );
+  }
+
+
+  /* =======================================================
+     CARTE INIZIALI PER RUOLO
+
+     Ogni riga totalizza esattamente 360.
+     L'OVR iniziale resta quindi 60,
+     ma le statistiche sono molto diverse.
+     ======================================================= */
+
+  const MP_V6_ROLE_BASES = {
+    ATT: {
+      pac: 65,
+      sho: 67,
+      pas: 58,
+      dri: 64,
+      def: 46,
+      phy: 60
+    },
+
+    ALA: {
+      pac: 70,
+      sho: 62,
+      pas: 62,
+      dri: 68,
+      def: 45,
+      phy: 53
+    },
+
+    COC: {
+      pac: 62,
+      sho: 61,
+      pas: 70,
+      dri: 68,
+      def: 45,
+      phy: 54
+    },
+
+    CC: {
+      pac: 61,
+      sho: 57,
+      pas: 68,
+      dri: 64,
+      def: 55,
+      phy: 55
+    },
+
+    CDC: {
+      pac: 57,
+      sho: 48,
+      pas: 65,
+      dri: 58,
+      def: 68,
+      phy: 64
+    },
+
+    DC: {
+      pac: 63,
+      sho: 46,
+      pas: 63,
+      dri: 54,
+      def: 70,
+      phy: 64
+    },
+
+    TERZINO: {
+      pac: 68,
+      sho: 49,
+      pas: 64,
+      dri: 63,
+      def: 65,
+      phy: 51
+    }
+  };
+
+
+  /* =======================================================
+     MODIFICATORI DELLO STILE
+
+     Ogni stile sposta punti fra le statistiche,
+     ma la somma dei modificatori è sempre zero.
+     L'OVR iniziale rimane quindi 60.
+     ======================================================= */
+
+  const MP_V6_STYLE_MODIFIERS = {
+    Equilibrato: {
+      pac: 0,
+      sho: 0,
+      pas: 0,
+      dri: 0,
+      def: 0,
+      phy: 0
+    },
+
+    Finalizzatore: {
+      pac: -1,
+      sho: 5,
+      pas: -1,
+      dri: 1,
+      def: -3,
+      phy: -1
+    },
+
+    Regista: {
+      pac: -1,
+      sho: -2,
+      pas: 5,
+      dri: 1,
+      def: -2,
+      phy: -1
+    },
+
+    Dribblatore: {
+      pac: 1,
+      sho: -1,
+      pas: -1,
+      dri: 5,
+      def: -3,
+      phy: -1
+    },
+
+    Difensore: {
+      pac: -1,
+      sho: -3,
+      pas: 2,
+      dri: -2,
+      def: 3,
+      phy: 1
+    },
+
+    Motore: {
+      pac: 2,
+      sho: -2,
+      pas: 1,
+      dri: 1,
+      def: -1,
+      phy: -1
+    },
+
+    Velocista: {
+      pac: 5,
+      sho: -1,
+      pas: -1,
+      dri: 1,
+      def: -2,
+      phy: -2
+    },
+
+    Boa: {
+      pac: -2,
+      sho: 2,
+      pas: -2,
+      dri: -1,
+      def: -2,
+      phy: 5
+    }
+  };
+
+
+  /* =======================================================
+     GENERA LA CARTA INIZIALE RUOLO + STILE
+     ======================================================= */
+
+  function mpV6BaseStats() {
+    const profile =
+      typeof getPlayerProfile === "function"
+        ? getPlayerProfile()
+        : {};
+
+    const role =
+      mpV6NormalizeRole(
+        profile.role
+      );
+
+    const style =
+      mpV6NormalizeStyle(
+        profile.playStyle
+      );
+
+    const roleBase =
+      MP_V6_ROLE_BASES[role];
+
+    const styleModifier =
+      MP_V6_STYLE_MODIFIERS[style];
+
+    const result = {};
+
+    for (const stat of MP_V6_STATS) {
+      result[stat] =
+        roleBase[stat] +
+        styleModifier[stat];
+    }
+
+    /*
+      Protezione matematica:
+      la somma iniziale deve essere
+      sempre esattamente 360.
+    */
+
+    const total =
+      MP_V6_STATS.reduce(
+        (sum, stat) =>
+          sum + result[stat],
+        0
+      );
+
+    result.pas +=
+      360 - total;
+
+    return result;
+  }
+
+
+  /*
+    Esempi risultanti:
+
+    DC + Difensore:
+    62 PAC
+    43 SHO
+    65 PAS
+    52 DRI
+    73 DEF
+    65 PHY
+
+    ATT + Finalizzatore:
+    64 PAC
+    72 SHO
+    57 PAS
+    65 DRI
+    43 DEF
+    59 PHY
+
+    ATT + Boa:
+    63 PAC
+    69 SHO
+    56 PAS
+    63 DRI
+    44 DEF
+    65 PHY
+  */
+
+
+  /* =======================================================
+     SALVATAGGIO E LETTURA CARTA
+     ======================================================= */
+
+  function mpV6SaveCardStats(stats) {
+    const cleanStats = {};
+
+    for (const stat of MP_V6_STATS) {
+      cleanStats[stat] =
+        mpV6Clamp(
+          stats?.[stat],
+          20,
+          99
+        );
+    }
+
+    localStorage.setItem(
+      "matchpulse_card_stats",
+      JSON.stringify(cleanStats)
+    );
+
+    return cleanStats;
+  }
+
+  function mpV6GetCardStats() {
+    const saved =
+      localStorage.getItem(
+        "matchpulse_card_stats"
+      );
+
+    if (!saved) {
+      const base =
+        mpV6BaseStats();
+
+      mpV6SaveCardStats(base);
+
+      return base;
+    }
+
+    try {
+      const parsed =
+        JSON.parse(saved);
+
+      const result = {};
+
+      for (const stat of MP_V6_STATS) {
+        const value =
+          Number(parsed?.[stat]);
+
+        result[stat] =
+          Number.isFinite(value)
+            ? value
+            : mpV6BaseStats()[stat];
+      }
+
+      return result;
+    } catch (error) {
+      const base =
+        mpV6BaseStats();
+
+      mpV6SaveCardStats(base);
+
+      return base;
+    }
+  }
+
+
+  /* =======================================================
+     PESI DEL RUOLO GIOCATO NELLA SINGOLA PARTITA
+
+     Il ruolo della carta non cambia.
+     Questi valori influenzano soltanto
+     la crescita ottenuta in quella partita.
+     ======================================================= */
+
+  const MP_V6_MATCH_ROLE_WEIGHTS = {
+    ATT: {
+      pac: 1.07,
+      sho: 1.15,
+      pas: 0.95,
+      dri: 1.07,
+      def: 0.85,
+      phy: 1.05
+    },
+
+    ALA: {
+      pac: 1.13,
+      sho: 1.04,
+      pas: 1.01,
+      dri: 1.12,
+      def: 0.87,
+      phy: 0.95
+    },
+
+    COC: {
+      pac: 1.00,
+      sho: 1.03,
+      pas: 1.13,
+      dri: 1.10,
+      def: 0.88,
+      phy: 0.92
+    },
+
+    CC: {
+      pac: 0.99,
+      sho: 0.96,
+      pas: 1.10,
+      dri: 1.05,
+      def: 1.00,
+      phy: 0.98
+    },
+
+    CDC: {
+      pac: 0.94,
+      sho: 0.86,
+      pas: 1.06,
+      dri: 0.96,
+      def: 1.14,
+      phy: 1.11
+    },
+
+    DC: {
+      pac: 0.96,
+      sho: 0.84,
+      pas: 1.03,
+      dri: 0.91,
+      def: 1.15,
+      phy: 1.12
+    },
+
+    TERZINO: {
+      pac: 1.12,
+      sho: 0.89,
+      pas: 1.04,
+      dri: 1.05,
+      def: 1.10,
+      phy: 1.02
+    }
+  };
+
+
+  /* =======================================================
+     PESI DELLO STILE SULLA CRESCITA
+     ======================================================= */
+
+  const MP_V6_STYLE_GROWTH = {
+    Equilibrato: {
+      pac: 1,
+      sho: 1,
+      pas: 1,
+      dri: 1,
+      def: 1,
+      phy: 1
+    },
+
+    Finalizzatore: {
+      pac: 0.99,
+      sho: 1.15,
+      pas: 0.96,
+      dri: 1.03,
+      def: 0.90,
+      phy: 0.97
+    },
+
+    Regista: {
+      pac: 0.96,
+      sho: 0.94,
+      pas: 1.15,
+      dri: 1.04,
+      def: 0.95,
+      phy: 0.96
+    },
+
+    Dribblatore: {
+      pac: 1.03,
+      sho: 0.98,
+      pas: 0.97,
+      dri: 1.16,
+      def: 0.90,
+      phy: 0.96
+    },
+
+    Difensore: {
+      pac: 0.97,
+      sho: 0.88,
+      pas: 1.04,
+      dri: 0.94,
+      def: 1.15,
+      phy: 1.07
+    },
+
+    Motore: {
+      pac: 1.08,
+      sho: 0.96,
+      pas: 1.05,
+      dri: 1.05,
+      def: 1.02,
+      phy: 1.08
+    },
+
+    Velocista: {
+      pac: 1.18,
+      sho: 0.99,
+      pas: 0.96,
+      dri: 1.07,
+      def: 0.90,
+      phy: 0.95
+    },
+
+    Boa: {
+      pac: 0.92,
+      sho: 1.05,
+      pas: 0.96,
+      dri: 0.95,
+      def: 0.90,
+      phy: 1.18
+    }
+  };
+
+
+  /* =======================================================
+     IL VOTO GENERALE NON AUMENTA TUTTE LE STATISTICHE
+
+     Serve soltanto da moltiplicatore
+     della crescita specifica.
+     ======================================================= */
+
+  function mpV6OverallFactor(rating) {
+    const value =
+      mpV6Clamp(
+        rating,
+        1,
+        10
+      );
+
+    if (value >= 9.5) return 1.25;
+    if (value >= 8.5) return 1.12;
+    if (value >= 7.5) return 1.00;
+    if (value >= 6.5) return 0.82;
+    if (value >= 5.5) return 0.58;
+    if (value >= 4.5) return 0.30;
+
+    return 0.12;
+  }
+
+
+  /* =======================================================
+     AUTOVALUTAZIONE SPECIFICA
+
+     10 DRI aumenta DRI.
+     4 DRI può diminuire DRI.
+     Non modifica automaticamente le altre statistiche.
+     ======================================================= */
+
+  function mpV6SelfDelta(value) {
+    const rating =
+      mpV6Clamp(
+        value,
+        1,
+        10
+      );
+
+    if (rating >= 6) {
+      return (
+        rating - 5.5
+      ) * 0.18;
+    }
+
+    return -(
+      6 - rating
+    ) * 0.15;
+  }
+
+  function mpV6SelfRatings(match) {
+    const generalRating =
+      mpV6Read(
+        match,
+        [
+          "rating",
+          "voto",
+          "valutazione",
+          "matchRating"
+        ],
+        6
+      );
+
+    return {
+      pac: mpV6Read(
+        match,
+        [
+          "selfPac",
+          "pacRating",
+          "ratingPac"
+        ],
+        generalRating
+      ),
+
+      sho: mpV6Read(
+        match,
+        [
+          "selfSho",
+          "shoRating",
+          "ratingSho"
+        ],
+        generalRating
+      ),
+
+      pas: mpV6Read(
+        match,
+        [
+          "selfPas",
+          "pasRating",
+          "ratingPas"
+        ],
+        generalRating
+      ),
+
+      dri: mpV6Read(
+        match,
+        [
+          "selfDri",
+          "driRating",
+          "ratingDri"
+        ],
+        generalRating
+      ),
+
+      def: mpV6Read(
+        match,
+        [
+          "selfDef",
+          "defRating",
+          "ratingDef"
+        ],
+        generalRating
+      ),
+
+      phy: mpV6Read(
+        match,
+        [
+          "selfPhy",
+          "phyRating",
+          "ratingPhy"
+        ],
+        generalRating
+      )
+    };
+  }
+
+
+  /* =======================================================
+     RESISTENZA DELLE STATISTICHE ALTE
+
+     Una statistica a 50 cresce normalmente.
+     Una statistica sopra 90 cresce più lentamente.
+     ======================================================= */
+
+  function mpV6HighStatResistance(value) {
+    const stat =
+      mpV6Number(value, 60);
+
+    if (stat >= 95) return 0.30;
+    if (stat >= 90) return 0.48;
+    if (stat >= 85) return 0.63;
+    if (stat >= 80) return 0.76;
+    if (stat >= 70) return 0.90;
+
+    return 1;
+  }
+
+
+  /* =======================================================
+     CALCOLO DELLA SINGOLA PARTITA
+     ======================================================= */
+
+  function mpV6ApplyMatchToStats(
+    oldStats,
+    match
+  ) {
+    const profile =
+      typeof getPlayerProfile === "function"
+        ? getPlayerProfile()
+        : {};
+
+    const permanentRole =
+      mpV6NormalizeRole(
+        profile.role
+      );
+
+    const profileStyle =
+      mpV6NormalizeStyle(
+        profile.playStyle
+      );
+
+    const matchRole =
+      mpV6NormalizeRole(
+        match?.role ||
+        match?.matchRole ||
+        permanentRole
+      );
+
+    const roleWeights =
+      MP_V6_MATCH_ROLE_WEIGHTS[
+        matchRole
+      ];
+
+    const styleWeights =
+      MP_V6_STYLE_GROWTH[
+        profileStyle
+      ];
+
+    const selfRatings =
+      mpV6SelfRatings(match);
+
+    let generalRating =
+      mpV6Read(
+        match,
+        [
+          "rating",
+          "voto",
+          "valutazione",
+          "matchRating"
+        ],
+        0
+      );
+
+    if (generalRating <= 0) {
+      generalRating =
+        MP_V6_STATS.reduce(
+          (total, stat) =>
+            total +
+            selfRatings[stat],
+          0
+        ) / MP_V6_STATS.length;
+    }
+
+    generalRating =
+      mpV6Clamp(
+        generalRating,
+        1,
+        10
+      );
+
+    const generalFactor =
+      mpV6OverallFactor(
+        generalRating
+      );
+
+    const goals =
+      Math.max(
+        0,
+        mpV6Read(
+          match,
+          [
+            "goals",
+            "goal",
+            "gol"
+          ],
+          0
+        )
+      );
+
+    const assists =
+      Math.max(
+        0,
+        mpV6Read(
+          match,
+          [
+            "assists",
+            "assist"
+          ],
+          0
+        )
+      );
+
+    const deltas = {};
+
+    for (const stat of MP_V6_STATS) {
+      const specificDelta =
+        mpV6SelfDelta(
+          selfRatings[stat]
+        );
+
+      let delta;
+
+      if (specificDelta >= 0) {
+        delta =
+          specificDelta *
+          generalFactor *
+          roleWeights[stat] *
+          styleWeights[stat];
+      } else {
+        /*
+          Un voto specifico basso
+          abbassa soltanto quella statistica.
+
+          Un brutto voto generale
+          rende il calo un po' più forte,
+          ma non abbassa tutto allo stesso modo.
+        */
+
+        const negativeFactor =
+          generalRating < 6
+            ? 1 +
+              (6 - generalRating) *
+              0.12
+            : 0.72;
+
+        delta =
+          specificDelta *
+          negativeFactor;
+      }
+
+      deltas[stat] = delta;
+    }
+
+
+    /* =====================================================
+       BONUS GOL E ASSIST
+
+       Importanti, ma mirati:
+       non fanno salire tutte le statistiche.
+       ===================================================== */
+
+    const performanceBonusFactor =
+      mpV6Clamp(
+        0.40 +
+        generalFactor * 0.60,
+        0.35,
+        1.15
+      );
+
+    deltas.sho +=
+      Math.min(
+        goals,
+        4
+      ) *
+      0.13 *
+      performanceBonusFactor;
+
+    deltas.pac +=
+      Math.min(
+        goals,
+        3
+      ) *
+      0.025 *
+      performanceBonusFactor;
+
+    deltas.phy +=
+      Math.min(
+        goals,
+        3
+      ) *
+      0.018 *
+      performanceBonusFactor;
+
+    deltas.pas +=
+      Math.min(
+        assists,
+        4
+      ) *
+      0.13 *
+      performanceBonusFactor;
+
+    deltas.dri +=
+      Math.min(
+        assists,
+        3
+      ) *
+      0.03 *
+      performanceBonusFactor;
+
+
+    /* =====================================================
+       APPLICA I DELTA CON LIMITI
+       ===================================================== */
+
+    const updatedStats = {};
+
+    for (const stat of MP_V6_STATS) {
+      let delta =
+        mpV6Clamp(
+          deltas[stat],
+          -0.90,
+          1.55
+        );
+
+      if (delta > 0) {
+        delta *=
+          mpV6HighStatResistance(
+            oldStats[stat]
+          );
+      }
+
+      updatedStats[stat] =
+        mpV6Clamp(
+          mpV6Number(
+            oldStats[stat],
+            mpV6BaseStats()[stat]
+          ) +
+          delta,
+          20,
+          99
+        );
+    }
+
+    console.log(
+      "MATCHPULSE_CARD_V6",
+      {
+        permanentRole,
+        matchRole,
+        profileStyle,
+        generalRating,
+        selfRatings,
+        goals,
+        assists,
+        oldStats,
+        deltas,
+        updatedStats
+      }
+    );
+
+    return updatedStats;
+  }
+
+
+  /* =======================================================
+     APPLICA UNA NUOVA PARTITA
+     ======================================================= */
+
+  function mpV6ApplyMatchUpgrades(match) {
+    const currentStats =
+      mpV6GetCardStats();
+
+    const updatedStats =
+      mpV6ApplyMatchToStats(
+        currentStats,
+        match || {}
+      );
+
+    mpV6SaveCardStats(
+      updatedStats
+    );
+
+    if (
+      typeof renderPlayerCardStats ===
+      "function"
+    ) {
+      renderPlayerCardStats();
+    }
+
+    return updatedStats;
+  }
+
+
+  /* =======================================================
+     RICOSTRUISCE DALLO STORICO
+
+     Parte sempre dalla carta iniziale
+     determinata da ruolo + stile.
+     ======================================================= */
+
+  function mpRebuildCardStatsFromHistoryV6() {
+    let stats =
+      mpV6BaseStats();
+
+    const matches =
+      typeof getMatches === "function"
+        ? getMatches()
+        : [];
+
+    const orderedMatches =
+      Array.isArray(matches)
+        ? [...matches].sort(
+            (a, b) => {
+              const dateCompare =
+                String(a.date || "")
+                  .localeCompare(
+                    String(b.date || "")
+                  );
+
+              if (dateCompare !== 0) {
+                return dateCompare;
+              }
+
+              return String(
+                a.createdAt ||
+                a.id ||
+                ""
+              ).localeCompare(
+                String(
+                  b.createdAt ||
+                  b.id ||
+                  ""
+                )
+              );
+            }
+          )
+        : [];
+
+    for (
+      const match of orderedMatches
+    ) {
+      stats =
+        mpV6ApplyMatchToStats(
+          stats,
+          match
+        );
+    }
+
+    mpV6SaveCardStats(stats);
+
+    if (
+      typeof renderPlayerCardStats ===
+      "function"
+    ) {
+      renderPlayerCardStats();
+    }
+
+    return stats;
+  }
+
+
+  /* =======================================================
+     RESET CORRETTO
+     ======================================================= */
+
+  function mpV6ResetCardStats() {
+    const base =
+      mpV6BaseStats();
+
+    mpV6SaveCardStats(base);
+
+    if (
+      typeof renderPlayerCardStats ===
+      "function"
+    ) {
+      renderPlayerCardStats();
+    }
+
+    return base;
+  }
+
+
+  /* =======================================================
+     SOSTITUISCE COMPLETAMENTE IL SISTEMA V5
+     ======================================================= */
+
+  getCardStats =
+    mpV6GetCardStats;
+
+  saveCardStats =
+    mpV6SaveCardStats;
+
+  applyMatchUpgrades =
+    mpV6ApplyMatchUpgrades;
+
+  rebuildCardStatsFromHistory =
+    mpRebuildCardStatsFromHistoryV6;
+
+  resetCardStats =
+    mpV6ResetCardStats;
+
+  mpFinalBaseStats =
+    mpV6BaseStats;
+
+
+  window.getCardStats =
+    mpV6GetCardStats;
+
+  window.saveCardStats =
+    mpV6SaveCardStats;
+
+  window.applyMatchUpgrades =
+    mpV6ApplyMatchUpgrades;
+
+  window.rebuildCardStatsFromHistory =
+    mpRebuildCardStatsFromHistoryV6;
+
+  window.resetCardStats =
+    mpV6ResetCardStats;
+
+  window.mpFinalBaseStats =
+    mpV6BaseStats;
+
+  window.mpV6BaseStats =
+    mpV6BaseStats;
+
+  window.mpRebuildCardStatsFromHistoryV6 =
+    mpRebuildCardStatsFromHistoryV6;
+
+
+  /*
+    Aggiorna anche la vecchia variabile globale,
+    così eventuali funzioni precedenti non
+    possono più usare sei valori a 60.
+  */
+
+  try {
+    MP_FINAL_BASE_CARD_STATS =
+      mpV6BaseStats();
+  } catch (error) {
+    console.warn(
+      "Variabile base precedente non aggiornata",
+      error
+    );
+  }
+
+
+  /* =======================================================
+     QUANDO CAMBI RUOLO O STILE,
+     RICOSTRUISCE LA CARTA
+     ======================================================= */
+
+  const previousSavePlayerProfileV6 =
+    window.savePlayerProfile;
+
+  if (
+    typeof previousSavePlayerProfileV6 ===
+    "function"
+  ) {
+    function mpV6SavePlayerProfile(
+      event
+    ) {
+      const result =
+        previousSavePlayerProfileV6(
+          event
+        );
+
+      setTimeout(() => {
+        mpRebuildCardStatsFromHistoryV6();
+
+        if (
+          typeof render === "function"
+        ) {
+          render();
+        }
+
+        if (
+          typeof renderPlayerCardStats ===
+          "function"
+        ) {
+          renderPlayerCardStats();
+        }
+      }, 30);
+
+      return result;
+    }
+
+    savePlayerProfile =
+      mpV6SavePlayerProfile;
+
+    window.savePlayerProfile =
+      mpV6SavePlayerProfile;
+  }
+
+
+  /* =======================================================
+     RIPARA SUBITO LA CARTA ATTUALE
+
+     Ricalcola anche le nove partite già salvate.
+     ======================================================= */
+
+  setTimeout(() => {
+    try {
+      const correctedStats =
+        mpRebuildCardStatsFromHistoryV6();
+
+      console.log(
+        "CARTA MATCHPULSE RIPARATA:",
+        {
+          base:
+            mpV6BaseStats(),
+
+          final:
+            correctedStats
+        }
+      );
+
+      if (
+        typeof render === "function"
+      ) {
+        render();
+      }
+
+      if (
+        typeof renderPlayerCardStats ===
+        "function"
+      ) {
+        renderPlayerCardStats();
+      }
+    } catch (error) {
+      console.error(
+        "ERRORE RIPARAZIONE CARTA V6:",
+        error
+      );
+    }
+  }, 100);
+})();
+
+/* =========================================================
+   MATCHPULSE
+   SISTEMA CRESCITA CARTA DEFINITIVO V7
+
+   - Carta iniziale diversa per ruolo
+   - Stile modifica realmente l'archetipo
+   - Boa parte con fisico molto alto
+   - Le autovalutazioni specifiche comandano la crescita
+   - Le statistiche basse recuperano più velocemente
+   - Le statistiche alte rallentano
+   - Gol e assist danno bonus mirati
+   - Grafici limitati alle ultime 5 partite
+   ========================================================= */
+
+(function () {
+  if (window.MP_CARD_SYSTEM_V7_READY) {
+    return;
+  }
+
+  window.MP_CARD_SYSTEM_V7_READY = true;
+
+  const MP_V7_STATS = [
+    "pac",
+    "sho",
+    "pas",
+    "dri",
+    "def",
+    "phy"
+  ];
+
+
+  /* =======================================================
+     SUPPORTO NUMERICO
+     ======================================================= */
+
+  function mpV7Number(value, fallback = 0) {
+    const number = Number(
+      String(value ?? "")
+        .replace(",", ".")
+    );
+
+    return Number.isFinite(number)
+      ? number
+      : fallback;
+  }
+
+  function mpV7Clamp(value, min, max) {
+    return Math.max(
+      min,
+      Math.min(
+        max,
+        mpV7Number(value, min)
+      )
+    );
+  }
+
+  function mpV7Read(object, keys, fallback = 0) {
+    for (const key of keys) {
+      const value = object?.[key];
+
+      if (
+        value !== undefined &&
+        value !== null &&
+        value !== ""
+      ) {
+        return mpV7Number(
+          value,
+          fallback
+        );
+      }
+    }
+
+    return fallback;
+  }
+
+
+  /* =======================================================
+     RUOLI E STILI
+     ======================================================= */
+
+  function mpV7Role(value) {
+    const normalized = String(
+      value || "CC"
+    )
+      .trim()
+      .toUpperCase();
+
+    const roles = [
+      "ATT",
+      "ALA",
+      "COC",
+      "CC",
+      "CDC",
+      "DC",
+      "TERZINO"
+    ];
+
+    return roles.includes(normalized)
+      ? normalized
+      : "CC";
+  }
+
+  function mpV7Style(value) {
+    const normalized = String(
+      value || "Equilibrato"
+    )
+      .trim()
+      .toLowerCase();
+
+    const styles = {
+      equilibrato: "Equilibrato",
+      finalizzatore: "Finalizzatore",
+      regista: "Regista",
+      dribblatore: "Dribblatore",
+      difensore: "Difensore",
+      motore: "Motore",
+      velocista: "Velocista",
+      boa: "Boa"
+    };
+
+    return (
+      styles[normalized] ||
+      "Equilibrato"
+    );
+  }
+
+
+  /* =======================================================
+     CARTE BASE PER RUOLO
+
+     Ogni ruolo totalizza 360:
+     la carta parte sempre da OVR 60,
+     ma con statistiche differenti.
+     ======================================================= */
+
+  const MP_V7_ROLE_BASES = {
+    ATT: {
+      pac: 65,
+      sho: 67,
+      pas: 58,
+      dri: 64,
+      def: 46,
+      phy: 60
+    },
+
+    ALA: {
+      pac: 70,
+      sho: 62,
+      pas: 62,
+      dri: 68,
+      def: 45,
+      phy: 53
+    },
+
+    COC: {
+      pac: 62,
+      sho: 61,
+      pas: 70,
+      dri: 68,
+      def: 45,
+      phy: 54
+    },
+
+    CC: {
+      pac: 61,
+      sho: 57,
+      pas: 68,
+      dri: 64,
+      def: 55,
+      phy: 55
+    },
+
+    CDC: {
+      pac: 57,
+      sho: 48,
+      pas: 65,
+      dri: 58,
+      def: 68,
+      phy: 64
+    },
+
+    DC: {
+      pac: 63,
+      sho: 46,
+      pas: 63,
+      dri: 54,
+      def: 70,
+      phy: 64
+    },
+
+    TERZINO: {
+      pac: 68,
+      sho: 49,
+      pas: 64,
+      dri: 63,
+      def: 65,
+      phy: 51
+    }
+  };
+
+
+  /* =======================================================
+     MODIFICATORI DELLO STILE
+
+     La somma di ogni stile è zero:
+     cambia l'archetipo ma non l'OVR iniziale.
+     ======================================================= */
+
+  const MP_V7_STYLE_BASE = {
+    Equilibrato: {
+      pac: 0,
+      sho: 0,
+      pas: 0,
+      dri: 0,
+      def: 0,
+      phy: 0
+    },
+
+    Finalizzatore: {
+      pac: -1,
+      sho: 6,
+      pas: -1,
+      dri: 1,
+      def: -4,
+      phy: -1
+    },
+
+    Regista: {
+      pac: -1,
+      sho: -2,
+      pas: 6,
+      dri: 1,
+      def: -2,
+      phy: -2
+    },
+
+    Dribblatore: {
+      pac: 1,
+      sho: -1,
+      pas: -1,
+      dri: 6,
+      def: -4,
+      phy: -1
+    },
+
+    Difensore: {
+      pac: -1,
+      sho: -3,
+      pas: 2,
+      dri: -2,
+      def: 3,
+      phy: 1
+    },
+
+    Motore: {
+      pac: 3,
+      sho: -2,
+      pas: 1,
+      dri: 2,
+      def: -2,
+      phy: -2
+    },
+
+    Velocista: {
+      pac: 7,
+      sho: -2,
+      pas: -2,
+      dri: 2,
+      def: -3,
+      phy: -2
+    },
+
+    /*
+      ATT + Boa:
+
+      59 PAC
+      68 SHO
+      58 PAS
+      61 DRI
+      41 DEF
+      73 PHY
+
+      Totale 360, OVR 60.
+    */
+
+    Boa: {
+      pac: -6,
+      sho: 1,
+      pas: 0,
+      dri: -3,
+      def: -5,
+      phy: 13
+    }
+  };
+
+
+  /* =======================================================
+     CARTA INIZIALE
+     ======================================================= */
+
+  function mpV7BaseStats() {
+    const profile =
+      typeof getPlayerProfile === "function"
+        ? getPlayerProfile()
+        : {};
+
+    const role =
+      mpV7Role(profile.role);
+
+    const style =
+      mpV7Style(profile.playStyle);
+
+    const roleStats =
+      MP_V7_ROLE_BASES[role];
+
+    const styleStats =
+      MP_V7_STYLE_BASE[style];
+
+    const result = {};
+
+    for (const stat of MP_V7_STATS) {
+      result[stat] =
+        roleStats[stat] +
+        styleStats[stat];
+    }
+
+    /*
+      Protezione:
+      corregge eventuali errori di somma
+      mantenendo il totale a 360.
+    */
+
+    const total =
+      MP_V7_STATS.reduce(
+        (sum, stat) =>
+          sum + result[stat],
+        0
+      );
+
+    result.pas += 360 - total;
+
+    return result;
+  }
+
+
+  /* =======================================================
+     SALVATAGGIO CARTA
+     ======================================================= */
+
+  function mpV7SaveStats(stats) {
+    const clean = {};
+
+    for (const stat of MP_V7_STATS) {
+      clean[stat] = Number(
+        mpV7Clamp(
+          stats?.[stat],
+          20,
+          99
+        ).toFixed(3)
+      );
+    }
+
+    localStorage.setItem(
+      "matchpulse_card_stats",
+      JSON.stringify(clean)
+    );
+
+    return clean;
+  }
+
+  function mpV7GetStats() {
+    const saved =
+      localStorage.getItem(
+        "matchpulse_card_stats"
+      );
+
+    if (!saved) {
+      const base = mpV7BaseStats();
+
+      mpV7SaveStats(base);
+
+      return base;
+    }
+
+    try {
+      const parsed =
+        JSON.parse(saved);
+
+      const base =
+        mpV7BaseStats();
+
+      const result = {};
+
+      for (const stat of MP_V7_STATS) {
+        const value =
+          Number(parsed?.[stat]);
+
+        result[stat] =
+          Number.isFinite(value)
+            ? value
+            : base[stat];
+      }
+
+      return result;
+    } catch (error) {
+      const base = mpV7BaseStats();
+
+      mpV7SaveStats(base);
+
+      return base;
+    }
+  }
+
+
+  /* =======================================================
+     PESO DEL RUOLO GIOCATO NELLA PARTITA
+
+     Influenza leggermente la crescita,
+     ma non blocca le statistiche fuori ruolo.
+     ======================================================= */
+
+  const MP_V7_ROLE_GROWTH = {
+    ATT: {
+      pac: 1.04,
+      sho: 1.08,
+      pas: 0.98,
+      dri: 1.04,
+      def: 0.95,
+      phy: 1.02
+    },
+
+    ALA: {
+      pac: 1.07,
+      sho: 1.03,
+      pas: 1.01,
+      dri: 1.07,
+      def: 0.95,
+      phy: 0.98
+    },
+
+    COC: {
+      pac: 1.00,
+      sho: 1.01,
+      pas: 1.07,
+      dri: 1.06,
+      def: 0.95,
+      phy: 0.97
+    },
+
+    CC: {
+      pac: 1.00,
+      sho: 0.98,
+      pas: 1.06,
+      dri: 1.03,
+      def: 1.00,
+      phy: 1.00
+    },
+
+    CDC: {
+      pac: 0.97,
+      sho: 0.95,
+      pas: 1.03,
+      dri: 0.98,
+      def: 1.07,
+      phy: 1.05
+    },
+
+    DC: {
+      pac: 0.95,
+      sho: 0.96,
+      pas: 0.98,
+      dri: 0.95,
+      def: 1.08,
+      phy: 1.03
+    },
+
+    TERZINO: {
+      pac: 1.07,
+      sho: 0.95,
+      pas: 1.02,
+      dri: 1.03,
+      def: 1.05,
+      phy: 1.00
+    }
+  };
+
+
+  /* =======================================================
+     PESO DELLO STILE SULLA CRESCITA
+     ======================================================= */
+
+  const MP_V7_STYLE_GROWTH = {
+    Equilibrato: {
+      pac: 1,
+      sho: 1,
+      pas: 1,
+      dri: 1,
+      def: 1,
+      phy: 1
+    },
+
+    Finalizzatore: {
+      pac: 0.99,
+      sho: 1.10,
+      pas: 0.97,
+      dri: 1.02,
+      def: 0.95,
+      phy: 0.98
+    },
+
+    Regista: {
+      pac: 0.97,
+      sho: 0.96,
+      pas: 1.10,
+      dri: 1.03,
+      def: 0.97,
+      phy: 0.97
+    },
+
+    Dribblatore: {
+      pac: 1.02,
+      sho: 0.98,
+      pas: 0.98,
+      dri: 1.11,
+      def: 0.95,
+      phy: 0.96
+    },
+
+    Difensore: {
+      pac: 0.98,
+      sho: 0.95,
+      pas: 1.02,
+      dri: 0.96,
+      def: 1.10,
+      phy: 1.05
+    },
+
+    Motore: {
+      pac: 1.06,
+      sho: 0.98,
+      pas: 1.03,
+      dri: 1.04,
+      def: 1.02,
+      phy: 1.06
+    },
+
+    Velocista: {
+      pac: 1.12,
+      sho: 0.98,
+      pas: 0.97,
+      dri: 1.05,
+      def: 0.95,
+      phy: 0.97
+    },
+
+    Boa: {
+      pac: 0.95,
+      sho: 1.04,
+      pas: 0.98,
+      dri: 0.96,
+      def: 0.95,
+      phy: 1.12
+    }
+  };
+
+
+  /* =======================================================
+     INCREMENTO PER AUTOVALUTAZIONE
+
+     È il valore principale del sistema.
+     ======================================================= */
+
+  function mpV7SpecificDelta(rating) {
+    const value =
+      mpV7Clamp(rating, 1, 10);
+
+    const deltas = {
+      10: 1.55,
+      9: 1.15,
+      8: 0.78,
+      7: 0.38,
+      6: 0,
+      5: -0.18,
+      4: -0.42,
+      3: -0.70,
+      2: -0.95,
+      1: -1.20
+    };
+
+    const rounded =
+      Math.round(value);
+
+    return deltas[rounded];
+  }
+
+
+  /* =======================================================
+     MOLTIPLICATORE DEL VOTO GENERALE
+
+     Non aggiunge punti direttamente:
+     amplifica o riduce la prestazione specifica.
+     ======================================================= */
+
+  function mpV7GeneralGrowthFactor(rating) {
+    const value =
+      mpV7Clamp(rating, 1, 10);
+
+    if (value >= 9.5) return 1.15;
+    if (value >= 8.5) return 1.08;
+    if (value >= 7.5) return 1.00;
+    if (value >= 6.5) return 0.88;
+    if (value >= 5.5) return 0.65;
+    if (value >= 4.5) return 0.40;
+
+    return 0.22;
+  }
+
+  function mpV7GeneralLossFactor(rating) {
+    const value =
+      mpV7Clamp(rating, 1, 10);
+
+    if (value >= 9) return 0.70;
+    if (value >= 7) return 0.82;
+    if (value >= 6) return 0.95;
+    if (value >= 5) return 1.05;
+    if (value >= 4) return 1.15;
+    if (value >= 3) return 1.24;
+
+    return 1.35;
+  }
+
+
+  /* =======================================================
+     RECUPERO DELLE STATISTICHE BASSE
+
+     È il punto che permette a un DC
+     di migliorare davvero tiro e dribbling.
+     ======================================================= */
+
+  function mpV7RecoveryMultiplier(statValue) {
+    const value =
+      mpV7Number(statValue, 60);
+
+    if (value < 50) return 1.80;
+    if (value < 60) return 1.35;
+    if (value < 70) return 1.10;
+    if (value < 80) return 0.88;
+    if (value < 90) return 0.65;
+    if (value < 95) return 0.42;
+
+    return 0.20;
+  }
+
+
+  /* =======================================================
+     LEGGE LE AUTOVALUTAZIONI
+     ======================================================= */
+
+  function mpV7SelfRatings(match) {
+    const generalRating =
+      mpV7Read(
+        match,
+        [
+          "rating",
+          "voto",
+          "valutazione",
+          "matchRating"
+        ],
+        6
+      );
+
+    return {
+      pac: mpV7Read(
+        match,
+        [
+          "selfPac",
+          "pacRating",
+          "ratingPac"
+        ],
+        generalRating
+      ),
+
+      sho: mpV7Read(
+        match,
+        [
+          "selfSho",
+          "shoRating",
+          "ratingSho"
+        ],
+        generalRating
+      ),
+
+      pas: mpV7Read(
+        match,
+        [
+          "selfPas",
+          "pasRating",
+          "ratingPas"
+        ],
+        generalRating
+      ),
+
+      dri: mpV7Read(
+        match,
+        [
+          "selfDri",
+          "driRating",
+          "ratingDri"
+        ],
+        generalRating
+      ),
+
+      def: mpV7Read(
+        match,
+        [
+          "selfDef",
+          "defRating",
+          "ratingDef"
+        ],
+        generalRating
+      ),
+
+      phy: mpV7Read(
+        match,
+        [
+          "selfPhy",
+          "phyRating",
+          "ratingPhy"
+        ],
+        generalRating
+      )
+    };
+  }
+
+
+  /* =======================================================
+     APPLICA UNA PARTITA
+     ======================================================= */
+
+  function mpV7ApplyMatch(oldStats, match) {
+    const profile =
+      typeof getPlayerProfile === "function"
+        ? getPlayerProfile()
+        : {};
+
+    const permanentRole =
+      mpV7Role(profile.role);
+
+    const profileStyle =
+      mpV7Style(profile.playStyle);
+
+    const matchRole =
+      mpV7Role(
+        match?.role ||
+        match?.matchRole ||
+        permanentRole
+      );
+
+    const roleGrowth =
+      MP_V7_ROLE_GROWTH[matchRole];
+
+    const styleGrowth =
+      MP_V7_STYLE_GROWTH[
+        profileStyle
+      ];
+
+    const selfRatings =
+      mpV7SelfRatings(match);
+
+    let generalRating =
+      mpV7Read(
+        match,
+        [
+          "rating",
+          "voto",
+          "valutazione",
+          "matchRating"
+        ],
+        0
+      );
+
+    if (generalRating <= 0) {
+      generalRating =
+        MP_V7_STATS.reduce(
+          (total, stat) =>
+            total +
+            selfRatings[stat],
+          0
+        ) / MP_V7_STATS.length;
+    }
+
+    generalRating =
+      mpV7Clamp(
+        generalRating,
+        1,
+        10
+      );
+
+    const growthFactor =
+      mpV7GeneralGrowthFactor(
+        generalRating
+      );
+
+    const lossFactor =
+      mpV7GeneralLossFactor(
+        generalRating
+      );
+
+    const updated = {};
+    const deltas = {};
+
+    for (const stat of MP_V7_STATS) {
+      const specificDelta =
+        mpV7SpecificDelta(
+          selfRatings[stat]
+        );
+
+      let delta;
+
+      if (specificDelta > 0) {
+        delta =
+          specificDelta *
+          growthFactor *
+          mpV7RecoveryMultiplier(
+            oldStats[stat]
+          ) *
+          roleGrowth[stat] *
+          styleGrowth[stat];
+      } else if (specificDelta < 0) {
+        /*
+          Le statistiche negative non ricevono
+          il moltiplicatore di recupero.
+
+          Una statistica bassa quindi cresce
+          rapidamente, ma non crolla rapidamente.
+        */
+
+        delta =
+          specificDelta *
+          lossFactor;
+      } else {
+        delta = 0;
+      }
+
+      deltas[stat] = delta;
+    }
+
+
+    /* =====================================================
+       BONUS GOL E ASSIST
+
+       Mirati, non distribuiti su tutta la carta.
+       ===================================================== */
+
+    const goals = Math.max(
+      0,
+      mpV7Read(
+        match,
+        ["goals", "goal", "gol"],
+        0
+      )
+    );
+
+    const assists = Math.max(
+      0,
+      mpV7Read(
+        match,
+        ["assists", "assist"],
+        0
+      )
+    );
+
+    const performanceFactor =
+      0.55 +
+      growthFactor * 0.45;
+
+    deltas.sho +=
+      Math.min(goals, 4) *
+      0.28 *
+      performanceFactor;
+
+    deltas.pac +=
+      Math.min(goals, 3) *
+      0.04 *
+      performanceFactor;
+
+    deltas.phy +=
+      Math.min(goals, 3) *
+      0.04 *
+      performanceFactor;
+
+    deltas.pas +=
+      Math.min(assists, 4) *
+      0.28 *
+      performanceFactor;
+
+    deltas.dri +=
+      Math.min(assists, 3) *
+      0.07 *
+      performanceFactor;
+
+
+    /* =====================================================
+       SALVATAGGIO DEI NUOVI VALORI
+       ===================================================== */
+
+    for (const stat of MP_V7_STATS) {
+      const safeDelta =
+        mpV7Clamp(
+          deltas[stat],
+          -1.65,
+          3.20
+        );
+
+      updated[stat] =
+        Number(
+          mpV7Clamp(
+            mpV7Number(
+              oldStats[stat],
+              mpV7BaseStats()[stat]
+            ) +
+            safeDelta,
+            20,
+            99
+          ).toFixed(3)
+        );
+    }
+
+    console.log(
+      "MATCHPULSE_CARD_V7",
+      {
+        permanentRole,
+        matchRole,
+        profileStyle,
+        generalRating,
+        selfRatings,
+        goals,
+        assists,
+        oldStats,
+        deltas,
+        updated
+      }
+    );
+
+    return updated;
+  }
+
+
+  /* =======================================================
+     APPLICA UNA NUOVA PARTITA
+     ======================================================= */
+
+  function mpV7ApplyMatchUpgrades(match) {
+    const current =
+      mpV7GetStats();
+
+    const updated =
+      mpV7ApplyMatch(
+        current,
+        match || {}
+      );
+
+    mpV7SaveStats(updated);
+
+    if (
+      typeof renderPlayerCardStats ===
+      "function"
+    ) {
+      renderPlayerCardStats();
+    }
+
+    return updated;
+  }
+
+
+  /* =======================================================
+     RICOSTRUISCE DALLO STORICO
+     ======================================================= */
+
+  function mpV7RebuildFromHistory() {
+    let stats =
+      mpV7BaseStats();
+
+    const matches =
+      typeof getMatches === "function"
+        ? getMatches()
+        : [];
+
+    const ordered =
+      Array.isArray(matches)
+        ? [...matches].sort(
+            (a, b) => {
+              const dateDifference =
+                String(a.date || "")
+                  .localeCompare(
+                    String(b.date || "")
+                  );
+
+              if (dateDifference !== 0) {
+                return dateDifference;
+              }
+
+              return String(
+                a.createdAt ||
+                a.id ||
+                ""
+              ).localeCompare(
+                String(
+                  b.createdAt ||
+                  b.id ||
+                  ""
+                )
+              );
+            }
+          )
+        : [];
+
+    for (const match of ordered) {
+      stats =
+        mpV7ApplyMatch(
+          stats,
+          match
+        );
+    }
+
+    mpV7SaveStats(stats);
+
+    if (
+      typeof renderPlayerCardStats ===
+      "function"
+    ) {
+      renderPlayerCardStats();
+    }
+
+    return stats;
+  }
+
+
+  /* =======================================================
+     RESET CORRETTO
+     ======================================================= */
+
+  function mpV7ResetStats() {
+    const base =
+      mpV7BaseStats();
+
+    mpV7SaveStats(base);
+
+    if (
+      typeof renderPlayerCardStats ===
+      "function"
+    ) {
+      renderPlayerCardStats();
+    }
+
+    return base;
+  }
+
+
+  /* =======================================================
+     SOSTITUISCE I SISTEMI PRECEDENTI
+     ======================================================= */
+
+  getCardStats =
+    mpV7GetStats;
+
+  saveCardStats =
+    mpV7SaveStats;
+
+  applyMatchUpgrades =
+    mpV7ApplyMatchUpgrades;
+
+  rebuildCardStatsFromHistory =
+    mpV7RebuildFromHistory;
+
+  resetCardStats =
+    mpV7ResetStats;
+
+  mpFinalBaseStats =
+    mpV7BaseStats;
+
+
+  window.getCardStats =
+    mpV7GetStats;
+
+  window.saveCardStats =
+    mpV7SaveStats;
+
+  window.applyMatchUpgrades =
+    mpV7ApplyMatchUpgrades;
+
+  window.rebuildCardStatsFromHistory =
+    mpV7RebuildFromHistory;
+
+  window.resetCardStats =
+    mpV7ResetStats;
+
+  window.mpFinalBaseStats =
+    mpV7BaseStats;
+
+  window.mpV7BaseStats =
+    mpV7BaseStats;
+
+  window.mpV7RebuildFromHistory =
+    mpV7RebuildFromHistory;
+
+
+  /*
+    Compatibilità con eventuali vecchie
+    funzioni rimaste nel file.
+  */
+
+  try {
+    MP_FINAL_BASE_CARD_STATS =
+      mpV7BaseStats();
+  } catch (error) {
+    console.warn(
+      "Base precedente non modificabile",
+      error
+    );
+  }
+
+
+  /* =======================================================
+     CAMBIO RUOLO O STILE
+     ======================================================= */
+
+  const mpV7PreviousSaveProfile =
+    window.savePlayerProfile;
+
+  if (
+    typeof mpV7PreviousSaveProfile ===
+    "function"
+  ) {
+    function mpV7SaveProfile(event) {
+      const result =
+        mpV7PreviousSaveProfile(event);
+
+      setTimeout(() => {
+        mpV7RebuildFromHistory();
+
+        if (
+          typeof render === "function"
+        ) {
+          render();
+        }
+
+        if (
+          typeof renderPlayerCardStats ===
+          "function"
+        ) {
+          renderPlayerCardStats();
+        }
+      }, 100);
+
+      return result;
+    }
+
+    savePlayerProfile =
+      mpV7SaveProfile;
+
+    window.savePlayerProfile =
+      mpV7SaveProfile;
+  }
+
+
+  /* =======================================================
+     GRAFICI: ULTIME CINQUE PARTITE
+     ======================================================= */
+
+  const mpV7PreviousTrendCard =
+    typeof window.trendCard === "function"
+      ? window.trendCard
+      : typeof trendCard === "function"
+        ? trendCard
+        : null;
+
+  if (
+    typeof mpV7PreviousTrendCard ===
+    "function"
+  ) {
+    function mpV7TrendCardLastFive(
+      matches,
+      config
+    ) {
+      const ordered =
+        Array.isArray(matches)
+          ? [...matches].sort(
+              (a, b) =>
+                String(a.date || "")
+                  .localeCompare(
+                    String(b.date || "")
+                  )
+            )
+          : [];
+
+      const latestFive =
+        ordered.slice(-5);
+
+      return mpV7PreviousTrendCard(
+        latestFive,
+        config
+      );
+    }
+
+    trendCard =
+      mpV7TrendCardLastFive;
+
+    window.trendCard =
+      mpV7TrendCardLastFive;
+  }
+
+
+  /* =======================================================
+     RICALCOLO AUTOMATICO
+     ======================================================= */
+
+  setTimeout(() => {
+    try {
+      const base =
+        mpV7BaseStats();
+
+      const finalStats =
+        mpV7RebuildFromHistory();
+
+      console.log(
+        "MATCHPULSE V7 ATTIVO",
+        {
+          base,
+          finalStats
+        }
+      );
+
+      if (
+        typeof render === "function"
+      ) {
+        render();
+      }
+
+      if (
+        typeof renderPlayerCardStats ===
+        "function"
+      ) {
+        renderPlayerCardStats();
+      }
+    } catch (error) {
+      console.error(
+        "ERRORE SISTEMA CARTA V7:",
+        error
+      );
+    }
+  }, 250);
+})();
+
+/* =========================================================
+   MATCHPULSE
+   SISTEMA COMPLETO CARTE PROMO V1
+   ========================================================= */
+
+(function () {
+  if (window.MP_PROMO_SYSTEM_V1_READY) {
+    return;
+  }
+
+  window.MP_PROMO_SYSTEM_V1_READY = true;
+
+
+  /* =======================================================
+     CHIAVI DI SALVATAGGIO
+     ======================================================= */
+
+  const MP_PROMO_CARDS_KEY =
+    "matchpulse_promo_cards_v1";
+
+  const MP_PROMO_SELECTED_KEY =
+    "matchpulse_selected_card_v1";
+
+  const MP_PROMO_PHOTOS_KEY =
+    "matchpulse_promo_photos_v1";
+
+  const MP_PROMO_ADMIN_KEY =
+    "matchpulse_promo_admin_v1";
+
+  const MP_PROMO_SEASON =
+    "2026-27";
+
+  const MP_PROMO_STATS = [
+    "pac",
+    "sho",
+    "pas",
+    "dri",
+    "def",
+    "phy"
+  ];
+
+
+  /* =======================================================
+     CATALOGO DELLE PROMO
+     ======================================================= */
+
+  const MP_PROMOS = {
+    otw: {
+      id: "otw",
+      name: "Ones to Watch",
+      shortName: "OTW",
+      order: 1,
+      template:
+        "assets-promos/otw.png",
+      plusCount: 1,
+      type: "otw"
+    },
+
+    ultimateScream: {
+      id: "ultimateScream",
+      name: "Ultimate Scream",
+      shortName: "SCREAM",
+      order: 2,
+      template:
+        "assets-promos/ultimate-scream.png",
+      plusCount: 1,
+      type: "scream"
+    },
+
+    thunderstruck: {
+      id: "thunderstruck",
+      name: "Thunderstruck",
+      shortName: "THUNDERSTRUCK",
+      order: 3,
+      template:
+        "assets-promos/thunderstruck.png",
+      plusCount: 2,
+      type: "thunderstruck"
+    },
+
+    futmas: {
+      id: "futmas",
+      name: "FUTMAS",
+      shortName: "FUTMAS",
+      order: 4,
+      template:
+        "assets-promos/futmas.png",
+      plusCount: 2,
+      type: "futmas"
+    },
+
+    toty: {
+      id: "toty",
+      name: "Team of the Year",
+      shortName: "TOTY",
+      order: 5,
+      template:
+        "assets-promos/toty.png",
+      plusCount: 3,
+      type: "toty"
+    },
+
+    futureStars: {
+      id: "futureStars",
+      name: "Future Stars",
+      shortName: "FUTURE STARS",
+      order: 6,
+      template:
+        "assets-promos/future-stars.png",
+      plusCount: 3,
+      type: "futureStars"
+    },
+
+    futBirthday: {
+      id: "futBirthday",
+      name: "FUT Birthday",
+      shortName: "FUT BIRTHDAY",
+      order: 7,
+      template:
+        "assets-promos/fut-birthday.png",
+      plusCount: 3,
+      type: "birthday"
+    },
+
+    timeWarp: {
+      id: "timeWarp",
+      name: "Time Warp",
+      shortName: "TIME WARP",
+      order: 8,
+      template:
+        "assets-promos/time-warp.png",
+      plusCount: 3,
+      type: "timeWarp"
+    },
+
+    tots: {
+      id: "tots",
+      name: "Team of the Season",
+      shortName: "TOTS",
+      order: 9,
+      template:
+        "assets-promos/tots.png",
+      plusCount: 4,
+      type: "tots"
+    },
+
+    summerHeat: {
+      id: "summerHeat",
+      name: "Summer Heat",
+      shortName: "SUMMER HEAT",
+      order: 10,
+      template:
+        "assets-promos/summer-heat.png",
+      plusCount: 4,
+      type: "summerHeat"
+    },
+
+    futties: {
+      id: "futties",
+      name: "FUTTIES",
+      shortName: "FUTTIES",
+      order: 11,
+      template:
+        "assets-promos/futties.png",
+      plusCount: 5,
+      type: "futties"
+    }
+  };
+
+
+  /* =======================================================
+     SUPPORTO
+     ======================================================= */
+
+  function mpPromoNumber(
+    value,
+    fallback = 0
+  ) {
+    const number = Number(
+      String(value ?? "")
+        .replace(",", ".")
+    );
+
+    return Number.isFinite(number)
+      ? number
+      : fallback;
+  }
+
+  function mpPromoClamp(
+    value,
+    min,
+    max
+  ) {
+    return Math.max(
+      min,
+      Math.min(
+        max,
+        mpPromoNumber(value, min)
+      )
+    );
+  }
+
+  function mpPromoEscape(value) {
+    if (
+      typeof escapeHtml ===
+      "function"
+    ) {
+      return escapeHtml(value);
+    }
+
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function mpPromoHash(value) {
+    const text =
+      String(value ?? "");
+
+    let hash = 2166136261;
+
+    for (
+      let index = 0;
+      index < text.length;
+      index += 1
+    ) {
+      hash ^= text.charCodeAt(index);
+
+      hash = Math.imul(
+        hash,
+        16777619
+      );
+    }
+
+    return hash >>> 0;
+  }
+
+  function mpPromoCleanStats(source) {
+    const result = {};
+
+    for (const stat of MP_PROMO_STATS) {
+      result[stat] =
+        Math.round(
+          mpPromoClamp(
+            source?.[stat] ?? 60,
+            20,
+            99
+          )
+        );
+    }
+
+    return result;
+  }
+
+  function mpPromoOvr(stats) {
+    const total =
+      MP_PROMO_STATS.reduce(
+        (sum, stat) =>
+          sum +
+          mpPromoNumber(
+            stats?.[stat],
+            60
+          ),
+        0
+      );
+
+    return Math.round(
+      total /
+      MP_PROMO_STATS.length
+    );
+  }
+
+  function mpPromoInitials(name) {
+    const words =
+      String(name || "MP")
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
+
+    if (!words.length) {
+      return "MP";
+    }
+
+    if (words.length === 1) {
+      return words[0]
+        .slice(0, 2)
+        .toUpperCase();
+    }
+
+    return (
+      words[0][0] +
+      words[words.length - 1][0]
+    ).toUpperCase();
+  }
+
+
+  /* =======================================================
+     PRIORITÀ PER RUOLO
+     ======================================================= */
+
+  function mpPromoRoleOrder(role) {
+    const normalized =
+      String(role || "CC")
+        .trim()
+        .toUpperCase();
+
+    const orders = {
+      ATT: [
+        "sho",
+        "pac",
+        "dri",
+        "phy",
+        "pas",
+        "def"
+      ],
+
+      ALA: [
+        "pac",
+        "dri",
+        "sho",
+        "pas",
+        "phy",
+        "def"
+      ],
+
+      COC: [
+        "pas",
+        "dri",
+        "sho",
+        "pac",
+        "phy",
+        "def"
+      ],
+
+      CC: [
+        "pas",
+        "dri",
+        "phy",
+        "def",
+        "pac",
+        "sho"
+      ],
+
+      CDC: [
+        "def",
+        "phy",
+        "pas",
+        "dri",
+        "pac",
+        "sho"
+      ],
+
+      DC: [
+        "def",
+        "phy",
+        "pas",
+        "pac",
+        "dri",
+        "sho"
+      ],
+
+      TERZINO: [
+        "pac",
+        "def",
+        "pas",
+        "dri",
+        "phy",
+        "sho"
+      ]
+    };
+
+    return (
+      orders[normalized] ||
+      orders.CC
+    );
+  }
+
+  function mpPromoRoleWeights(role) {
+    const order =
+      mpPromoRoleOrder(role);
+
+    const weights = {};
+
+    order.forEach(
+      (stat, index) => {
+        weights[stat] =
+          7 - index;
+      }
+    );
+
+    return weights;
+  }
+
+  function mpPromoRankStats(
+    stats,
+    ascending = false
+  ) {
+    return [...MP_PROMO_STATS]
+      .sort((a, b) => {
+        const difference =
+          mpPromoNumber(
+            stats[a],
+            60
+          ) -
+          mpPromoNumber(
+            stats[b],
+            60
+          );
+
+        return ascending
+          ? difference
+          : -difference;
+      });
+  }
+
+
+  /* =======================================================
+     BOOST DIRETTI BASATI SUL RUOLO
+     ======================================================= */
+
+  function mpPromoApplyRoleBoosts(
+    baseStats,
+    role,
+    boosts,
+    excludedStats = []
+  ) {
+    const result =
+      mpPromoCleanStats(
+        baseStats
+      );
+
+    const order =
+      mpPromoRoleOrder(role)
+        .filter(
+          stat =>
+            !excludedStats.includes(
+              stat
+            )
+        );
+
+    order.forEach(
+      (stat, index) => {
+        const boost =
+          boosts[index] ?? 0;
+
+        result[stat] =
+          Math.round(
+            mpPromoClamp(
+              result[stat] +
+              boost,
+              20,
+              99
+            )
+          );
+      }
+    );
+
+    return result;
+  }
+
+
+  /* =======================================================
+     PORTA UNA CARTA VERSO UN OVR OBIETTIVO
+     ======================================================= */
+
+  function mpPromoRaiseToTarget(
+    baseStats,
+    targetOvr,
+    weights,
+    seed
+  ) {
+    const result =
+      mpPromoCleanStats(
+        baseStats
+      );
+
+    const targetTotal =
+      Math.min(
+        594,
+        Math.round(
+          targetOvr * 6
+        )
+      );
+
+    let currentTotal =
+      MP_PROMO_STATS.reduce(
+        (sum, stat) =>
+          sum + result[stat],
+        0
+      );
+
+    let safety = 0;
+
+    while (
+      currentTotal < targetTotal &&
+      safety < 3000
+    ) {
+      safety += 1;
+
+      const candidates =
+        MP_PROMO_STATS
+          .filter(
+            stat =>
+              result[stat] < 99
+          )
+          .map(stat => {
+            const headroom =
+              99 - result[stat];
+
+            const tie =
+              (
+                mpPromoHash(
+                  `${seed}:${stat}:${result[stat]}`
+                ) %
+                1000
+              ) /
+              100000;
+
+            return {
+              stat,
+
+              score:
+                mpPromoNumber(
+                  weights[stat],
+                  1
+                ) *
+                (
+                  1 +
+                  headroom / 150
+                ) +
+                tie
+            };
+          })
+          .sort(
+            (a, b) =>
+              b.score -
+              a.score
+          );
+
+      if (!candidates.length) {
+        break;
+      }
+
+      result[
+        candidates[0].stat
+      ] += 1;
+
+      currentTotal += 1;
+    }
+
+    return result;
+  }
+
+  function mpPromoTargetOvr(
+    baseOvr,
+    minimum,
+    maximum,
+    ordinaryIncrease,
+    seed
+  ) {
+    const randomTarget =
+      minimum +
+      (
+        seed %
+        (
+          maximum -
+          minimum +
+          1
+        )
+      );
+
+    if (baseOvr < minimum) {
+      return randomTarget;
+    }
+
+    if (baseOvr <= maximum) {
+      return Math.min(
+        99,
+        Math.max(
+          randomTarget,
+          baseOvr +
+          ordinaryIncrease
+        )
+      );
+    }
+
+    return Math.min(
+      99,
+      baseOvr +
+      Math.max(
+        1,
+        Math.round(
+          ordinaryIncrease / 2
+        )
+      )
+    );
+  }
+
+
+  /* =======================================================
+     ALGORITMI DELLE UNDICI PROMO
+     ======================================================= */
+
+  function mpPromoBuildStats(
+    definition,
+    baseStats,
+    profile,
+    seed
+  ) {
+    const base =
+      mpPromoCleanStats(
+        baseStats
+      );
+
+    const role =
+      profile.role || "CC";
+
+    const baseOvr =
+      mpPromoOvr(base);
+
+    let stats = {
+      ...base
+    };
+
+    let focusStats = [];
+
+    let specialText = "";
+
+    switch (definition.type) {
+      case "otw": {
+        stats =
+          mpPromoApplyRoleBoosts(
+            base,
+            role,
+            [5, 4, 3, 2, 1, 0]
+          );
+
+        focusStats =
+          mpPromoRoleOrder(role)
+            .slice(0, 3);
+
+        specialText =
+          "Boost moderato basato sul ruolo";
+
+        break;
+      }
+
+
+      case "scream": {
+        const strongest =
+          mpPromoRankStats(
+            base,
+            false
+          ).slice(0, 2);
+
+        const weakest =
+          mpPromoRankStats(
+            base,
+            true
+          ).slice(0, 2);
+
+        const useStrongest =
+          seed % 100 < 75;
+
+        const pool =
+          useStrongest
+            ? strongest
+            : weakest;
+
+        const screamStat =
+          pool[
+            seed %
+            pool.length
+          ];
+
+        stats =
+          mpPromoApplyRoleBoosts(
+            base,
+            role,
+            [7, 6, 5, 4, 3],
+            [screamStat]
+          );
+
+        stats[screamStat] = 99;
+
+        focusStats = [
+          screamStat,
+          ...mpPromoRoleOrder(role)
+            .filter(
+              stat =>
+                stat !== screamStat
+            )
+            .slice(0, 2)
+        ];
+
+        specialText =
+          `${screamStat.toUpperCase()} portata a 99`;
+
+        break;
+      }
+
+
+      case "thunderstruck": {
+        stats =
+          mpPromoApplyRoleBoosts(
+            base,
+            role,
+            [8, 5, 4, 3, 2, 1]
+          );
+
+        focusStats =
+          mpPromoRoleOrder(role)
+            .slice(0, 3);
+
+        specialText =
+          `${focusStats[0].toUpperCase()} riceve il boost principale`;
+
+        break;
+      }
+
+
+      case "futmas": {
+        stats =
+          mpPromoApplyRoleBoosts(
+            base,
+            role,
+            [8, 7, 6, 5, 4, 3]
+          );
+
+        focusStats =
+          mpPromoRoleOrder(role)
+            .slice(0, 3);
+
+        specialText =
+          "Boost completo legato al ruolo";
+
+        break;
+      }
+
+
+      case "toty": {
+        const weights =
+          mpPromoRoleWeights(role);
+
+        const strongest =
+          mpPromoRankStats(
+            base,
+            false
+          );
+
+        strongest
+          .slice(0, 3)
+          .forEach(
+            (stat, index) => {
+              weights[stat] +=
+                [7, 5, 3][index];
+            }
+          );
+
+        const target =
+          mpPromoTargetOvr(
+            baseOvr,
+            90,
+            93,
+            8,
+            seed
+          );
+
+        stats =
+          mpPromoRaiseToTarget(
+            base,
+            target,
+            weights,
+            seed
+          );
+
+        focusStats =
+          strongest.slice(0, 3);
+
+        specialText =
+          `Carta élite da ${mpPromoOvr(stats)} OVR`;
+
+        break;
+      }
+
+
+      case "futureStars": {
+        const weights =
+          mpPromoRoleWeights(role);
+
+        let identityBase = {};
+
+        if (
+          typeof window.mpV7BaseStats ===
+          "function"
+        ) {
+          try {
+            identityBase =
+              window.mpV7BaseStats();
+          } catch {
+            identityBase = {};
+          }
+        }
+
+        const growthOrder =
+          [...MP_PROMO_STATS]
+            .sort((a, b) => {
+              const growthA =
+                base[a] -
+                mpPromoNumber(
+                  identityBase[a],
+                  base[a]
+                );
+
+              const growthB =
+                base[b] -
+                mpPromoNumber(
+                  identityBase[b],
+                  base[b]
+                );
+
+              return (
+                growthB -
+                growthA
+              );
+            });
+
+        growthOrder
+          .slice(0, 3)
+          .forEach(
+            (stat, index) => {
+              weights[stat] +=
+                [8, 5, 3][index];
+            }
+          );
+
+        const target =
+          mpPromoTargetOvr(
+            baseOvr,
+            86,
+            90,
+            4,
+            seed
+          );
+
+        stats =
+          mpPromoRaiseToTarget(
+            base,
+            target,
+            weights,
+            seed
+          );
+
+        focusStats =
+          growthOrder.slice(0, 3);
+
+        specialText =
+          "Boost sulle statistiche con maggiore crescita";
+
+        break;
+      }
+
+
+      case "birthday": {
+        const weights =
+          mpPromoRoleWeights(role);
+
+        const weakest =
+          mpPromoRankStats(
+            base,
+            true
+          );
+
+        weakest
+          .slice(0, 3)
+          .forEach(
+            (stat, index) => {
+              weights[stat] +=
+                [12, 9, 6][index];
+            }
+          );
+
+        const target =
+          mpPromoTargetOvr(
+            baseOvr,
+            88,
+            91,
+            5,
+            seed
+          );
+
+        stats =
+          mpPromoRaiseToTarget(
+            base,
+            target,
+            weights,
+            seed
+          );
+
+        focusStats =
+          weakest.slice(0, 3);
+
+        specialText =
+          "Trasforma le caratteristiche più deboli";
+
+        break;
+      }
+
+
+      case "timeWarp": {
+        const weights = {};
+
+        const weakest =
+          mpPromoRankStats(
+            base,
+            true
+          );
+
+        MP_PROMO_STATS.forEach(
+          stat => {
+            weights[stat] = 2;
+          }
+        );
+
+        weakest.forEach(
+          (stat, index) => {
+            weights[stat] +=
+              [17, 13, 8, 5, 3, 1][index];
+          }
+        );
+
+        const target =
+          mpPromoTargetOvr(
+            baseOvr,
+            89,
+            92,
+            6,
+            seed
+          );
+
+        stats =
+          mpPromoRaiseToTarget(
+            base,
+            target,
+            weights,
+            seed
+          );
+
+        focusStats =
+          weakest.slice(0, 3);
+
+        specialText =
+          "Le statistiche più basse vengono trasformate";
+
+        break;
+      }
+
+
+      case "tots": {
+        const weights =
+          mpPromoRoleWeights(role);
+
+        const strongest =
+          mpPromoRankStats(
+            base,
+            false
+          );
+
+        strongest
+          .slice(0, 4)
+          .forEach(
+            (stat, index) => {
+              weights[stat] +=
+                [8, 6, 4, 2][index];
+            }
+          );
+
+        const target =
+          mpPromoTargetOvr(
+            baseOvr,
+            92,
+            95,
+            9,
+            seed
+          );
+
+        stats =
+          mpPromoRaiseToTarget(
+            base,
+            target,
+            weights,
+            seed
+          );
+
+        focusStats =
+          strongest.slice(0, 4);
+
+        specialText =
+          "Versione definitiva della stagione";
+
+        break;
+      }
+
+
+      case "summerHeat": {
+        const weights =
+          mpPromoRoleWeights(role);
+
+        weights.pac += 9;
+        weights.dri += 9;
+
+        const rolePrimary =
+          mpPromoRoleOrder(role)[0];
+
+        weights[rolePrimary] += 6;
+
+        const target =
+          mpPromoTargetOvr(
+            baseOvr,
+            94,
+            96,
+            9,
+            seed
+          );
+
+        stats =
+          mpPromoRaiseToTarget(
+            base,
+            target,
+            weights,
+            seed
+          );
+
+        focusStats = [
+          "pac",
+          "dri",
+          rolePrimary
+        ];
+
+        specialText =
+          "Boost estivo a velocità e dribbling";
+
+        break;
+      }
+
+
+      case "futties": {
+        const weights =
+          mpPromoRoleWeights(role);
+
+        const weakest =
+          mpPromoRankStats(
+            base,
+            true
+          );
+
+        weakest
+          .slice(0, 3)
+          .forEach(
+            (stat, index) => {
+              weights[stat] +=
+                [8, 6, 4][index];
+            }
+          );
+
+        const target =
+          mpPromoTargetOvr(
+            baseOvr,
+            97,
+            99,
+            10,
+            seed
+          );
+
+        stats =
+          mpPromoRaiseToTarget(
+            base,
+            target,
+            weights,
+            seed
+          );
+
+        focusStats =
+          mpPromoRoleOrder(role)
+            .slice(0, 3);
+
+        specialText =
+          "Carta finale quasi definitiva";
+
+        break;
+      }
+    }
+
+    return {
+      stats:
+        mpPromoCleanStats(stats),
+
+      focusStats,
+
+      specialText
+    };
+  }
+
+
+  /* =======================================================
+     PLAYSTYLE DELLE PROMO
+     ======================================================= */
+
+  function mpPromoRelevantStat(
+    playStyle
+  ) {
+    const directStats = {
+      finesseShot: "sho",
+      deadBall: "sho",
+      chipShot: "sho",
+      acrobatic: "sho",
+      gamechanger: "sho",
+      powerShot: "sho",
+      precisionHeader: "sho",
+      lowDriven: "sho",
+
+      inventive: "pas",
+      incisivePass: "pas",
+      pingedPass: "pas",
+      longBallPass: "pas",
+      tikiTaka: "pas",
+      whippedPass: "pas",
+
+      jockey: "def",
+      block: "def",
+      intercept: "def",
+      anticipate: "def",
+      slideTackle: "def",
+
+      firstTouch: "dri",
+      pressProven: "dri",
+      rapid: "pac",
+      technical: "dri",
+      trickster: "dri",
+
+      bruiser: "phy",
+      enforcer: "phy",
+      quickStep: "pac",
+      relentless: "phy"
+    };
+
+    if (directStats[playStyle.id]) {
+      return directStats[
+        playStyle.id
+      ];
+    }
+
+    const categoryStats = {
+      shooting: "sho",
+      passing: "pas",
+      defense: "def",
+      ballControl: "dri",
+      physical: "phy"
+    };
+
+    return (
+      categoryStats[
+        playStyle.category
+      ] ||
+      "pas"
+    );
+  }
+
+  function mpPromoRoleCategoryScores(
+    role
+  ) {
+    const normalized =
+      String(role || "CC")
+        .toUpperCase();
+
+    const scores = {
+      ATT: {
+        shooting: 9,
+        ballControl: 7,
+        physical: 5,
+        passing: 4,
+        defense: 1
+      },
+
+      ALA: {
+        ballControl: 9,
+        physical: 7,
+        passing: 6,
+        shooting: 6,
+        defense: 1
+      },
+
+      COC: {
+        passing: 9,
+        ballControl: 8,
+        shooting: 6,
+        physical: 3,
+        defense: 1
+      },
+
+      CC: {
+        passing: 9,
+        ballControl: 7,
+        physical: 5,
+        defense: 5,
+        shooting: 4
+      },
+
+      CDC: {
+        defense: 9,
+        physical: 8,
+        passing: 7,
+        ballControl: 4,
+        shooting: 1
+      },
+
+      DC: {
+        defense: 10,
+        physical: 8,
+        passing: 5,
+        ballControl: 3,
+        shooting: 1
+      },
+
+      TERZINO: {
+        defense: 8,
+        physical: 7,
+        passing: 6,
+        ballControl: 6,
+        shooting: 2
+      }
+    };
+
+    return (
+      scores[normalized] ||
+      scores.CC
+    );
+  }
+
+  function mpPromoStyleCategoryBonus(
+    style
+  ) {
+    const normalized =
+      String(
+        style || "Equilibrato"
+      );
+
+    const bonuses = {
+      Equilibrato: {},
+
+      Finalizzatore: {
+        shooting: 7
+      },
+
+      Regista: {
+        passing: 7
+      },
+
+      Dribblatore: {
+        ballControl: 7
+      },
+
+      Difensore: {
+        defense: 7,
+        physical: 3
+      },
+
+      Motore: {
+        physical: 5,
+        ballControl: 3,
+        passing: 2
+      },
+
+      Velocista: {
+        ballControl: 4,
+        physical: 4
+      },
+
+      Boa: {
+        physical: 7,
+        shooting: 3
+      }
+    };
+
+    return (
+      bonuses[normalized] ||
+      {}
+    );
+  }
+
+  function mpPromoSelectWithCaps(
+    candidates,
+    amount,
+    excludedIds,
+    categoryCap
+  ) {
+    const selected = [];
+
+    const categoryCounts = {};
+
+    for (const item of candidates) {
+      if (
+        selected.length >= amount
+      ) {
+        break;
+      }
+
+      if (
+        excludedIds.includes(
+          item.playStyle.id
+        )
+      ) {
+        continue;
+      }
+
+      const category =
+        item.playStyle.category;
+
+      const currentCount =
+        categoryCounts[category] || 0;
+
+      if (
+        currentCount >= categoryCap
+      ) {
+        continue;
+      }
+
+      selected.push(
+        item.playStyle
+      );
+
+      categoryCounts[category] =
+        currentCount + 1;
+    }
+
+    if (
+      selected.length < amount
+    ) {
+      for (const item of candidates) {
+        if (
+          selected.length >= amount
+        ) {
+          break;
+        }
+
+        if (
+          excludedIds.includes(
+            item.playStyle.id
+          ) ||
+          selected.some(
+            selectedPlayStyle =>
+              selectedPlayStyle.id ===
+              item.playStyle.id
+          )
+        ) {
+          continue;
+        }
+
+        selected.push(
+          item.playStyle
+        );
+      }
+    }
+
+    return selected;
+  }
+
+  function mpPromoGeneratePlayStyles(
+    definition,
+    cardStats,
+    profile,
+    focusStats,
+    seed
+  ) {
+    const catalog =
+      typeof MP_PLAYSTYLES !==
+        "undefined" &&
+      Array.isArray(MP_PLAYSTYLES)
+        ? MP_PLAYSTYLES
+        : [];
+
+    const baseData =
+      typeof mpGetPsData ===
+      "function"
+        ? mpGetPsData()
+        : {};
+
+    const roleScores =
+      mpPromoRoleCategoryScores(
+        profile.role
+      );
+
+    const styleScores =
+      mpPromoStyleCategoryBonus(
+        profile.playStyle
+      );
+
+    const candidates =
+      catalog
+        .map(playStyle => {
+          const relevantStat =
+            mpPromoRelevantStat(
+              playStyle
+            );
+
+          let score =
+            mpPromoNumber(
+              roleScores[
+                playStyle.category
+              ],
+              0
+            ) *
+            5;
+
+          score +=
+            mpPromoNumber(
+              styleScores[
+                playStyle.category
+              ],
+              0
+            ) *
+            3;
+
+          score +=
+            mpPromoNumber(
+              cardStats[
+                relevantStat
+              ],
+              60
+            ) /
+            4;
+
+          if (
+            focusStats.includes(
+              relevantStat
+            )
+          ) {
+            score += 25;
+          }
+
+          if (
+            baseData[
+              playStyle.id
+            ] === "plus"
+          ) {
+            score += 18;
+          }
+
+          if (
+            baseData[
+              playStyle.id
+            ] === "normal"
+          ) {
+            score += 10;
+          }
+
+          if (
+            definition.type ===
+              "summerHeat" &&
+            (
+              relevantStat === "pac" ||
+              relevantStat === "dri"
+            )
+          ) {
+            score += 12;
+          }
+
+          if (
+            definition.type ===
+              "birthday" ||
+            definition.type ===
+              "timeWarp"
+          ) {
+            const weakest =
+              mpPromoRankStats(
+                cardStats,
+                true
+              ).slice(0, 3);
+
+            if (
+              weakest.includes(
+                relevantStat
+              )
+            ) {
+              score += 10;
+            }
+          }
+
+          score +=
+            (
+              mpPromoHash(
+                `${seed}:${playStyle.id}`
+              ) %
+              1000
+            ) /
+            10000;
+
+          return {
+            playStyle,
+            score
+          };
+        })
+        .sort(
+          (a, b) =>
+            b.score -
+            a.score
+        );
+
+    const plusPlayStyles =
+      mpPromoSelectWithCaps(
+        candidates,
+        definition.plusCount,
+        [],
+        2
+      );
+
+    const plusIds =
+      plusPlayStyles.map(
+        playStyle =>
+          playStyle.id
+      );
+
+    const normalPlayStyles =
+      mpPromoSelectWithCaps(
+        candidates,
+        8,
+        plusIds,
+        3
+      );
+
+    return {
+      normal:
+        normalPlayStyles.map(
+          playStyle =>
+            playStyle.id
+        ),
+
+      plus:
+        plusIds
+    };
+  }
+
+
+  /* =======================================================
+     FOTO SALVATA UNA SOLA VOLTA
+     ======================================================= */
+
+  function mpPromoReadPhotoLibrary() {
+    try {
+      const saved =
+        JSON.parse(
+          localStorage.getItem(
+            MP_PROMO_PHOTOS_KEY
+          ) || "{}"
+        );
+
+      return (
+        saved &&
+        typeof saved === "object"
+      )
+        ? saved
+        : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function mpPromoStorePhoto(source) {
+    const photo =
+      String(source || "");
+
+    if (!photo) {
+      return "";
+    }
+
+    const reference =
+      `photo-${mpPromoHash(
+        `${photo.length}:${photo.slice(0, 1200)}`
+      )}`;
+
+    const library =
+      mpPromoReadPhotoLibrary();
+
+    if (!library[reference]) {
+      library[reference] = photo;
+
+      try {
+        localStorage.setItem(
+          MP_PROMO_PHOTOS_KEY,
+          JSON.stringify(library)
+        );
+      } catch (error) {
+        console.warn(
+          "Foto promo non duplicata:",
+          error
+        );
+
+        return "";
+      }
+    }
+
+    return reference;
+  }
+
+  function mpPromoResolvePhoto(card) {
+    const library =
+      mpPromoReadPhotoLibrary();
+
+    if (
+      card?.photoRef &&
+      library[card.photoRef]
+    ) {
+      return library[
+        card.photoRef
+      ];
+    }
+
+    const profile =
+      typeof getPlayerProfile ===
+      "function"
+        ? getPlayerProfile()
+        : {};
+
+    return (
+      profile.photo ||
+      "profile.jpg"
+    );
+  }
+
+
+  /* =======================================================
+     LETTURA E SALVATAGGIO DELLA COLLEZIONE
+     ======================================================= */
+
+  function mpPromoGetCards() {
+    try {
+      const saved =
+        JSON.parse(
+          localStorage.getItem(
+            MP_PROMO_CARDS_KEY
+          ) || "[]"
+        );
+
+      return Array.isArray(saved)
+        ? saved
+        : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function mpPromoSaveCards(cards) {
+    localStorage.setItem(
+      MP_PROMO_CARDS_KEY,
+      JSON.stringify(cards)
+    );
+  }
+
+  function mpPromoSelectedId() {
+    return (
+      localStorage.getItem(
+        MP_PROMO_SELECTED_KEY
+      ) ||
+      "base"
+    );
+  }
+
+  function mpPromoSelectedCard() {
+    const selectedId =
+      mpPromoSelectedId();
+
+    if (
+      selectedId === "base"
+    ) {
+      return null;
+    }
+
+    return (
+      mpPromoGetCards()
+        .find(
+          card =>
+            card.id === selectedId
+        ) ||
+      null
+    );
+  }
+
+
+  /* =======================================================
+     STELLE DELLA CARTA PROMO
+     ======================================================= */
+
+  function mpPromoBuildAbilities(
+    definition,
+    profile,
+    seed
+  ) {
+    let weakFoot =
+      Math.round(
+        mpPromoClamp(
+          profile.weakFoot ?? 3,
+          1,
+          5
+        )
+      );
+
+    let skillMoves =
+      Math.round(
+        mpPromoClamp(
+          profile.skillMoves ?? 3,
+          1,
+          5
+        )
+      );
+
+    if (
+      definition.type ===
+      "birthday"
+    ) {
+      if (
+        (
+          seed % 2 === 0 &&
+          weakFoot < 5
+        ) ||
+        skillMoves >= 5
+      ) {
+        weakFoot += 1;
+      } else {
+        skillMoves += 1;
+      }
+    }
+
+    if (
+      definition.type ===
+      "tots"
+    ) {
+      if (
+        weakFoot <= skillMoves &&
+        weakFoot < 5
+      ) {
+        weakFoot += 1;
+      } else if (
+        skillMoves < 5
+      ) {
+        skillMoves += 1;
+      }
+    }
+
+    if (
+      definition.type ===
+      "futties"
+    ) {
+      weakFoot = 5;
+      skillMoves = 5;
+    }
+
+    return {
+      weakFoot:
+        mpPromoClamp(
+          weakFoot,
+          1,
+          5
+        ),
+
+      skillMoves:
+        mpPromoClamp(
+          skillMoves,
+          1,
+          5
+        )
+    };
+  }
+
+
+  /* =======================================================
+     GENERAZIONE DI UNA CARTA
+     ======================================================= */
+
+  function mpPromoGenerateCard(
+    promoId,
+    force = false,
+    silent = false
+  ) {
+    const definition =
+      MP_PROMOS[promoId];
+
+    if (!definition) {
+      toast("Promo non trovata");
+      return null;
+    }
+
+    const oldCards =
+      mpPromoGetCards();
+
+    const existingIndex =
+      oldCards.findIndex(
+        card =>
+          card.promoId ===
+            promoId &&
+          card.season ===
+            MP_PROMO_SEASON
+      );
+
+    if (
+      existingIndex >= 0 &&
+      !force
+    ) {
+      const replace =
+        confirm(
+          `${definition.name} esiste già. Vuoi rigenerarla?`
+        );
+
+      if (!replace) {
+        return oldCards[
+          existingIndex
+        ];
+      }
+    }
+
+    const profile =
+      typeof getPlayerProfile ===
+      "function"
+        ? getPlayerProfile()
+        : {};
+
+    const baseStats =
+      typeof getCardStats ===
+      "function"
+        ? mpPromoCleanStats(
+            getCardStats()
+          )
+        : mpPromoCleanStats({});
+
+    const seed =
+      mpPromoHash(
+        [
+          MP_PROMO_SEASON,
+          promoId,
+          profile.name,
+          profile.role,
+          profile.playStyle,
+          ...MP_PROMO_STATS.map(
+            stat =>
+              baseStats[stat]
+          )
+        ].join(":")
+      );
+
+    const generated =
+      mpPromoBuildStats(
+        definition,
+        baseStats,
+        profile,
+        seed
+      );
+
+    const playstyles =
+      mpPromoGeneratePlayStyles(
+        definition,
+        generated.stats,
+        profile,
+        generated.focusStats,
+        seed
+      );
+
+    const abilities =
+      mpPromoBuildAbilities(
+        definition,
+        profile,
+        seed
+      );
+
+    const card = {
+      id:
+        `${MP_PROMO_SEASON}-${promoId}`,
+
+      season:
+        MP_PROMO_SEASON,
+
+      promoId:
+        definition.id,
+
+      promoName:
+        definition.name,
+
+      shortName:
+        definition.shortName,
+
+      order:
+        definition.order,
+
+      template:
+        definition.template,
+
+      createdAt:
+        new Date()
+          .toISOString(),
+
+      baseStats:
+        {...baseStats},
+
+      stats:
+        {...generated.stats},
+
+      baseOvr:
+        mpPromoOvr(baseStats),
+
+      ovr:
+        mpPromoOvr(
+          generated.stats
+        ),
+
+      role:
+        profile.role || "CC",
+
+      playStyle:
+        profile.playStyle ||
+        "Equilibrato",
+
+      playerName:
+        profile.name ||
+        "PLAYER",
+
+      shirtNumber:
+        profile.shirtNumber ||
+        "10",
+
+      preferredFoot:
+        profile.foot ||
+        "Destro",
+
+      weakFoot:
+        abilities.weakFoot,
+
+      skillMoves:
+        abilities.skillMoves,
+
+      normalPlayStyles:
+        playstyles.normal,
+
+      plusPlayStyles:
+        playstyles.plus,
+
+      plusCount:
+        definition.plusCount,
+
+      focusStats:
+        generated.focusStats,
+
+      specialText:
+        generated.specialText,
+
+      photoRef:
+        mpPromoStorePhoto(
+          profile.photo
+        ),
+
+      photoX:
+        mpPromoNumber(
+          profile.photoX,
+          50
+        ),
+
+      photoY:
+        mpPromoNumber(
+          profile.photoY,
+          8
+        ),
+
+      photoZoom:
+        mpPromoNumber(
+          profile.photoZoom,
+          1.02
+        )
+    };
+
+    const cards =
+      [...oldCards];
+
+    if (existingIndex >= 0) {
+      cards[existingIndex] =
+        card;
+    } else {
+      cards.push(card);
+    }
+
+    cards.sort(
+      (a, b) =>
+        mpPromoNumber(
+          a.order,
+          99
+        ) -
+        mpPromoNumber(
+          b.order,
+          99
+        )
+    );
+
+    mpPromoSaveCards(cards);
+
+    if (!silent) {
+      toast(
+        `${definition.name} generata`
+      );
+    }
+
+    if (
+      route === "promos"
+    ) {
+      renderPromos();
+    }
+
+    return card;
+  }
+
+  function mpPromoGenerateAllCards() {
+    Object.keys(MP_PROMOS)
+      .forEach(promoId => {
+        mpPromoGenerateCard(
+          promoId,
+          true,
+          true
+        );
+      });
+
+    toast(
+      "Tutte le promo sono state generate"
+    );
+
+    renderPromos();
+  }
+
+
+  /* =======================================================
+     ICONA PLAYSTYLE
+     ======================================================= */
+
+  function mpPromoGetPlayStyle(
+    playStyleId
+  ) {
+    if (
+      typeof MP_PLAYSTYLES ===
+        "undefined" ||
+      !Array.isArray(MP_PLAYSTYLES)
+    ) {
+      return null;
+    }
+
+    return (
+      MP_PLAYSTYLES.find(
+        playStyle =>
+          playStyle.id ===
+          playStyleId
+      ) ||
+      null
+    );
+  }
+
+  function mpPromoIconsHtml(
+    ids,
+    kind
+  ) {
+    return (ids || [])
+      .map(id => {
+        const playStyle =
+          mpPromoGetPlayStyle(id);
+
+        if (!playStyle) {
+          return "";
+        }
+
+        const icon =
+          kind === "plus"
+            ? playStyle.plusIcon
+            : playStyle.normalIcon;
+
+        return `
+          <img
+            src="${mpPromoEscape(icon)}"
+            alt="${mpPromoEscape(playStyle.name)}"
+            title="${mpPromoEscape(
+              playStyle.name +
+              (
+                kind === "plus"
+                  ? "+"
+                  : ""
+              )
+            )}"
+          >
+        `;
+      })
+      .join("");
+  }
+
+
+  /* =======================================================
+     HTML DELLA CARTA
+     ======================================================= */
+
+  function mpPromoCardCanvas(
+    card,
+    extraClass = ""
+  ) {
+    const photo =
+      mpPromoResolvePhoto(card);
+
+    return `
+      <div
+        class="
+          mp-promo-card-canvas
+          ${extraClass}
+        "
+        data-promo-card="${mpPromoEscape(card.id)}"
+
+        style="
+          --promo-photo-x:${mpPromoNumber(card.photoX, 50)}%;
+          --promo-photo-y:${mpPromoNumber(card.photoY, 8)}%;
+          --promo-photo-zoom:${mpPromoNumber(card.photoZoom, 1.02)};
+        "
+      >
+        <img
+          class="mp-promo-template"
+          src="${mpPromoEscape(card.template)}"
+          alt="${mpPromoEscape(card.promoName)}"
+        >
+
+        <div class="mp-promo-player-photo">
+          <img
+            src="${mpPromoEscape(photo)}"
+            alt="${mpPromoEscape(card.playerName)}"
+          >
+        </div>
+
+        <div class="mp-promo-rating">
+          <strong>${card.ovr}</strong>
+          <span>${mpPromoEscape(card.role)}</span>
+        </div>
+
+        <div class="mp-promo-plus-icons">
+          ${mpPromoIconsHtml(
+            card.plusPlayStyles,
+            "plus"
+          )}
+        </div>
+
+        <div class="mp-promo-player-name">
+          ${mpPromoEscape(card.playerName)}
+        </div>
+
+        <div class="mp-promo-card-abilities">
+          <span>
+            WF ${card.weakFoot}★
+          </span>
+
+          <span>
+            SM ${card.skillMoves}★
+          </span>
+        </div>
+
+        <div class="mp-promo-card-stats">
+          ${MP_PROMO_STATS
+            .map(stat => `
+              <div>
+                <strong>
+                  ${Math.round(
+                    card.stats[stat]
+                  )}
+                </strong>
+
+                <span>
+                  ${stat.toUpperCase()}
+                </span>
+              </div>
+            `)
+            .join("")}
+        </div>
+
+        <div class="mp-promo-normal-icons">
+          ${mpPromoIconsHtml(
+            card.normalPlayStyles,
+            "normal"
+          )}
+        </div>
+      </div>
+    `;
+  }
+
+
+  /* =======================================================
+     SELEZIONE DELLA CARTA MOSTRATA NEL CLUB
+     ======================================================= */
+
+  async function mpPromoSyncSelectedToClub() {
+    try {
+      let club =
+        typeof MP_CLUB_CURRENT !==
+          "undefined"
+          ? MP_CLUB_CURRENT
+          : null;
+
+      if (
+        !club?.club_id &&
+        typeof mpGetMyClub ===
+          "function"
+      ) {
+        club =
+          await mpGetMyClub();
+      }
+
+      if (
+        club?.club_id &&
+        typeof window
+          .mpSyncMyClubProfile ===
+          "function"
+      ) {
+        await window
+          .mpSyncMyClubProfile(
+            club.club_id
+          );
+      }
+    } catch (error) {
+      console.warn(
+        "Sincronizzazione carta selezionata:",
+        error
+      );
+    }
+  }
+
+  async function mpSelectPromoCard(
+    cardId
+  ) {
+    const card =
+      mpPromoGetCards()
+        .find(
+          item =>
+            item.id === cardId
+        );
+
+    if (!card) {
+      toast("Carta non trovata");
+      return;
+    }
+
+    localStorage.setItem(
+      MP_PROMO_SELECTED_KEY,
+      card.id
+    );
+
+    toast(
+      `${card.shortName} selezionata`
+    );
+
+    renderPromos();
+
+    await mpPromoSyncSelectedToClub();
+  }
+
+  async function mpSelectBaseCard() {
+    localStorage.setItem(
+      MP_PROMO_SELECTED_KEY,
+      "base"
+    );
+
+    toast(
+      "Carta base selezionata"
+    );
+
+    renderPromos();
+
+    await mpPromoSyncSelectedToClub();
+  }
+
+
+  /* =======================================================
+     MODIFICA POSIZIONE FOTO
+     ======================================================= */
+
+  function mpOpenPromoPhotoEditor(
+    cardId
+  ) {
+    const card =
+      mpPromoGetCards()
+        .find(
+          item =>
+            item.id === cardId
+        );
+
+    if (!card) {
+      return;
+    }
+
+    const oldOverlay =
+      document.querySelector(
+        ".mp-promo-photo-overlay"
+      );
+
+    if (oldOverlay) {
+      oldOverlay.remove();
+    }
+
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      `
+        <div class="mp-promo-photo-overlay">
+          <div class="mp-promo-photo-modal">
+            <header>
+              <div>
+                <span>SISTEMA FOTO</span>
+                <h3>
+                  ${mpPromoEscape(card.promoName)}
+                </h3>
+              </div>
+
+              <button
+                type="button"
+                onclick="mpClosePromoPhotoEditor()"
+              >
+                ×
+              </button>
+            </header>
+
+            <div class="mp-promo-photo-preview">
+              ${mpPromoCardCanvas(
+                card,
+                "mp-promo-editor-card"
+              )}
+            </div>
+
+            <div class="mp-promo-photo-controls">
+              <label>
+                <span>
+                  Destra / sinistra
+                  <b id="mpPromoPhotoXLabel">
+                    ${Math.round(card.photoX)}%
+                  </b>
+                </span>
+
+                <input
+                  id="mpPromoPhotoX"
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value="${card.photoX}"
+
+                  oninput="
+                    mpUpdatePromoPhotoPreview()
+                  "
+                >
+              </label>
+
+              <label>
+                <span>
+                  Alto / basso
+                  <b id="mpPromoPhotoYLabel">
+                    ${Math.round(card.photoY)}%
+                  </b>
+                </span>
+
+                <input
+                  id="mpPromoPhotoY"
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value="${card.photoY}"
+
+                  oninput="
+                    mpUpdatePromoPhotoPreview()
+                  "
+                >
+              </label>
+
+              <label>
+                <span>
+                  Zoom
+                  <b id="mpPromoPhotoZoomLabel">
+                    ${Number(card.photoZoom).toFixed(2)}x
+                  </b>
+                </span>
+
+                <input
+                  id="mpPromoPhotoZoom"
+                  type="range"
+                  min="0.70"
+                  max="1.90"
+                  step="0.01"
+                  value="${card.photoZoom}"
+
+                  oninput="
+                    mpUpdatePromoPhotoPreview()
+                  "
+                >
+              </label>
+            </div>
+
+            <div class="mp-promo-photo-actions">
+              <button
+                type="button"
+                class="secondary-btn"
+                onclick="
+                  mpResetPromoPhotoPreview(
+                    '${mpPromoEscape(card.id)}'
+                  )
+                "
+              >
+                RIPRISTINA
+              </button>
+
+              <button
+                type="button"
+                class="primary-btn"
+                onclick="
+                  mpSavePromoPhoto(
+                    '${mpPromoEscape(card.id)}'
+                  )
+                "
+              >
+                SALVA FOTO
+              </button>
+            </div>
+          </div>
+        </div>
+      `
+    );
+  }
+
+  function mpUpdatePromoPhotoPreview() {
+    const card =
+      document.querySelector(
+        ".mp-promo-editor-card"
+      );
+
+    const x =
+      mpPromoNumber(
+        document.getElementById(
+          "mpPromoPhotoX"
+        )?.value,
+        50
+      );
+
+    const y =
+      mpPromoNumber(
+        document.getElementById(
+          "mpPromoPhotoY"
+        )?.value,
+        8
+      );
+
+    const zoom =
+      mpPromoNumber(
+        document.getElementById(
+          "mpPromoPhotoZoom"
+        )?.value,
+        1.02
+      );
+
+    if (card) {
+      card.style.setProperty(
+        "--promo-photo-x",
+        `${x}%`
+      );
+
+      card.style.setProperty(
+        "--promo-photo-y",
+        `${y}%`
+      );
+
+      card.style.setProperty(
+        "--promo-photo-zoom",
+        zoom
+      );
+    }
+
+    const xLabel =
+      document.getElementById(
+        "mpPromoPhotoXLabel"
+      );
+
+    const yLabel =
+      document.getElementById(
+        "mpPromoPhotoYLabel"
+      );
+
+    const zoomLabel =
+      document.getElementById(
+        "mpPromoPhotoZoomLabel"
+      );
+
+    if (xLabel) {
+      xLabel.textContent =
+        `${Math.round(x)}%`;
+    }
+
+    if (yLabel) {
+      yLabel.textContent =
+        `${Math.round(y)}%`;
+    }
+
+    if (zoomLabel) {
+      zoomLabel.textContent =
+        `${zoom.toFixed(2)}x`;
+    }
+  }
+
+  function mpResetPromoPhotoPreview(
+    cardId
+  ) {
+    const card =
+      mpPromoGetCards()
+        .find(
+          item =>
+            item.id === cardId
+        );
+
+    const profile =
+      typeof getPlayerProfile ===
+      "function"
+        ? getPlayerProfile()
+        : {};
+
+    if (!card) {
+      return;
+    }
+
+    document.getElementById(
+      "mpPromoPhotoX"
+    ).value =
+      profile.photoX ?? 50;
+
+    document.getElementById(
+      "mpPromoPhotoY"
+    ).value =
+      profile.photoY ?? 8;
+
+    document.getElementById(
+      "mpPromoPhotoZoom"
+    ).value =
+      profile.photoZoom ?? 1.02;
+
+    mpUpdatePromoPhotoPreview();
+  }
+
+  async function mpSavePromoPhoto(
+    cardId
+  ) {
+    const cards =
+      mpPromoGetCards();
+
+    const index =
+      cards.findIndex(
+        item =>
+          item.id === cardId
+      );
+
+    if (index < 0) {
+      return;
+    }
+
+    cards[index] = {
+      ...cards[index],
+
+      photoX:
+        mpPromoNumber(
+          document.getElementById(
+            "mpPromoPhotoX"
+          )?.value,
+          50
+        ),
+
+      photoY:
+        mpPromoNumber(
+          document.getElementById(
+            "mpPromoPhotoY"
+          )?.value,
+          8
+        ),
+
+      photoZoom:
+        mpPromoNumber(
+          document.getElementById(
+            "mpPromoPhotoZoom"
+          )?.value,
+          1.02
+        )
+    };
+
+    mpPromoSaveCards(cards);
+
+    mpClosePromoPhotoEditor();
+
+    toast("Foto promo salvata");
+
+    renderPromos();
+
+    if (
+      mpPromoSelectedId() ===
+      cardId
+    ) {
+      await mpPromoSyncSelectedToClub();
+    }
+  }
+
+  function mpClosePromoPhotoEditor() {
+    document.querySelector(
+      ".mp-promo-photo-overlay"
+    )?.remove();
+  }
+
+
+  /* =======================================================
+     LABORATORIO PRIVATO
+     ======================================================= */
+
+  function mpPromoAdminEnabled() {
+    return (
+      localStorage.getItem(
+        MP_PROMO_ADMIN_KEY
+      ) === "true"
+    );
+  }
+
+  function mpEnablePromoAdmin() {
+    localStorage.setItem(
+      MP_PROMO_ADMIN_KEY,
+      "true"
+    );
+
+    toast(
+      "Laboratorio promo attivato"
+    );
+
+    if (
+      route === "promos"
+    ) {
+      renderPromos();
+    }
+  }
+
+  function mpDisablePromoAdmin() {
+    localStorage.removeItem(
+      MP_PROMO_ADMIN_KEY
+    );
+
+    toast(
+      "Laboratorio promo nascosto"
+    );
+
+    if (
+      route === "promos"
+    ) {
+      renderPromos();
+    }
+  }
+
+  function mpPromoDeleteAllCards() {
+    const confirmed =
+      confirm(
+        "Eliminare tutte le carte promo di prova?"
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    localStorage.removeItem(
+      MP_PROMO_CARDS_KEY
+    );
+
+    localStorage.setItem(
+      MP_PROMO_SELECTED_KEY,
+      "base"
+    );
+
+    toast(
+      "Collezione promo eliminata"
+    );
+
+    renderPromos();
+  }
+
+
+  /* =======================================================
+     PAGINA PROMO
+     ======================================================= */
+
+  function mpPromoFormatDate(value) {
+    const date =
+      new Date(value);
+
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
+      return "—";
+    }
+
+    return date.toLocaleDateString(
+      "it-IT",
+      {
+        day: "2-digit",
+        month: "long",
+        year: "numeric"
+      }
+    );
+  }
+
+  function renderPromos() {
+    const cards =
+      mpPromoGetCards();
+
+    const selectedId =
+      mpPromoSelectedId();
+
+    const baseStats =
+      typeof getCardStats ===
+      "function"
+        ? mpPromoCleanStats(
+            getCardStats()
+          )
+        : mpPromoCleanStats({});
+
+    const profile =
+      typeof getPlayerProfile ===
+      "function"
+        ? getPlayerProfile()
+        : {};
+
+    const admin =
+      mpPromoAdminEnabled();
+
+    app.innerHTML = `
+      <section class="mp-promos-page">
+
+        <header class="mp-promos-hero">
+          <div>
+            <span>COLLEZIONE MATCHPULSE</span>
+
+            <h2>Le tue carte promo</h2>
+
+            <p>
+              Ogni carta è una fotografia congelata
+              della carta base nel momento del rilascio.
+            </p>
+          </div>
+
+          <div class="mp-promos-count">
+            <strong>${cards.length}</strong>
+            <span>CARTE</span>
+          </div>
+        </header>
+
+
+        <section class="
+          mp-base-card-selection
+          ${selectedId === "base"
+            ? "is-selected"
+            : ""}
+        ">
+          <div>
+            <span>CARTA ATTIVA</span>
+
+            <h3>Carta base</h3>
+
+            <p>
+              ${mpPromoEscape(
+                profile.name || "PLAYER"
+              )}
+              ·
+              ${mpPromoEscape(
+                profile.role || "CC"
+              )}
+              ·
+              ${mpPromoOvr(baseStats)} OVR
+            </p>
+          </div>
+
+          <button
+            type="button"
+            class="
+              ${selectedId === "base"
+                ? "secondary-btn"
+                : "primary-btn"}
+            "
+            onclick="mpSelectBaseCard()"
+          >
+            ${selectedId === "base"
+              ? "SELEZIONATA"
+              : "MOSTRA NEL CLUB"}
+          </button>
+        </section>
+
+
+        ${
+          cards.length
+            ? `
+              <section class="mp-promo-collection-grid">
+                ${cards
+                  .map(card => {
+                    const selected =
+                      selectedId ===
+                      card.id;
+
+                    return `
+                      <article class="
+                        mp-promo-collection-item
+                        ${selected
+                          ? "is-selected"
+                          : ""}
+                      ">
+                        <div class="mp-promo-card-label">
+                          <span>
+                            ${mpPromoEscape(card.shortName)}
+                          </span>
+
+                          ${
+                            selected
+                              ? `
+                                <strong>
+                                  CARTA ATTIVA
+                                </strong>
+                              `
+                              : ""
+                          }
+                        </div>
+
+                        ${mpPromoCardCanvas(card)}
+
+                        <div class="mp-promo-card-info">
+                          <div>
+                            <span>
+                              ${mpPromoEscape(card.promoName)}
+                            </span>
+
+                            <strong>
+                              ${card.baseOvr}
+                              →
+                              ${card.ovr}
+                              OVR
+                            </strong>
+
+                            <small>
+                              ${mpPromoEscape(card.specialText)}
+                            </small>
+                          </div>
+
+                          <time>
+                            ${mpPromoFormatDate(card.createdAt)}
+                          </time>
+                        </div>
+
+                        <div class="mp-promo-card-actions">
+                          <button
+                            type="button"
+                            class="secondary-btn"
+
+                            onclick="
+                              mpOpenPromoPhotoEditor(
+                                '${mpPromoEscape(card.id)}'
+                              )
+                            "
+                          >
+                            SISTEMA FOTO
+                          </button>
+
+                          <button
+                            type="button"
+                            class="
+                              ${selected
+                                ? "secondary-btn"
+                                : "primary-btn"}
+                            "
+
+                            onclick="
+                              mpSelectPromoCard(
+                                '${mpPromoEscape(card.id)}'
+                              )
+                            "
+                          >
+                            ${selected
+                              ? "SELEZIONATA"
+                              : "MOSTRA NEL CLUB"}
+                          </button>
+                        </div>
+                      </article>
+                    `;
+                  })
+                  .join("")}
+              </section>
+            `
+            : `
+              <section class="mp-promos-empty">
+                <span>COLLEZIONE VUOTA</span>
+
+                <h3>
+                  Nessuna promo è stata ancora rilasciata
+                </h3>
+
+                <p>
+                  Le carte compariranno qui
+                  quando il sistema pubblicherà una nuova promo.
+                </p>
+              </section>
+            `
+        }
+
+
+        ${
+          admin
+            ? `
+              <section class="mp-promo-admin-lab">
+                <div class="mp-promo-admin-head">
+                  <div>
+                    <span>SOLO AMMINISTRATORE</span>
+
+                    <h3>Laboratorio promo</h3>
+
+                    <p>
+                      Serve per provare tutte le carte.
+                      Verrà nascosto prima della pubblicazione definitiva.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    class="secondary-btn"
+                    onclick="mpDisablePromoAdmin()"
+                  >
+                    NASCONDI LAB
+                  </button>
+                </div>
+
+                <div class="mp-promo-admin-grid">
+                  ${Object.values(
+                    MP_PROMOS
+                  )
+                    .sort(
+                      (a, b) =>
+                        a.order -
+                        b.order
+                    )
+                    .map(definition => `
+                      <button
+                        type="button"
+
+                        onclick="
+                          mpPromoGenerateCard(
+                            '${definition.id}'
+                          )
+                        "
+                      >
+                        <span>
+                          ${definition.order
+                            .toString()
+                            .padStart(2, "0")}
+                        </span>
+
+                        <strong>
+                          ${mpPromoEscape(
+                            definition.name
+                          )}
+                        </strong>
+
+                        <small>
+                          ${definition.plusCount}
+                          PS+
+                        </small>
+                      </button>
+                    `)
+                    .join("")}
+                </div>
+
+                <div class="mp-promo-admin-actions">
+                  <button
+                    type="button"
+                    class="primary-btn"
+                    onclick="mpPromoGenerateAllCards()"
+                  >
+                    GENERA TUTTE LE PROMO
+                  </button>
+
+                  <button
+                    type="button"
+                    class="danger-btn"
+                    onclick="mpPromoDeleteAllCards()"
+                  >
+                    ELIMINA CARTE DI PROVA
+                  </button>
+                </div>
+              </section>
+            `
+            : ""
+        }
+
+      </section>
+    `;
+  }
+
+
+  /* =======================================================
+     DATI DELLA CARTA SELEZIONATA INVIATI AL CLUB
+     ======================================================= */
+
+  const mpPromoPreviousClubStats =
+    typeof mpClubGetCardStats ===
+      "function"
+      ? mpClubGetCardStats
+      : null;
+
+  if (mpPromoPreviousClubStats) {
+    mpClubGetCardStats =
+      function () {
+        const selected =
+          mpPromoSelectedCard();
+
+        if (!selected) {
+          return mpPromoPreviousClubStats();
+        }
+
+        return {
+          ...mpPromoCleanStats(
+            selected.stats
+          ),
+
+          promoCard: true,
+
+          promoId:
+            selected.promoId,
+
+          promoName:
+            selected.promoName,
+
+          promoShortName:
+            selected.shortName,
+
+          promoTemplate:
+            selected.template,
+
+          promoPhotoX:
+            selected.photoX,
+
+          promoPhotoY:
+            selected.photoY,
+
+          promoPhotoZoom:
+            selected.photoZoom,
+
+          promoPlusCount:
+            selected.plusCount,
+
+          promoSeason:
+            selected.season
+        };
+      };
+
+    window.mpClubGetCardStats =
+      mpClubGetCardStats;
+  }
+
+
+  const mpPromoPreviousClubProfile =
+    typeof mpClubGetProfile ===
+      "function"
+      ? mpClubGetProfile
+      : null;
+
+  if (mpPromoPreviousClubProfile) {
+    mpClubGetProfile =
+      function () {
+        const profile =
+          mpPromoPreviousClubProfile();
+
+        const selected =
+          mpPromoSelectedCard();
+
+        if (!selected) {
+          return profile;
+        }
+
+        return {
+          ...profile,
+
+          role:
+            selected.role,
+
+          playStyle:
+            selected.playStyle,
+
+          weakFoot:
+            selected.weakFoot,
+
+          skillMoves:
+            selected.skillMoves,
+
+          photoX:
+            selected.photoX,
+
+          photoY:
+            selected.photoY,
+
+          photoZoom:
+            selected.photoZoom
+        };
+      };
+
+    window.mpClubGetProfile =
+      mpClubGetProfile;
+  }
+
+
+  const mpPromoPreviousClubPs =
+    typeof mpClubGetPlayStylesData ===
+      "function"
+      ? mpClubGetPlayStylesData
+      : null;
+
+  if (mpPromoPreviousClubPs) {
+    mpClubGetPlayStylesData =
+      function () {
+        const selected =
+          mpPromoSelectedCard();
+
+        if (!selected) {
+          return mpPromoPreviousClubPs();
+        }
+
+        const data = {};
+
+        if (
+          typeof MP_PLAYSTYLES !==
+            "undefined"
+        ) {
+          MP_PLAYSTYLES.forEach(
+            playStyle => {
+              data[playStyle.id] =
+                "none";
+            }
+          );
+        }
+
+        selected.normalPlayStyles
+          .forEach(id => {
+            data[id] = "normal";
+          });
+
+        selected.plusPlayStyles
+          .forEach(id => {
+            data[id] = "plus";
+          });
+
+        return data;
+      };
+
+    window.mpClubGetPlayStylesData =
+      mpClubGetPlayStylesData;
+  }
+
+
+  /* =======================================================
+     CARTA PROMO NEL CLUB
+     ======================================================= */
+
+  const mpPromoPreviousClubCard =
+    typeof mpClubMemberCard ===
+      "function"
+      ? mpClubMemberCard
+      : window.mpClubMemberCard;
+
+  function mpPromoClubPhotoUrl(member) {
+    if (
+      typeof window
+        .mpV3PublicAvatarUrl ===
+        "function"
+    ) {
+      const url =
+        window.mpV3PublicAvatarUrl(
+          member
+        );
+
+      if (url) {
+        return url;
+      }
+    }
+
+    if (
+      typeof window
+        .mpClubAvatarPublicUrl ===
+        "function"
+    ) {
+      const url =
+        window.mpClubAvatarPublicUrl(
+          member
+        );
+
+      if (url) {
+        return url;
+      }
+    }
+
+    const path =
+      String(
+        member?.avatar_path || ""
+      );
+
+    if (
+      path &&
+      typeof matchpulseSupabase !==
+        "undefined" &&
+      matchpulseSupabase
+    ) {
+      const result =
+        matchpulseSupabase
+          .storage
+          .from(
+            "matchpulse-avatars"
+          )
+          .getPublicUrl(path);
+
+      return (
+        result?.data?.publicUrl ||
+        ""
+      );
+    }
+
+    return "";
+  }
+
+  function mpPromoParseMemberPs(member) {
+    const raw =
+      member?.playstyles;
+
+    if (
+      raw &&
+      typeof raw === "object"
+    ) {
+      return raw;
+    }
+
+    try {
+      return JSON.parse(
+        raw || "{}"
+      );
+    } catch {
+      return {};
+    }
+  }
+
+  function mpPromoClubMemberCard(
+    member,
+    ownerId
+  ) {
+    const stats =
+      member.card_stats || {};
+
+    if (
+      !stats.promoCard ||
+      !stats.promoTemplate
+    ) {
+      return (
+        typeof mpPromoPreviousClubCard ===
+          "function"
+          ? mpPromoPreviousClubCard(
+              member,
+              ownerId
+            )
+          : ""
+      );
+    }
+
+    const playstyles =
+      mpPromoParseMemberPs(
+        member
+      );
+
+    const normalIds =
+      Object.keys(playstyles)
+        .filter(
+          id =>
+            playstyles[id] ===
+            "normal"
+        )
+        .slice(0, 8);
+
+    const plusIds =
+      Object.keys(playstyles)
+        .filter(
+          id =>
+            playstyles[id] ===
+            "plus"
+        )
+        .slice(
+          0,
+          mpPromoNumber(
+            stats.promoPlusCount,
+            1
+          )
+        );
+
+    const photoUrl =
+      mpPromoClubPhotoUrl(
+        member
+      );
+
+    const isFounder =
+      member.user_id === ownerId;
+
+    const canKick =
+      typeof MP_CLUB_CURRENT !==
+        "undefined" &&
+      MP_CLUB_CURRENT?.is_owner ===
+        true &&
+      !isFounder &&
+      typeof window
+        .mpKickClubMember ===
+        "function";
+
+    const weakFoot =
+      Math.round(
+        mpPromoClamp(
+          member.weak_foot ?? 3,
+          1,
+          5
+        )
+      );
+
+    const skillMoves =
+      Math.round(
+        mpPromoClamp(
+          member.skill_moves ?? 3,
+          1,
+          5
+        )
+      );
+
+    return `
+      <article
+        class="mp-club-promo-card"
+
+        tabindex="0"
+        role="button"
+
+        onclick="
+          mpOpenClubMember(
+            '${member.user_id}'
+          )
+        "
+      >
+        <div class="mp-club-promo-tools">
+          ${
+            isFounder
+              ? `
+                <span>
+                  FONDATORE
+                </span>
+              `
+              : ""
+          }
+
+          ${
+            canKick
+              ? `
+                <button
+                  type="button"
+
+                  onclick="
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    mpKickClubMember(
+                      '${member.user_id}'
+                    );
+                  "
+                >
+                  ×
+                </button>
+              `
+              : ""
+          }
+        </div>
+
+        <div
+          class="
+            mp-promo-card-canvas
+            mp-promo-card-club
+          "
+
+          style="
+            --promo-photo-x:${mpPromoNumber(
+              stats.promoPhotoX,
+              50
+            )}%;
+
+            --promo-photo-y:${mpPromoNumber(
+              stats.promoPhotoY,
+              8
+            )}%;
+
+            --promo-photo-zoom:${mpPromoNumber(
+              stats.promoPhotoZoom,
+              1.02
+            )};
+          "
+        >
+          <img
+            class="mp-promo-template"
+
+            src="${mpPromoEscape(
+              stats.promoTemplate
+            )}"
+
+            alt="${mpPromoEscape(
+              stats.promoName ||
+              "Carta promo"
+            )}"
+          >
+
+          <div class="mp-promo-player-photo">
+            ${
+              photoUrl
+                ? `
+                  <img
+                    src="${mpPromoEscape(photoUrl)}"
+                    alt="${mpPromoEscape(
+                      member.player_name
+                    )}"
+                  >
+                `
+                : `
+                  <div class="mp-promo-photo-initials">
+                    ${mpPromoEscape(
+                      mpPromoInitials(
+                        member.player_name
+                      )
+                    )}
+                  </div>
+                `
+            }
+          </div>
+
+          <div class="mp-promo-rating">
+            <strong>
+              ${Math.round(
+                mpPromoNumber(
+                  member.ovr,
+                  60
+                )
+              )}
+            </strong>
+
+            <span>
+              ${mpPromoEscape(
+                member.role || "CC"
+              )}
+            </span>
+          </div>
+
+          <div class="mp-promo-plus-icons">
+            ${mpPromoIconsHtml(
+              plusIds,
+              "plus"
+            )}
+          </div>
+
+          <div class="mp-promo-player-name">
+            ${mpPromoEscape(
+              member.player_name ||
+              "PLAYER"
+            )}
+          </div>
+
+          <div class="mp-promo-card-abilities">
+            <span>
+              WF ${weakFoot}★
+            </span>
+
+            <span>
+              SM ${skillMoves}★
+            </span>
+          </div>
+
+          <div class="mp-promo-card-stats">
+            ${MP_PROMO_STATS
+              .map(stat => `
+                <div>
+                  <strong>
+                    ${Math.round(
+                      mpPromoNumber(
+                        stats[stat],
+                        60
+                      )
+                    )}
+                  </strong>
+
+                  <span>
+                    ${stat.toUpperCase()}
+                  </span>
+                </div>
+              `)
+              .join("")}
+          </div>
+
+          <div class="mp-promo-normal-icons">
+            ${mpPromoIconsHtml(
+              normalIds,
+              "normal"
+            )}
+          </div>
+        </div>
+
+        <footer>
+          <span>
+            ${mpPromoEscape(
+              stats.promoShortName ||
+              stats.promoName ||
+              "PROMO"
+            )}
+          </span>
+
+          <strong>
+            APRI PROFILO
+          </strong>
+        </footer>
+      </article>
+    `;
+  }
+
+  if (
+    typeof mpPromoPreviousClubCard ===
+    "function"
+  ) {
+    mpClubMemberCard =
+      mpPromoClubMemberCard;
+
+    window.mpClubMemberCard =
+      mpPromoClubMemberCard;
+  }
+
+
+  /* =======================================================
+     PULSANTE PROMO NELLA HOME
+     ======================================================= */
+
+  const mpPromoPreviousRenderHome =
+    renderHome;
+
+  renderHome = function () {
+    mpPromoPreviousRenderHome();
+
+    const actionGrid =
+      document.querySelector(
+        ".home-action-grid"
+      ) ||
+      document.querySelector(
+        ".action-grid-premium"
+      );
+
+    if (
+      !actionGrid ||
+      actionGrid.querySelector(
+        ".mp-promo-home-tile"
+      )
+    ) {
+      return;
+    }
+
+    actionGrid.insertAdjacentHTML(
+      "beforeend",
+      `
+        <button
+          type="button"
+
+          class="
+            home-action-tile
+            purple
+            mp-promo-home-tile
+          "
+
+          onclick="
+            setRoute('promos')
+          "
+        >
+          <div class="action-icon">
+            ✦
+          </div>
+
+          <div class="action-text">
+            <strong>PROMO</strong>
+            <span>COLLEZIONE</span>
+          </div>
+        </button>
+      `
+    );
+  };
+
+  window.renderHome =
+    renderHome;
+
+
+  /* =======================================================
+     ROUTE PROMO
+     ======================================================= */
+
+  const mpPromoPreviousRender =
+    render;
+
+  render = function () {
+    if (
+      route === "promos"
+    ) {
+      renderPromos();
+      return;
+    }
+
+    mpPromoPreviousRender();
+  };
+
+  window.render =
+    render;
+
+
+  /* =======================================================
+     FUNZIONI GLOBALI
+     ======================================================= */
+
+  window.renderPromos =
+    renderPromos;
+
+  window.mpPromoGenerateCard =
+    mpPromoGenerateCard;
+
+  window.mpPromoGenerateAllCards =
+    mpPromoGenerateAllCards;
+
+  window.mpSelectPromoCard =
+    mpSelectPromoCard;
+
+  window.mpSelectBaseCard =
+    mpSelectBaseCard;
+
+  window.mpOpenPromoPhotoEditor =
+    mpOpenPromoPhotoEditor;
+
+  window.mpUpdatePromoPhotoPreview =
+    mpUpdatePromoPhotoPreview;
+
+  window.mpResetPromoPhotoPreview =
+    mpResetPromoPhotoPreview;
+
+  window.mpSavePromoPhoto =
+    mpSavePromoPhoto;
+
+  window.mpClosePromoPhotoEditor =
+    mpClosePromoPhotoEditor;
+
+  window.mpEnablePromoAdmin =
+    mpEnablePromoAdmin;
+
+  window.mpDisablePromoAdmin =
+    mpDisablePromoAdmin;
+
+  window.mpPromoDeleteAllCards =
+    mpPromoDeleteAllCards;
+
+  window.mpPromoGetCards =
+    mpPromoGetCards;
+
+  window.mpPromoSelectedCard =
+    mpPromoSelectedCard;
+})();
+
+/* =========================================================
+   MATCHPULSE
+   CORREZIONE VISIVA CARTE PROMO V2
+   ========================================================= */
+
+(function () {
+  if (window.MP_PROMO_VISUAL_V2_READY) {
+    return;
+  }
+
+  window.MP_PROMO_VISUAL_V2_READY = true;
+
+  const MP_PV2_STATS = [
+    "pac",
+    "sho",
+    "pas",
+    "dri",
+    "def",
+    "phy"
+  ];
+
+
+  /* =======================================================
+     FUNZIONI DI SUPPORTO
+     ======================================================= */
+
+  function mpPV2Number(
+    value,
+    fallback = 0
+  ) {
+    const number = Number(
+      String(value ?? "")
+        .replace(",", ".")
+    );
+
+    return Number.isFinite(number)
+      ? number
+      : fallback;
+  }
+
+
+  function mpPV2Clamp(
+    value,
+    min,
+    max
+  ) {
+    return Math.max(
+      min,
+      Math.min(
+        max,
+        mpPV2Number(value, min)
+      )
+    );
+  }
+
+
+  function mpPV2Escape(value) {
+    if (
+      typeof escapeHtml ===
+      "function"
+    ) {
+      return escapeHtml(value);
+    }
+
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+
+  function mpPV2Object(value) {
+    if (
+      value &&
+      typeof value === "object" &&
+      !Array.isArray(value)
+    ) {
+      return value;
+    }
+
+    try {
+      const parsed =
+        JSON.parse(value || "{}");
+
+      return (
+        parsed &&
+        typeof parsed === "object" &&
+        !Array.isArray(parsed)
+      )
+        ? parsed
+        : {};
+    } catch {
+      return {};
+    }
+  }
+
+
+  function mpPV2SafeClass(value) {
+    return String(value || "promo")
+      .replace(
+        /[^a-z0-9_-]/gi,
+        "-"
+      );
+  }
+
+
+  function mpPV2Initials(name) {
+    const words =
+      String(name || "MP")
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
+
+    if (!words.length) {
+      return "MP";
+    }
+
+    if (words.length === 1) {
+      return words[0]
+        .slice(0, 2)
+        .toUpperCase();
+    }
+
+    return (
+      words[0][0] +
+      words[words.length - 1][0]
+    ).toUpperCase();
+  }
+
+
+  /* =======================================================
+     PLAYSTYLE
+     ======================================================= */
+
+  function mpPV2GetPlayStyle(id) {
+    if (
+      typeof MP_PLAYSTYLES ===
+        "undefined" ||
+      !Array.isArray(MP_PLAYSTYLES)
+    ) {
+      return null;
+    }
+
+    return (
+      MP_PLAYSTYLES.find(
+        playStyle =>
+          playStyle.id === id
+      ) ||
+      null
+    );
+  }
+
+
+  function mpPV2PlusIcons(ids) {
+    return (ids || [])
+      .map(id => {
+        const playStyle =
+          mpPV2GetPlayStyle(id);
+
+        if (!playStyle) {
+          return "";
+        }
+
+        return `
+          <img
+            src="${mpPV2Escape(
+              playStyle.plusIcon
+            )}"
+
+            alt="${mpPV2Escape(
+              playStyle.name
+            )}+"
+
+            title="${mpPV2Escape(
+              playStyle.name
+            )}+"
+          >
+        `;
+      })
+      .join("");
+  }
+
+
+  function mpPV2PlayStyleItem(
+    id,
+    type
+  ) {
+    const playStyle =
+      mpPV2GetPlayStyle(id);
+
+    if (!playStyle) {
+      return "";
+    }
+
+    const isPlus =
+      type === "plus";
+
+    return `
+      <div class="
+        mp-pv2-ps-item
+        ${isPlus
+          ? "is-plus"
+          : "is-normal"}
+      ">
+        <img
+          src="${mpPV2Escape(
+            isPlus
+              ? playStyle.plusIcon
+              : playStyle.normalIcon
+          )}"
+
+          alt="${mpPV2Escape(
+            playStyle.name
+          )}"
+        >
+
+        <div>
+          <strong>
+            ${mpPV2Escape(
+              playStyle.name
+            )}
+          </strong>
+
+          <span>
+            ${isPlus
+              ? "PLAYSTYLE+"
+              : "PLAYSTYLE"}
+          </span>
+        </div>
+      </div>
+    `;
+  }
+
+
+  /* =======================================================
+     FOTO LOCALE DELLA PROMO
+     ======================================================= */
+
+  function mpPV2PromoPhoto(card) {
+    let library = {};
+
+    try {
+      library =
+        JSON.parse(
+          localStorage.getItem(
+            "matchpulse_promo_photos_v1"
+          ) || "{}"
+        );
+    } catch {
+      library = {};
+    }
+
+    if (
+      card?.photoRef &&
+      library[card.photoRef]
+    ) {
+      return library[
+        card.photoRef
+      ];
+    }
+
+    const profile =
+      typeof getPlayerProfile ===
+      "function"
+        ? getPlayerProfile()
+        : {};
+
+    return (
+      profile.photo ||
+      "profile.jpg"
+    );
+  }
+
+
+  /* =======================================================
+     FOTO ONLINE DEL MEMBRO
+     ======================================================= */
+
+  function mpPV2MemberPhoto(member) {
+    if (
+      typeof window
+        .mpV3PublicAvatarUrl ===
+        "function"
+    ) {
+      const url =
+        window.mpV3PublicAvatarUrl(
+          member
+        );
+
+      if (url) {
+        return url;
+      }
+    }
+
+    if (
+      typeof window
+        .mpClubAvatarPublicUrl ===
+        "function"
+    ) {
+      const url =
+        window.mpClubAvatarPublicUrl(
+          member
+        );
+
+      if (url) {
+        return url;
+      }
+    }
+
+    const path =
+      String(
+        member?.avatar_path || ""
+      );
+
+    if (
+      path &&
+      typeof matchpulseSupabase !==
+        "undefined" &&
+      matchpulseSupabase
+    ) {
+      const result =
+        matchpulseSupabase
+          .storage
+          .from(
+            "matchpulse-avatars"
+          )
+          .getPublicUrl(path);
+
+      return (
+        result?.data?.publicUrl ||
+        ""
+      );
+    }
+
+    return "";
+  }
+
+
+  /* =======================================================
+     DATI DEL MEMBRO CLUB
+     ======================================================= */
+
+  function mpPV2MemberCardData(member) {
+    const stats =
+      mpPV2Object(
+        member?.card_stats
+      );
+
+    const playstyles =
+      mpPV2Object(
+        member?.playstyles
+      );
+
+    const plusIds =
+      Object.keys(playstyles)
+        .filter(
+          id =>
+            playstyles[id] ===
+            "plus"
+        )
+        .slice(
+          0,
+          mpPV2Number(
+            stats.promoPlusCount,
+            5
+          )
+        );
+
+    return {
+      id:
+        member.user_id,
+
+      promoId:
+        stats.promoId ||
+        "promo",
+
+      promoName:
+        stats.promoName ||
+        "Carta promo",
+
+      shortName:
+        stats.promoShortName ||
+        stats.promoName ||
+        "PROMO",
+
+      template:
+        stats.promoTemplate ||
+        "",
+
+      playerName:
+        member.player_name ||
+        "PLAYER",
+
+      role:
+        member.role ||
+        "CC",
+
+      ovr:
+        Math.round(
+          mpPV2Clamp(
+            member.ovr,
+            0,
+            99
+          )
+        ),
+
+      stats: {
+        pac:
+          stats.pac ?? 60,
+
+        sho:
+          stats.sho ?? 60,
+
+        pas:
+          stats.pas ?? 60,
+
+        dri:
+          stats.dri ?? 60,
+
+        def:
+          stats.def ?? 60,
+
+        phy:
+          stats.phy ?? 60
+      },
+
+      plusPlayStyles:
+        plusIds,
+
+      photo:
+        mpPV2MemberPhoto(
+          member
+        ),
+
+      photoX:
+        stats.promoPhotoX ??
+        member.photo_x ??
+        50,
+
+      photoY:
+        stats.promoPhotoY ??
+        member.photo_y ??
+        8,
+
+      photoZoom:
+        stats.promoPhotoZoom ??
+        member.photo_zoom ??
+        1.02
+    };
+  }
+
+
+  /* =======================================================
+     CARTA PROMO PULITA
+
+     Nessun PlayStyle normale.
+     Nessuna stella nella versione ridotta.
+     ======================================================= */
+
+  function mpPV2CardCanvas(
+    card,
+    mode
+  ) {
+    const promoClass =
+      mpPV2SafeClass(
+        card.promoId
+      );
+
+    const photo =
+      card.photo ||
+      mpPV2PromoPhoto(card);
+
+    return `
+      <div
+        class="
+          mp-promo-v2-card
+          mp-promo-v2-${mode}
+          mp-promo-v2-theme-${promoClass}
+        "
+
+        data-promo-v2-card="${mpPV2Escape(
+          card.id || ""
+        )}"
+
+        style="
+          --mp-pv2-photo-x:
+            ${mpPV2Number(
+              card.photoX,
+              50
+            )}%;
+
+          --mp-pv2-photo-y:
+            ${mpPV2Number(
+              card.photoY,
+              8
+            )}%;
+
+          --mp-pv2-photo-zoom:
+            ${mpPV2Number(
+              card.photoZoom,
+              1.02
+            )};
+        "
+      >
+        <img
+          class="mp-promo-v2-template"
+
+          src="${mpPV2Escape(
+            card.template
+          )}"
+
+          alt="${mpPV2Escape(
+            card.promoName ||
+            "Carta promo"
+          )}"
+        >
+
+
+        <div class="mp-promo-v2-photo">
+          ${
+            photo
+              ? `
+                <img
+                  src="${mpPV2Escape(photo)}"
+
+                  alt="${mpPV2Escape(
+                    card.playerName
+                  )}"
+                >
+              `
+              : `
+                <div class="mp-promo-v2-initials">
+                  ${mpPV2Escape(
+                    mpPV2Initials(
+                      card.playerName
+                    )
+                  )}
+                </div>
+              `
+          }
+        </div>
+
+
+        <div class="mp-promo-v2-rating">
+          <strong>
+            ${Math.round(
+              mpPV2Number(
+                card.ovr,
+                60
+              )
+            )}
+          </strong>
+
+          <span>
+            ${mpPV2Escape(
+              card.role ||
+              "CC"
+            )}
+          </span>
+        </div>
+
+
+        <div class="mp-promo-v2-plus">
+          ${mpPV2PlusIcons(
+            card.plusPlayStyles
+          )}
+        </div>
+
+
+        <div class="mp-promo-v2-name">
+          ${mpPV2Escape(
+            card.playerName ||
+            "PLAYER"
+          )}
+        </div>
+
+
+        <div class="mp-promo-v2-stats">
+          ${MP_PV2_STATS
+            .map(stat => `
+              <div>
+                <strong>
+                  ${Math.round(
+                    mpPV2Number(
+                      card.stats?.[stat],
+                      60
+                    )
+                  )}
+                </strong>
+
+                <span>
+                  ${stat.toUpperCase()}
+                </span>
+              </div>
+            `)
+            .join("")}
+        </div>
+      </div>
+    `;
+  }
+
+
+  /* =======================================================
+     CORREGGE LE CARTE NELLA PAGINA PROMO
+     ======================================================= */
+
+  function mpPV2PatchCollection() {
+    if (
+      typeof route !==
+        "undefined" &&
+      route !== "promos"
+    ) {
+      return;
+    }
+
+    const cards =
+      typeof window
+        .mpPromoGetCards ===
+        "function"
+        ? window
+            .mpPromoGetCards()
+        : [];
+
+    const oldCards =
+      document.querySelectorAll(
+        `
+          .mp-promo-collection-item
+          .mp-promo-card-canvas[
+            data-promo-card
+          ]
+        `
+      );
+
+    oldCards.forEach(oldCard => {
+      const cardId =
+        oldCard.dataset
+          .promoCard;
+
+      const card =
+        cards.find(
+          item =>
+            item.id === cardId
+        );
+
+      if (!card) {
+        return;
+      }
+
+      const openButton =
+        document.createElement(
+          "button"
+        );
+
+      openButton.type =
+        "button";
+
+      openButton.className =
+        "mp-promo-v2-open-button";
+
+      openButton.setAttribute(
+        "aria-label",
+        `Apri ${card.promoName}`
+      );
+
+      openButton.innerHTML =
+        mpPV2CardCanvas(
+          card,
+          "preview"
+        );
+
+      openButton.addEventListener(
+        "click",
+        () => {
+          mpOpenPromoCardDetailV2(
+            card.id
+          );
+        }
+      );
+
+      oldCard.replaceWith(
+        openButton
+      );
+    });
+  }
+
+
+  /* =======================================================
+     DETTAGLIO DELLA CARTA NELLA COLLEZIONE
+     ======================================================= */
+
+  function mpOpenPromoCardDetailV2(
+    cardId
+  ) {
+    const cards =
+      typeof window
+        .mpPromoGetCards ===
+        "function"
+        ? window
+            .mpPromoGetCards()
+        : [];
+
+    const card =
+      cards.find(
+        item =>
+          item.id === cardId
+      );
+
+    if (!card) {
+      return;
+    }
+
+    mpClosePromoCardDetailV2();
+
+    const overlay =
+      document.createElement(
+        "div"
+      );
+
+    overlay.id =
+      "mpPromoDetailV2";
+
+    overlay.className =
+      "mp-promo-v2-detail-backdrop";
+
+    overlay.addEventListener(
+      "click",
+      event => {
+        if (
+          event.target === overlay
+        ) {
+          mpClosePromoCardDetailV2();
+        }
+      }
+    );
+
+    overlay.innerHTML = `
+      <section class="mp-promo-v2-detail-modal">
+
+        <button
+          type="button"
+          class="mp-promo-v2-detail-close"
+          onclick="
+            mpClosePromoCardDetailV2()
+          "
+        >
+          ×
+        </button>
+
+
+        <div class="mp-promo-v2-detail-head">
+
+          <div class="mp-promo-v2-detail-card">
+            ${mpPV2CardCanvas(
+              card,
+              "detail"
+            )}
+          </div>
+
+
+          <div class="mp-promo-v2-detail-info">
+
+            <span>
+              ${mpPV2Escape(
+                card.shortName ||
+                card.promoName
+              )}
+            </span>
+
+            <h2>
+              ${mpPV2Escape(
+                card.playerName
+              )}
+            </h2>
+
+            <p>
+              ${mpPV2Escape(
+                card.promoName
+              )}
+              ·
+              ${mpPV2Escape(
+                card.role
+              )}
+              ·
+              ${card.ovr} OVR
+            </p>
+
+
+            <div class="mp-promo-v2-ability-grid">
+              <div>
+                <span>
+                  Piede debole
+                </span>
+
+                <strong>
+                  ${card.weakFoot ?? 3}★
+                </strong>
+              </div>
+
+              <div>
+                <span>
+                  Mosse abilità
+                </span>
+
+                <strong>
+                  ${card.skillMoves ?? 3}★
+                </strong>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+
+        <section class="mp-promo-v2-ps-section">
+
+          <div class="mp-promo-v2-ps-group">
+            <header>
+              <span>PLAYSTYLE NORMALI</span>
+
+              <strong>
+                ${
+                  card.normalPlayStyles
+                    ?.length || 0
+                }
+              </strong>
+            </header>
+
+            <div class="mp-promo-v2-ps-grid">
+              ${
+                card.normalPlayStyles
+                  ?.length
+                  ? card
+                      .normalPlayStyles
+                      .map(id =>
+                        mpPV2PlayStyleItem(
+                          id,
+                          "normal"
+                        )
+                      )
+                      .join("")
+                  : `
+                    <p>
+                      Nessun PlayStyle normale.
+                    </p>
+                  `
+              }
+            </div>
+          </div>
+
+
+          <div class="mp-promo-v2-ps-group">
+            <header>
+              <span>PLAYSTYLE+</span>
+
+              <strong>
+                ${
+                  card.plusPlayStyles
+                    ?.length || 0
+                }
+              </strong>
+            </header>
+
+            <div class="mp-promo-v2-ps-grid">
+              ${
+                card.plusPlayStyles
+                  ?.length
+                  ? card
+                      .plusPlayStyles
+                      .map(id =>
+                        mpPV2PlayStyleItem(
+                          id,
+                          "plus"
+                        )
+                      )
+                      .join("")
+                  : `
+                    <p>
+                      Nessun PlayStyle+.
+                    </p>
+                  `
+              }
+            </div>
+          </div>
+
+        </section>
+
+      </section>
+    `;
+
+    document.body.appendChild(
+      overlay
+    );
+
+    document.body.classList.add(
+      "mp-promo-v2-modal-open"
+    );
+  }
+
+
+  function mpClosePromoCardDetailV2() {
+    document.getElementById(
+      "mpPromoDetailV2"
+    )?.remove();
+
+    document.body.classList.remove(
+      "mp-promo-v2-modal-open"
+    );
+  }
+
+
+  /* =======================================================
+     NUOVA CARTA PROMO NEL CLUB
+     ======================================================= */
+
+  const mpPV2PreviousClubCard =
+    typeof window
+      .mpClubMemberCard ===
+      "function"
+      ? window.mpClubMemberCard
+      : null;
+
+
+  function mpPV2ClubMemberCard(
+    member,
+    ownerId
+  ) {
+    const stats =
+      mpPV2Object(
+        member?.card_stats
+      );
+
+    if (
+      !stats.promoCard ||
+      !stats.promoTemplate
+    ) {
+      return mpPV2PreviousClubCard
+        ? mpPV2PreviousClubCard(
+            member,
+            ownerId
+          )
+        : "";
+    }
+
+    const card =
+      mpPV2MemberCardData(
+        member
+      );
+
+    const isFounder =
+      member.user_id ===
+      ownerId;
+
+    const canKick =
+      typeof MP_CLUB_CURRENT !==
+        "undefined" &&
+      MP_CLUB_CURRENT?.is_owner ===
+        true &&
+      !isFounder &&
+      typeof window
+        .mpKickClubMember ===
+        "function";
+
+    return `
+      <article
+        class="mp-club-promo-v2"
+
+        tabindex="0"
+        role="button"
+
+        onclick="
+          mpOpenClubMember(
+            '${mpPV2Escape(
+              member.user_id
+            )}'
+          )
+        "
+
+        onkeydown="
+          if (
+            event.key === 'Enter' ||
+            event.key === ' '
+          ) {
+            event.preventDefault();
+
+            mpOpenClubMember(
+              '${mpPV2Escape(
+                member.user_id
+              )}'
+            );
+          }
+        "
+      >
+
+        <div class="mp-club-promo-v2-tools">
+          ${
+            isFounder
+              ? `
+                <span>
+                  FONDATORE
+                </span>
+              `
+              : ""
+          }
+
+          ${
+            canKick
+              ? `
+                <button
+                  type="button"
+
+                  onclick="
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    mpKickClubMember(
+                      '${mpPV2Escape(
+                        member.user_id
+                      )}'
+                    );
+                  "
+                >
+                  ×
+                </button>
+              `
+              : ""
+          }
+        </div>
+
+
+        ${mpPV2CardCanvas(
+          card,
+          "club"
+        )}
+
+
+        <footer>
+          <span>
+            ${mpPV2Escape(
+              card.shortName
+            )}
+          </span>
+
+          <strong>
+            APRI PROFILO
+          </strong>
+        </footer>
+
+      </article>
+    `;
+  }
+
+
+  if (
+    typeof mpPV2PreviousClubCard ===
+    "function"
+  ) {
+    try {
+      mpClubMemberCard =
+        mpPV2ClubMemberCard;
+    } catch {}
+
+    window.mpClubMemberCard =
+      mpPV2ClubMemberCard;
+  }
+
+
+  /* =======================================================
+     SOSTITUISCE LA CARTA MARRONE NEL PROFILO APERTO
+     ======================================================= */
+
+  const mpPV2PreviousOpenMember =
+    typeof window
+      .mpOpenClubMember ===
+      "function"
+      ? window.mpOpenClubMember
+      : null;
+
+
+  function mpPV2PatchOpenClubMember(
+    member
+  ) {
+    const stats =
+      mpPV2Object(
+        member?.card_stats
+      );
+
+    if (
+      !stats.promoCard ||
+      !stats.promoTemplate
+    ) {
+      return;
+    }
+
+    const modal =
+      document.getElementById(
+        "mpClubMemberModal"
+      );
+
+    if (!modal) {
+      return;
+    }
+
+    const oldCard =
+      modal.querySelector(
+        ".mp-club-profile-card"
+      );
+
+    if (!oldCard) {
+      return;
+    }
+
+    const card =
+      mpPV2MemberCardData(
+        member
+      );
+
+    oldCard.className =
+      `
+        mp-club-profile-card
+        mp-club-profile-card-promo-v2
+      `;
+
+    oldCard.innerHTML =
+      mpPV2CardCanvas(
+        card,
+        "detail"
+      );
+
+    const kicker =
+      modal.querySelector(
+        ".mp-club-profile-title span"
+      );
+
+    if (kicker) {
+      kicker.textContent =
+        card.promoName
+          .toUpperCase();
+    }
+  }
+
+
+  if (mpPV2PreviousOpenMember) {
+    function mpPV2OpenClubMember(
+      userId
+    ) {
+      mpPV2PreviousOpenMember(
+        userId
+      );
+
+      const member =
+        typeof MP_CLUB_MEMBERS_CACHE !==
+          "undefined"
+          ? MP_CLUB_MEMBERS_CACHE.find(
+              item =>
+                item.user_id ===
+                userId
+            )
+          : null;
+
+      if (!member) {
+        return;
+      }
+
+      /*
+        Le vecchie correzioni della foto
+        vengono completate prima.
+      */
+
+      setTimeout(() => {
+        mpPV2PatchOpenClubMember(
+          member
+        );
+      }, 0);
+    }
+
+    try {
+      mpOpenClubMember =
+        mpPV2OpenClubMember;
+    } catch {}
+
+    window.mpOpenClubMember =
+      mpPV2OpenClubMember;
+  }
+
+
+  /* =======================================================
+     OSSERVA I CAMBI DELLA PAGINA PROMO
+     ======================================================= */
+
+  if (
+    typeof app !==
+      "undefined" &&
+    app
+  ) {
+    const observer =
+      new MutationObserver(() => {
+        requestAnimationFrame(
+          mpPV2PatchCollection
+        );
+      });
+
+    observer.observe(
+      app,
+      {
+        childList: true,
+        subtree: true
+      }
+    );
+  }
+
+
+  /* =======================================================
+     FUNZIONI GLOBALI
+     ======================================================= */
+
+  window.mpOpenPromoCardDetailV2 =
+    mpOpenPromoCardDetailV2;
+
+  window.mpClosePromoCardDetailV2 =
+    mpClosePromoCardDetailV2;
+
+  window.mpPV2PatchCollection =
+    mpPV2PatchCollection;
+
+
+  requestAnimationFrame(
+    mpPV2PatchCollection
+  );
+})();
