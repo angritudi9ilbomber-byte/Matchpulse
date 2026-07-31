@@ -15288,3 +15288,180 @@ if (!window.MP_CLUB_ESCAPE_READY) {
   window.mpOpenClubMember =
     mpOpenClubMember;
 })();
+
+/* =========================================================
+   MATCHPULSE
+   RIMOZIONE MEMBRI DA PARTE DEL FONDATORE
+   ========================================================= */
+
+(function () {
+  if (window.MP_CLUB_KICK_READY) {
+    return;
+  }
+
+  window.MP_CLUB_KICK_READY = true;
+
+
+  /* =======================================================
+     ELIMINA MEMBRO
+     ======================================================= */
+
+  async function mpKickClubMember(userId) {
+    const club = MP_CLUB_CURRENT;
+
+    if (!club?.club_id) {
+      mpClubToast("Club non trovato");
+      return;
+    }
+
+    if (!club.is_owner) {
+      mpClubToast(
+        "Solo il fondatore può rimuovere i membri"
+      );
+      return;
+    }
+
+    if (userId === club.owner_id) {
+      mpClubToast(
+        "Il fondatore non può rimuovere se stesso"
+      );
+      return;
+    }
+
+    const member =
+      MP_CLUB_MEMBERS_CACHE.find(
+        item => item.user_id === userId
+      );
+
+    if (!member) {
+      mpClubToast("Membro non trovato");
+      return;
+    }
+
+    const memberName =
+      member.player_name || "questo membro";
+
+    const confirmed = confirm(
+      `Vuoi rimuovere ${memberName} dal Club?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      mpClubToast(
+        `Rimozione di ${memberName}...`
+      );
+
+      const {
+        error
+      } = await matchpulseSupabase.rpc(
+        "kick_matchpulse_member",
+        {
+          p_club_id: club.club_id,
+          p_user_id: userId
+        }
+      );
+
+      if (error) {
+        throw error;
+      }
+
+      MP_CLUB_MEMBERS_CACHE =
+        MP_CLUB_MEMBERS_CACHE.filter(
+          item => item.user_id !== userId
+        );
+
+      mpClubToast(
+        `${memberName} è stato rimosso`
+      );
+
+      await renderLockerRoom();
+    } catch (error) {
+      console.error(
+        "ERRORE RIMOZIONE MEMBRO:",
+        error
+      );
+
+      mpClubToast(
+        error?.message ||
+        "Impossibile rimuovere il membro"
+      );
+    }
+  }
+
+  window.mpKickClubMember =
+    mpKickClubMember;
+
+
+  /* =======================================================
+     AGGIUNGE IL PULSANTE ALLA CARTA DEL MEMBRO
+     ======================================================= */
+
+  const mpClubCardBeforeKick =
+    mpClubMemberCard;
+
+  mpClubMemberCard = function (
+    member,
+    ownerId
+  ) {
+    let html =
+      mpClubCardBeforeKick(
+        member,
+        ownerId
+      );
+
+    const founderLogged =
+      MP_CLUB_CURRENT?.is_owner === true;
+
+    const isFounderCard =
+      member.user_id === ownerId;
+
+    /*
+      Il pulsante appare soltanto:
+      - al fondatore;
+      - sulle carte degli altri membri.
+    */
+
+    if (
+      !founderLogged ||
+      isFounderCard
+    ) {
+      return html;
+    }
+
+    const removeControl = `
+      <span
+        class="mp-club-kick-member"
+        role="button"
+        tabindex="0"
+        title="Rimuovi dal Club"
+        onclick="
+          event.preventDefault();
+          event.stopPropagation();
+          mpKickClubMember(
+            '${member.user_id}'
+          );
+        "
+      >
+        <span class="mp-club-kick-icon">
+          ×
+        </span>
+
+        <span>RIMUOVI</span>
+      </span>
+    `;
+
+    return html.replace(
+      '<div class="mp-club-member-avatar">',
+      `
+        ${removeControl}
+        <div class="mp-club-member-avatar">
+      `
+    );
+  };
+
+  window.mpClubMemberCard =
+    mpClubMemberCard;
+})();
