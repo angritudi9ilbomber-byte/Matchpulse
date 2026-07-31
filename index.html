@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#020807" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="MatchPulse" />
+  <title>MatchPulse</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <button class="top-profile-btn" type="button" onclick="openProfileHub()" aria-label="Profilo e backup">
+  👤
+</button>
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Premium tracker</p>
+        <h1>MatchPulse</h1>
+      </div>
+      <div class="ball-mark" aria-hidden="true">⚽</div>
+    </header>
+
+    <main id="app"></main>
+
+    <nav class="bottom-nav" aria-label="Navigazione principale">
+      <button data-route="home" class="nav-btn active">
+        <span class="nav-icon">🏟️</span>
+        <span class="nav-label">Home</span>
+      </button>
+      <button data-route="new" class="nav-btn">
+        <span class="nav-icon">⚽</span>
+        <span class="nav-label">Partita</span>
+      </button>
+      <button data-route="history" class="nav-btn">
+        <span class="nav-icon">📋</span>
+        <span class="nav-label">Storico</span>
+      </button>
+      <button data-route="locker" class="nav-btn">
+  <span class="nav-icon">🛡️</span>
+  <span class="nav-label">Club</span>
+</button>
+      <button data-route="goals" class="nav-btn">
+        <span class="nav-icon">🎯</span>
+        <span class="nav-label">Focus</span>
+      </button>
+      <button data-route="stats" class="nav-btn">
+        <span class="nav-icon">🔥</span>
+        <span class="nav-label">Stats</span>
+      </button>
+    </nav>
+  </div>
+
+  <template id="field-input-template">
+    <label class="field">
+      <span></span>
+      <input />
+    </label>
+  </template>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "name": "MatchPulse",
+  "short_name": "MatchPulse",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#06100d",
+  "theme_color": "#07130f",
+  "description": "Diario statistiche per calcetto e futsal.",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
