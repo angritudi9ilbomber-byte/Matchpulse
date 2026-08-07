@@ -192,7 +192,7 @@ function getPlayerProfile() {
   return {
     name:
       saved.name ||
-      "Giuseppe",
+      "PLAYER",
 
     role:
       MP_CARD_ROLES.includes(savedRole)
@@ -665,7 +665,7 @@ const cardOvr = testOvr !==null? testOvr : Math.round(calculatedOvr);
         ? { tier: "Oro", tierClass: "tier-gold" }
         : { tier: "Icona", tierClass: "tier-icon" };
 return {
-  name: "Giuseppe",
+  name: profile.name || "PLAYER",
   role: (profile.role || last.role || "PLAYER").toUpperCase().slice(0, 8),
   ovr: cardOvr,
   pac,
