@@ -12662,3 +12662,334 @@ body.mp-promo-v2-modal-open {
       18px;
   }
 }
+
+/* =========================================================
+   MATCHPULSE
+   PROMO VISUAL V3
+   ========================================================= */
+
+
+/* =========================================================
+   PROPORZIONI CARTA
+   ========================================================= */
+
+.mp-promo-v2-card {
+  aspect-ratio: 5 / 7 !important;
+
+  overflow: visible !important;
+}
+
+
+/*
+  Il template rimane intero.
+*/
+
+.mp-promo-v2-template {
+  width: 100% !important;
+  height: 100% !important;
+
+  object-fit: contain !important;
+}
+
+
+/* =========================================================
+   FOTO
+   NIENTE PIÙ OVALE
+   ========================================================= */
+
+.mp-promo-v2-photo {
+  left: 43% !important;
+  top: 17.5% !important;
+
+  width: 39% !important;
+  height: 35% !important;
+
+  overflow: hidden !important;
+
+  border-radius:
+    17px !important;
+
+  background:
+    rgba(
+      0,
+      0,
+      0,
+      .10
+    ) !important;
+
+  -webkit-mask-image:
+    none !important;
+
+  mask-image:
+    none !important;
+
+  box-shadow:
+    0 8px 18px
+    rgba(
+      0,
+      0,
+      0,
+      .22
+    ) !important;
+}
+
+
+.mp-promo-v2-photo > img {
+  width: 100% !important;
+  height: 100% !important;
+
+  object-fit: cover !important;
+
+  border-radius:
+    17px !important;
+}
+
+
+/* =========================================================
+   OVERALL
+   ========================================================= */
+
+.mp-promo-v2-rating {
+  left: 16% !important;
+  top: 16% !important;
+
+  width: 18% !important;
+}
+
+
+.mp-promo-v2-rating strong {
+  font-size:
+    clamp(
+      31px,
+      7vw,
+      45px
+    ) !important;
+}
+
+
+.mp-promo-v2-rating span {
+  margin-top:
+    6px !important;
+
+  font-size:
+    clamp(
+      8px,
+      2vw,
+      11px
+    ) !important;
+}
+
+
+/* =========================================================
+   PLAYSTYLE+
+   SUL BORDO SINISTRO COME CARTA BASE
+   ========================================================= */
+
+.mp-promo-v2-plus {
+  left: 8.5% !important;
+  top: 29% !important;
+
+  gap: 4px !important;
+}
+
+
+.mp-promo-v2-plus img {
+  width:
+    clamp(
+      22px,
+      6vw,
+      31px
+    ) !important;
+
+  height:
+    clamp(
+      22px,
+      6vw,
+      31px
+    ) !important;
+}
+
+
+/* =========================================================
+   NOME
+   ========================================================= */
+
+.mp-promo-v2-name {
+  left: 15% !important;
+  right: 15% !important;
+
+  top: 59.5% !important;
+
+  font-size:
+    clamp(
+      11px,
+      3.8vw,
+      18px
+    ) !important;
+
+  letter-spacing:
+    .055em !important;
+}
+
+
+/* =========================================================
+   STATISTICHE CARTA
+   ========================================================= */
+
+.mp-promo-v2-stats {
+  left: 16% !important;
+  right: 16% !important;
+
+  top: 67% !important;
+
+  gap:
+    6px
+    8px !important;
+}
+
+
+.mp-promo-v2-stats div {
+  gap: 2px !important;
+}
+
+
+.mp-promo-v2-stats strong {
+  font-size:
+    clamp(
+      13px,
+      4vw,
+      20px
+    ) !important;
+}
+
+
+.mp-promo-v2-stats span {
+  font-size:
+    clamp(
+      6px,
+      1.7vw,
+      8px
+    ) !important;
+}
+
+
+/* =========================================================
+   COLLEZIONE
+   ========================================================= */
+
+.mp-promo-v2-preview {
+  width: 100% !important;
+
+  max-width:
+    245px !important;
+}
+
+
+/*
+  Nessun PS normale
+  nell'anteprima.
+*/
+
+.mp-promo-collection-item
+.mp-promo-normal-icons,
+
+.mp-promo-collection-item
+.mp-promo-v2-ps-section {
+  display: none !important;
+}
+
+
+/* =========================================================
+   CLUB
+   ========================================================= */
+
+.mp-promo-v2-club {
+  width: 100% !important;
+
+  max-width:
+    315px !important;
+}
+
+
+/*
+  Nessun PlayStyle normale
+  sulla carta Club.
+*/
+
+.mp-club-promo-card
+.mp-promo-normal-icons,
+
+.mp-club-promo-v2
+.mp-promo-normal-icons,
+
+.mp-club-promo-card
+.mp-promo-card-abilities {
+  display: none !important;
+}
+
+
+/* =========================================================
+   DETTAGLIO APERTO
+   ========================================================= */
+
+.mp-promo-v2-detail {
+  width: 100% !important;
+
+  max-width:
+    340px !important;
+}
+
+
+/*
+  Nel dettaglio sotto la carta,
+  invece, rimangono visibili
+  PlayStyle normali e PS+.
+*/
+
+.mp-promo-v2-detail-modal
+.mp-promo-v2-ps-section {
+  display: grid !important;
+}
+
+
+/* =========================================================
+   TELEFONO
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+  .mp-promo-v2-preview {
+    max-width:
+      235px !important;
+  }
+
+
+  .mp-promo-v2-club {
+    max-width:
+      300px !important;
+  }
+
+
+  .mp-promo-v2-detail {
+    max-width:
+      310px !important;
+  }
+
+
+  .mp-promo-v2-photo {
+    left:
+      43.5% !important;
+
+    width:
+      38% !important;
+
+    height:
+      34% !important;
+  }
+
+
+  .mp-promo-v2-plus {
+    left:
+      8% !important;
+  }
+}

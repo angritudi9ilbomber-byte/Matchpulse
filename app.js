@@ -26692,3 +26692,2974 @@ if (!window.MP_CLUB_ESCAPE_READY) {
     mpPV2PatchCollection
   );
 })();
+
+/* =========================================================
+   MATCHPULSE
+   PROMO BALANCE V3
+   Fix statistiche 99 + distribuzione bilanciata
+   ========================================================= */
+
+(function () {
+  if (window.MP_PROMO_BALANCE_V3_READY) {
+    return;
+  }
+
+  window.MP_PROMO_BALANCE_V3_READY = true;
+
+  const MP_PB3_KEY =
+    "matchpulse_promo_cards_v1";
+
+  const MP_PB3_SELECTED_KEY =
+    "matchpulse_selected_card_v1";
+
+  const MP_PB3_STATS = [
+    "pac",
+    "sho",
+    "pas",
+    "dri",
+    "def",
+    "phy"
+  ];
+
+
+  /* =======================================================
+     CONFIGURAZIONE PROMO
+
+     cap = massimo che la promo può GENERARE.
+     Non abbassa una stat base già superiore.
+     ======================================================= */
+
+  const MP_PB3_CONFIG = {
+    toty: {
+      min: 90,
+      max: 93,
+      cap: 96,
+      highIncrease: 4
+    },
+
+    futureStars: {
+      min: 86,
+      max: 90,
+      cap: 94,
+      highIncrease: 3
+    },
+
+    futBirthday: {
+      min: 88,
+      max: 91,
+      cap: 95,
+      highIncrease: 4
+    },
+
+    timeWarp: {
+      min: 89,
+      max: 92,
+      cap: 95,
+      highIncrease: 4
+    },
+
+    tots: {
+      min: 92,
+      max: 95,
+      cap: 97,
+      highIncrease: 5
+    },
+
+    summerHeat: {
+      min: 94,
+      max: 96,
+      cap: 98,
+      highIncrease: 5
+    },
+
+    /*
+      Da carta base molto bassa,
+      FUTTIES arriva 97/98.
+
+      Il 99 OVR resta possibile
+      soltanto partendo da una carta
+      già molto forte.
+    */
+    futties: {
+      min: 97,
+      max: 98,
+      cap: 99,
+      highIncrease: 6
+    }
+  };
+
+
+  /* =======================================================
+     RUOLI
+     ======================================================= */
+
+  const MP_PB3_ROLE_ORDER = {
+    ATT: [
+      "sho",
+      "pac",
+      "dri",
+      "phy",
+      "pas",
+      "def"
+    ],
+
+    ALA: [
+      "pac",
+      "dri",
+      "sho",
+      "pas",
+      "phy",
+      "def"
+    ],
+
+    COC: [
+      "pas",
+      "dri",
+      "sho",
+      "pac",
+      "phy",
+      "def"
+    ],
+
+    CC: [
+      "pas",
+      "dri",
+      "phy",
+      "def",
+      "pac",
+      "sho"
+    ],
+
+    CDC: [
+      "def",
+      "phy",
+      "pas",
+      "dri",
+      "pac",
+      "sho"
+    ],
+
+    DC: [
+      "def",
+      "phy",
+      "pas",
+      "pac",
+      "dri",
+      "sho"
+    ],
+
+    TERZINO: [
+      "pac",
+      "def",
+      "pas",
+      "dri",
+      "phy",
+      "sho"
+    ]
+  };
+
+
+  function mpPB3Number(
+    value,
+    fallback = 0
+  ) {
+    const number = Number(value);
+
+    return Number.isFinite(number)
+      ? number
+      : fallback;
+  }
+
+
+  function mpPB3Clamp(
+    value,
+    min,
+    max
+  ) {
+    return Math.max(
+      min,
+      Math.min(max, value)
+    );
+  }
+
+
+  function mpPB3Hash(value) {
+    const text =
+      String(value || "");
+
+    let hash = 2166136261;
+
+    for (
+      let i = 0;
+      i < text.length;
+      i += 1
+    ) {
+      hash ^= text.charCodeAt(i);
+
+      hash = Math.imul(
+        hash,
+        16777619
+      );
+    }
+
+    return hash >>> 0;
+  }
+
+
+  function mpPB3CleanStats(source) {
+    const stats = {};
+
+    MP_PB3_STATS.forEach(stat => {
+      stats[stat] =
+        Math.round(
+          mpPB3Clamp(
+            mpPB3Number(
+              source?.[stat],
+              60
+            ),
+            20,
+            99
+          )
+        );
+    });
+
+    return stats;
+  }
+
+
+  function mpPB3Ovr(stats) {
+    const total =
+      MP_PB3_STATS.reduce(
+        (sum, stat) =>
+          sum +
+          mpPB3Number(
+            stats[stat],
+            60
+          ),
+        0
+      );
+
+    return Math.round(
+      total / 6
+    );
+  }
+
+
+  function mpPB3RoleOrder(role) {
+    const key =
+      String(role || "CC")
+        .trim()
+        .toUpperCase();
+
+    return (
+      MP_PB3_ROLE_ORDER[key] ||
+      MP_PB3_ROLE_ORDER.CC
+    );
+  }
+
+
+  function mpPB3RankStats(
+    stats,
+    weakestFirst = false
+  ) {
+    return [...MP_PB3_STATS]
+      .sort((a, b) => {
+        const difference =
+          stats[a] - stats[b];
+
+        return weakestFirst
+          ? difference
+          : -difference;
+      });
+  }
+
+
+  /* =======================================================
+     OVR OBIETTIVO
+     ======================================================= */
+
+  function mpPB3TargetOvr(
+    card,
+    config
+  ) {
+    const base =
+      mpPB3CleanStats(
+        card.baseStats ||
+        card.stats
+      );
+
+    const baseOvr =
+      mpPB3Ovr(base);
+
+    const randomTarget =
+      config.min +
+      (
+        mpPB3Hash(
+          [
+            card.id,
+            card.playerName,
+            card.role,
+            "balance-v3"
+          ].join(":")
+        ) %
+        (
+          config.max -
+          config.min +
+          1
+        )
+      );
+
+    /*
+      Carta ancora sotto il livello
+      previsto dalla promo.
+    */
+
+    if (baseOvr < config.min) {
+      return randomTarget;
+    }
+
+    /*
+      Carta già nella fascia promo.
+    */
+
+    if (baseOvr <= config.max) {
+      return Math.min(
+        99,
+        Math.max(
+          randomTarget,
+          baseOvr + 1
+        )
+      );
+    }
+
+    /*
+      Carta base già fortissima:
+      non viene mai indebolita.
+    */
+
+    return Math.min(
+      99,
+      baseOvr +
+      Math.max(
+        1,
+        Math.round(
+          config.highIncrease / 2
+        )
+      )
+    );
+  }
+
+
+  /* =======================================================
+     IDENTITÀ DELLA PROMO
+     ======================================================= */
+
+  function mpPB3Biases(
+    card,
+    base
+  ) {
+    const biases = {
+      pac: 0,
+      sho: 0,
+      pas: 0,
+      dri: 0,
+      def: 0,
+      phy: 0
+    };
+
+    const roleOrder =
+      mpPB3RoleOrder(
+        card.role
+      );
+
+    /*
+      Mantiene sempre l'identità
+      del ruolo.
+    */
+
+    const roleBias =
+      card.promoId === "futties"
+        ? [1, 0.6, 0.3, 0, -0.4, -0.8]
+        : [3, 2, 1, 0, -1, -2];
+
+    roleOrder.forEach(
+      (stat, index) => {
+        biases[stat] +=
+          roleBias[index] || 0;
+      }
+    );
+
+
+    const focus =
+      Array.isArray(card.focusStats)
+        ? card.focusStats
+        : [];
+
+
+    /* TOTY:
+       amplifica l'identità forte */
+
+    if (card.promoId === "toty") {
+      focus
+        .slice(0, 3)
+        .forEach(
+          (stat, index) => {
+            biases[stat] +=
+              [3, 2, 1][index];
+          }
+        );
+    }
+
+
+    /* FUTURE STARS:
+       premia le stats cresciute */
+
+    if (
+      card.promoId ===
+      "futureStars"
+    ) {
+      focus
+        .slice(0, 3)
+        .forEach(
+          (stat, index) => {
+            biases[stat] +=
+              [4, 3, 2][index];
+          }
+        );
+    }
+
+
+    /* BIRTHDAY:
+       aumenta soprattutto
+       le statistiche deboli */
+
+    if (
+      card.promoId ===
+      "futBirthday"
+    ) {
+      const weakest =
+        mpPB3RankStats(
+          base,
+          true
+        );
+
+      weakest
+        .slice(0, 3)
+        .forEach(
+          (stat, index) => {
+            biases[stat] +=
+              [6, 4, 3][index];
+          }
+        );
+    }
+
+
+    /* TIME WARP:
+       trasformazione delle
+       statistiche più basse */
+
+    if (
+      card.promoId ===
+      "timeWarp"
+    ) {
+      const weakest =
+        mpPB3RankStats(
+          base,
+          true
+        );
+
+      weakest.forEach(
+        (stat, index) => {
+          biases[stat] +=
+            [8, 6, 4, 2, 0, -1][index];
+        }
+      );
+    }
+
+
+    /* TOTS:
+       identità stagionale forte */
+
+    if (card.promoId === "tots") {
+      focus
+        .slice(0, 4)
+        .forEach(
+          (stat, index) => {
+            biases[stat] +=
+              [4, 3, 2, 1][index];
+          }
+        );
+    }
+
+
+    /* SUMMER HEAT:
+       PAC + DRI protagoniste */
+
+    if (
+      card.promoId ===
+      "summerHeat"
+    ) {
+      biases.pac += 5;
+      biases.dri += 5;
+
+      const primary =
+        roleOrder[0];
+
+      biases[primary] += 3;
+    }
+
+
+    /* FUTTIES:
+       fortissima ma senza
+       trasformare automaticamente
+       tutto in 99 */
+
+    if (
+      card.promoId ===
+      "futties"
+    ) {
+      const weakest =
+        mpPB3RankStats(
+          base,
+          true
+        );
+
+      weakest
+        .slice(0, 3)
+        .forEach(
+          (stat, index) => {
+            biases[stat] +=
+              [2, 1.5, 1][index];
+          }
+        );
+    }
+
+
+    return biases;
+  }
+
+
+  /* =======================================================
+     NUOVA DISTRIBUZIONE BILANCIATA
+     ======================================================= */
+
+  function mpPB3BuildStats(card) {
+    const config =
+      MP_PB3_CONFIG[
+        card.promoId
+      ];
+
+    if (!config) {
+      return null;
+    }
+
+    const base =
+      mpPB3CleanStats(
+        card.baseStats ||
+        card.stats
+      );
+
+    const targetOvr =
+      mpPB3TargetOvr(
+        card,
+        config
+      );
+
+    const biases =
+      mpPB3Biases(
+        card,
+        base
+      );
+
+    const meanBias =
+      MP_PB3_STATS.reduce(
+        (sum, stat) =>
+          sum + biases[stat],
+        0
+      ) / 6;
+
+    const desired = {};
+    const result = {};
+    const caps = {};
+
+    MP_PB3_STATS.forEach(stat => {
+      /*
+        Se la base era già sopra il
+        limite della promo non viene
+        abbassata.
+      */
+
+      caps[stat] =
+        Math.max(
+          config.cap,
+          base[stat]
+        );
+
+      desired[stat] =
+        targetOvr +
+        biases[stat] -
+        meanBias;
+
+      result[stat] =
+        Math.round(
+          mpPB3Clamp(
+            Math.max(
+              base[stat],
+              desired[stat]
+            ),
+            base[stat],
+            caps[stat]
+          )
+        );
+    });
+
+
+    const targetTotal =
+      targetOvr * 6;
+
+    let total =
+      MP_PB3_STATS.reduce(
+        (sum, stat) =>
+          sum + result[stat],
+        0
+      );
+
+    let safety = 0;
+
+
+    /*
+      Se mancano punti li distribuisce
+      sulle stats più lontane dalla loro
+      posizione ideale.
+
+      Non riempie più sempre la stessa
+      statistica fino a 99.
+    */
+
+    while (
+      total < targetTotal &&
+      safety < 2000
+    ) {
+      safety += 1;
+
+      const candidates =
+        MP_PB3_STATS
+          .filter(
+            stat =>
+              result[stat] <
+              caps[stat]
+          )
+          .sort(
+            (a, b) => {
+              const distanceA =
+                result[a] -
+                desired[a];
+
+              const distanceB =
+                result[b] -
+                desired[b];
+
+              if (
+                distanceA !==
+                distanceB
+              ) {
+                return (
+                  distanceA -
+                  distanceB
+                );
+              }
+
+              return (
+                mpPB3RoleOrder(
+                  card.role
+                ).indexOf(a) -
+                mpPB3RoleOrder(
+                  card.role
+                ).indexOf(b)
+              );
+            }
+          );
+
+      if (!candidates.length) {
+        break;
+      }
+
+      result[
+        candidates[0]
+      ] += 1;
+
+      total += 1;
+    }
+
+
+    /*
+      Se per arrotondamenti abbiamo
+      superato il totale, rimuove
+      punti senza scendere sotto
+      la carta base.
+    */
+
+    safety = 0;
+
+    while (
+      total > targetTotal &&
+      safety < 2000
+    ) {
+      safety += 1;
+
+      const candidates =
+        MP_PB3_STATS
+          .filter(
+            stat =>
+              result[stat] >
+              base[stat]
+          )
+          .sort(
+            (a, b) => {
+              const excessA =
+                result[a] -
+                desired[a];
+
+              const excessB =
+                result[b] -
+                desired[b];
+
+              return (
+                excessB -
+                excessA
+              );
+            }
+          );
+
+      if (!candidates.length) {
+        break;
+      }
+
+      result[
+        candidates[0]
+      ] -= 1;
+
+      total -= 1;
+    }
+
+
+    return {
+      stats:
+        mpPB3CleanStats(result),
+
+      ovr:
+        mpPB3Ovr(result)
+    };
+  }
+
+
+  /* =======================================================
+     LETTURA / SCRITTURA
+     ======================================================= */
+
+  function mpPB3ReadCards() {
+    try {
+      const cards =
+        JSON.parse(
+          localStorage.getItem(
+            MP_PB3_KEY
+          ) || "[]"
+        );
+
+      return Array.isArray(cards)
+        ? cards
+        : [];
+    } catch {
+      return [];
+    }
+  }
+
+
+  function mpPB3SaveCards(cards) {
+    localStorage.setItem(
+      MP_PB3_KEY,
+      JSON.stringify(cards)
+    );
+  }
+
+
+  /* =======================================================
+     RIPARA ANCHE LE CARTE DI PROVA GIÀ GENERATE
+     ======================================================= */
+
+  function mpPromoRepairCardsV3(
+    rerender = true
+  ) {
+    const cards =
+      mpPB3ReadCards();
+
+    let changed = false;
+
+    const repaired =
+      cards.map(card => {
+        const balanced =
+          mpPB3BuildStats(card);
+
+        if (!balanced) {
+          return card;
+        }
+
+        if (
+          card.promoBalanceVersion ===
+          3
+        ) {
+          return card;
+        }
+
+        changed = true;
+
+        return {
+          ...card,
+
+          stats:
+            balanced.stats,
+
+          ovr:
+            balanced.ovr,
+
+          promoBalanceVersion:
+            3
+        };
+      });
+
+    if (changed) {
+      mpPB3SaveCards(repaired);
+    }
+
+    if (
+      rerender &&
+      typeof window.renderPromos ===
+        "function" &&
+      typeof route !==
+        "undefined" &&
+      route === "promos"
+    ) {
+      window.renderPromos();
+    }
+
+    return repaired;
+  }
+
+
+  /* =======================================================
+     NUOVE GENERAZIONI
+     ======================================================= */
+
+  const mpPB3OldGenerate =
+    typeof window
+      .mpPromoGenerateCard ===
+      "function"
+      ? window.mpPromoGenerateCard
+      : null;
+
+
+  if (mpPB3OldGenerate) {
+    window.mpPromoGenerateCard =
+      function (...args) {
+        const generated =
+          mpPB3OldGenerate.apply(
+            this,
+            args
+          );
+
+        const cards =
+          mpPromoRepairCardsV3(
+            false
+          );
+
+        if (
+          typeof window
+            .renderPromos ===
+            "function" &&
+          typeof route !==
+            "undefined" &&
+          route === "promos"
+        ) {
+          window.renderPromos();
+        }
+
+        if (!generated?.id) {
+          return generated;
+        }
+
+        return (
+          cards.find(
+            card =>
+              card.id ===
+              generated.id
+          ) ||
+          generated
+        );
+      };
+  }
+
+
+  const mpPB3OldGenerateAll =
+    typeof window
+      .mpPromoGenerateAllCards ===
+      "function"
+      ? window
+          .mpPromoGenerateAllCards
+      : null;
+
+
+  if (mpPB3OldGenerateAll) {
+    window.mpPromoGenerateAllCards =
+      function (...args) {
+        const result =
+          mpPB3OldGenerateAll.apply(
+            this,
+            args
+          );
+
+        mpPromoRepairCardsV3(
+          true
+        );
+
+        return result;
+      };
+  }
+
+
+  window.mpPromoRepairCardsV3 =
+    mpPromoRepairCardsV3;
+
+
+  /*
+    Sistema automaticamente
+    le carte test già presenti.
+  */
+
+  setTimeout(() => {
+    mpPromoRepairCardsV3(
+      true
+    );
+  }, 150);
+})();
+
+/* =========================================================
+   MATCHPULSE
+   PROMO BALANCE V4
+   OVR INDIPENDENTE DALLE 6 STATISTICHE
+   ========================================================= */
+
+(function () {
+  if (window.MP_PROMO_BALANCE_V4_READY) {
+    return;
+  }
+
+  window.MP_PROMO_BALANCE_V4_READY = true;
+
+
+  /* =======================================================
+     CHIAVI E STATISTICHE
+     ======================================================= */
+
+  const MP_PB4_KEY =
+    "matchpulse_promo_cards_v1";
+
+  const MP_PB4_SELECTED_KEY =
+    "matchpulse_selected_card_v1";
+
+  const MP_PB4_STATS = [
+    "pac",
+    "sho",
+    "pas",
+    "dri",
+    "def",
+    "phy"
+  ];
+
+
+  /* =======================================================
+     CURVE OVR
+
+     IMPORTANTE:
+     l'OVR mostrato NON è più la media delle sei stats.
+
+     Indice della prima riga:
+     BASE 60,65,70,75,80,85,90,95,99
+     ======================================================= */
+
+  const MP_PB4_BASE_POINTS = [
+    60,
+    65,
+    70,
+    75,
+    80,
+    85,
+    90,
+    95,
+    99
+  ];
+
+
+  const MP_PB4_OVR_CURVES = {
+
+    /*
+      Ones to Watch
+      Upgrade iniziale leggero.
+    */
+    otw: [
+      65,
+      69,
+      74,
+      79,
+      84,
+      89,
+      93,
+      96,
+      99
+    ],
+
+
+    /*
+      Ultimate Scream
+    */
+    ultimateScream: [
+      68,
+      72,
+      77,
+      82,
+      86,
+      90,
+      94,
+      97,
+      99
+    ],
+
+
+    /*
+      Thunderstruck
+    */
+    thunderstruck: [
+      70,
+      74,
+      79,
+      83,
+      87,
+      91,
+      95,
+      98,
+      99
+    ],
+
+
+    /*
+      FUTMAS
+    */
+    futmas: [
+      72,
+      76,
+      81,
+      85,
+      89,
+      92,
+      95,
+      98,
+      99
+    ],
+
+
+    /*
+      TOTY
+
+      Base 60 -> 82
+      Base 75 -> 90
+      Base 80 -> 93
+      Base 85 -> 95
+      Base 90 -> 97
+    */
+    toty: [
+      82,
+      85,
+      88,
+      90,
+      93,
+      95,
+      97,
+      98,
+      99
+    ],
+
+
+    /*
+      Future Stars
+      volutamente sotto TOTY.
+    */
+    futureStars: [
+      76,
+      79,
+      83,
+      86,
+      89,
+      92,
+      94,
+      97,
+      99
+    ],
+
+
+    /*
+      FUT Birthday
+      sotto TOTY.
+    */
+    futBirthday: [
+      78,
+      81,
+      84,
+      87,
+      90,
+      93,
+      95,
+      97,
+      99
+    ],
+
+
+    /*
+      Time Warp
+      sotto TOTY.
+    */
+    timeWarp: [
+      80,
+      83,
+      86,
+      89,
+      91,
+      93,
+      95,
+      97,
+      99
+    ],
+
+
+    /*
+      TOTS
+      quasi uguale al TOTY,
+      ma leggermente superiore.
+    */
+    tots: [
+      83,
+      86,
+      89,
+      91,
+      94,
+      96,
+      98,
+      99,
+      99
+    ],
+
+
+    /*
+      Summer Heat
+      endgame, sopra TOTY/TOTS.
+    */
+    summerHeat: [
+      86,
+      89,
+      92,
+      94,
+      96,
+      97,
+      98,
+      99,
+      99
+    ],
+
+
+    /*
+      FUTTIES
+      promo finale più forte.
+    */
+    futties: [
+      89,
+      92,
+      94,
+      96,
+      97,
+      98,
+      99,
+      99,
+      99
+    ]
+  };
+
+
+  /* =======================================================
+     BOOST DELLE SEI STATISTICHE
+
+     vector segue l'ordine delle stats
+     più importanti per il ruolo.
+
+     cap = limite normale della promo.
+
+     Se la carta base ha già una stat
+     superiore al cap, NON viene abbassata.
+     ======================================================= */
+
+  const MP_PB4_CONFIG = {
+
+    otw: {
+      vector: [
+        5,
+        4,
+        3,
+        2,
+        1,
+        1
+      ],
+
+      cap: 92,
+
+      referenceDelta: 5,
+
+      minScale: 0.75
+    },
+
+
+    ultimateScream: {
+      vector: [
+        7,
+        6,
+        5,
+        4,
+        3,
+        2
+      ],
+
+      /*
+        Questo cap vale per le ALTRE stats.
+        La stat speciale viene portata a 99.
+      */
+      cap: 93,
+
+      referenceDelta: 8,
+
+      minScale: 0.70
+    },
+
+
+    thunderstruck: {
+      vector: [
+        8,
+        6,
+        5,
+        4,
+        3,
+        2
+      ],
+
+      cap: 94,
+
+      referenceDelta: 10,
+
+      minScale: 0.65
+    },
+
+
+    futmas: {
+      vector: [
+        9,
+        8,
+        7,
+        6,
+        5,
+        4
+      ],
+
+      cap: 94,
+
+      referenceDelta: 12,
+
+      minScale: 0.65
+    },
+
+
+    toty: {
+      vector: [
+        24,
+        21,
+        18,
+        15,
+        12,
+        10
+      ],
+
+      /*
+        Nessun 99 automatico.
+      */
+      cap: 96,
+
+      referenceDelta: 22,
+
+      minScale: 0.50
+    },
+
+
+    futureStars: {
+      vector: [
+        17,
+        15,
+        13,
+        11,
+        9,
+        7
+      ],
+
+      cap: 94,
+
+      referenceDelta: 16,
+
+      minScale: 0.50
+    },
+
+
+    futBirthday: {
+      vector: [
+        15,
+        14,
+        13,
+        12,
+        11,
+        10
+      ],
+
+      cap: 95,
+
+      referenceDelta: 18,
+
+      minScale: 0.50
+    },
+
+
+    timeWarp: {
+      vector: [
+        13,
+        13,
+        12,
+        11,
+        10,
+        9
+      ],
+
+      cap: 95,
+
+      referenceDelta: 20,
+
+      minScale: 0.50
+    },
+
+
+    tots: {
+      vector: [
+        26,
+        23,
+        20,
+        17,
+        14,
+        12
+      ],
+
+      cap: 97,
+
+      referenceDelta: 23,
+
+      minScale: 0.50
+    },
+
+
+    summerHeat: {
+      vector: [
+        28,
+        25,
+        22,
+        20,
+        18,
+        16
+      ],
+
+      cap: 98,
+
+      referenceDelta: 26,
+
+      minScale: 0.50
+    },
+
+
+    futties: {
+      vector: [
+        30,
+        27,
+        24,
+        22,
+        20,
+        18
+      ],
+
+      /*
+        Qui il 99 è permesso.
+      */
+      cap: 99,
+
+      referenceDelta: 29,
+
+      minScale: 0.50
+    }
+  };
+
+
+  /* =======================================================
+     PRIORITÀ PER RUOLO
+     ======================================================= */
+
+  const MP_PB4_ROLE_ORDER = {
+
+    ATT: [
+      "sho",
+      "pac",
+      "dri",
+      "phy",
+      "pas",
+      "def"
+    ],
+
+    ALA: [
+      "pac",
+      "dri",
+      "sho",
+      "pas",
+      "phy",
+      "def"
+    ],
+
+    COC: [
+      "pas",
+      "dri",
+      "sho",
+      "pac",
+      "phy",
+      "def"
+    ],
+
+    CC: [
+      "pas",
+      "dri",
+      "phy",
+      "def",
+      "pac",
+      "sho"
+    ],
+
+    CDC: [
+      "def",
+      "phy",
+      "pas",
+      "dri",
+      "pac",
+      "sho"
+    ],
+
+    DC: [
+      "def",
+      "phy",
+      "pas",
+      "pac",
+      "dri",
+      "sho"
+    ],
+
+    TERZINO: [
+      "pac",
+      "def",
+      "pas",
+      "dri",
+      "phy",
+      "sho"
+    ]
+  };
+
+
+  /* =======================================================
+     FUNZIONI BASE
+     ======================================================= */
+
+  function mpPB4Number(
+    value,
+    fallback = 0
+  ) {
+    const number =
+      Number(value);
+
+    return Number.isFinite(number)
+      ? number
+      : fallback;
+  }
+
+
+  function mpPB4Clamp(
+    value,
+    min,
+    max
+  ) {
+    return Math.max(
+      min,
+      Math.min(
+        max,
+        value
+      )
+    );
+  }
+
+
+  function mpPB4CleanStats(
+    source
+  ) {
+    const result = {};
+
+    MP_PB4_STATS.forEach(
+      stat => {
+        result[stat] =
+          Math.round(
+            mpPB4Clamp(
+              mpPB4Number(
+                source?.[stat],
+                60
+              ),
+              20,
+              99
+            )
+          );
+      }
+    );
+
+    return result;
+  }
+
+
+  /*
+    Questa serve SOLO a mostrare
+    quanto fa la media matematica.
+
+    NON determina più l'OVR promo.
+  */
+
+  function mpPB4StatsAverage(
+    stats
+  ) {
+    const total =
+      MP_PB4_STATS.reduce(
+        (sum, stat) =>
+          sum +
+          mpPB4Number(
+            stats?.[stat],
+            60
+          ),
+        0
+      );
+
+    return Math.round(
+      total /
+      MP_PB4_STATS.length
+    );
+  }
+
+
+  function mpPB4BaseOvr(
+    card,
+    baseStats
+  ) {
+    const frozenOvr =
+      mpPB4Number(
+        card?.baseOvr,
+        NaN
+      );
+
+    /*
+      Per una carta già congelata
+      usa l'OVR base salvato al rilascio.
+    */
+
+    if (
+      Number.isFinite(
+        frozenOvr
+      )
+    ) {
+      return Math.round(
+        mpPB4Clamp(
+          frozenOvr,
+          0,
+          99
+        )
+      );
+    }
+
+
+    /*
+      Fallback.
+    */
+
+    if (
+      typeof calculateOVR ===
+      "function"
+    ) {
+      try {
+        return Math.round(
+          mpPB4Clamp(
+            calculateOVR(
+              baseStats
+            ),
+            0,
+            99
+          )
+        );
+      } catch {}
+    }
+
+
+    return mpPB4StatsAverage(
+      baseStats
+    );
+  }
+
+
+  function mpPB4RoleOrder(
+    role
+  ) {
+    const normalized =
+      String(
+        role || "CC"
+      )
+        .trim()
+        .toUpperCase();
+
+    return (
+      MP_PB4_ROLE_ORDER[
+        normalized
+      ] ||
+      MP_PB4_ROLE_ORDER.CC
+    );
+  }
+
+
+  function mpPB4RankStats(
+    stats,
+    weakestFirst = false
+  ) {
+    return [
+      ...MP_PB4_STATS
+    ].sort(
+      (a, b) => {
+        const difference =
+          mpPB4Number(
+            stats[a],
+            60
+          ) -
+          mpPB4Number(
+            stats[b],
+            60
+          );
+
+        return weakestFirst
+          ? difference
+          : -difference;
+      }
+    );
+  }
+
+
+  /* =======================================================
+     INTERPOLAZIONE OVR
+
+     Se, ad esempio, la base è 79,
+     viene calcolato un valore tra
+     la riga 75 e la riga 80.
+     ======================================================= */
+
+  function mpPB4CurveValue(
+    baseOvr,
+    values
+  ) {
+    const lastIndex =
+      MP_PB4_BASE_POINTS.length -
+      1;
+
+    const base =
+      mpPB4Clamp(
+        mpPB4Number(
+          baseOvr,
+          60
+        ),
+        MP_PB4_BASE_POINTS[0],
+        MP_PB4_BASE_POINTS[
+          lastIndex
+        ]
+      );
+
+
+    if (
+      base <=
+      MP_PB4_BASE_POINTS[0]
+    ) {
+      return values[0];
+    }
+
+
+    if (
+      base >=
+      MP_PB4_BASE_POINTS[
+        lastIndex
+      ]
+    ) {
+      return values[
+        values.length - 1
+      ];
+    }
+
+
+    for (
+      let index = 0;
+      index <
+        MP_PB4_BASE_POINTS.length -
+        1;
+      index += 1
+    ) {
+      const left =
+        MP_PB4_BASE_POINTS[
+          index
+        ];
+
+      const right =
+        MP_PB4_BASE_POINTS[
+          index + 1
+        ];
+
+
+      if (
+        base >= left &&
+        base <= right
+      ) {
+        const progress =
+          (
+            base - left
+          ) /
+          (
+            right - left
+          );
+
+        return Math.round(
+          values[index] +
+          (
+            values[
+              index + 1
+            ] -
+            values[index]
+          ) *
+          progress
+        );
+      }
+    }
+
+
+    return Math.round(base);
+  }
+
+
+  function mpPB4PromoOvr(
+    card,
+    baseOvr
+  ) {
+    const curve =
+      MP_PB4_OVR_CURVES[
+        card.promoId
+      ];
+
+
+    if (!curve) {
+      return Math.round(
+        baseOvr
+      );
+    }
+
+
+    const target =
+      mpPB4CurveValue(
+        baseOvr,
+        curve
+      );
+
+
+    /*
+      Una promo non può abbassare
+      l'OVR della carta base.
+    */
+
+    return Math.round(
+      mpPB4Clamp(
+        Math.max(
+          baseOvr,
+          target
+        ),
+        0,
+        99
+      )
+    );
+  }
+
+
+  function mpPB4AddBoost(
+    boosts,
+    stat,
+    amount
+  ) {
+    if (
+      !MP_PB4_STATS.includes(
+        stat
+      )
+    ) {
+      return;
+    }
+
+    boosts[stat] =
+      mpPB4Number(
+        boosts[stat],
+        0
+      ) +
+      amount;
+  }
+
+
+  /* =======================================================
+     COSTRUZIONE DELLE SEI STATISTICHE
+
+     QUESTE NON DEVONO PIÙ RAGGIUNGERE
+     UNA MEDIA UGUALE ALL'OVR.
+     ======================================================= */
+
+  function mpPB4BuildStats(
+    card
+  ) {
+    const config =
+      MP_PB4_CONFIG[
+        card.promoId
+      ];
+
+
+    if (!config) {
+      return null;
+    }
+
+
+    /*
+      Usa SEMPRE le statistiche
+      della carta base congelata.
+
+      Non usa le vecchie stats promo
+      eventualmente già rotte.
+    */
+
+    const base =
+      mpPB4CleanStats(
+        card.baseStats ||
+        card.stats ||
+        {}
+      );
+
+
+    const baseOvr =
+      mpPB4BaseOvr(
+        card,
+        base
+      );
+
+
+    const promoOvr =
+      mpPB4PromoOvr(
+        card,
+        baseOvr
+      );
+
+
+    const ovrDifference =
+      Math.max(
+        0,
+        promoOvr -
+        baseOvr
+      );
+
+
+    /*
+      Più alta è già la carta base,
+      meno enorme deve essere il boost
+      numerico delle singole stats.
+    */
+
+    const scale =
+      mpPB4Clamp(
+        ovrDifference /
+        Math.max(
+          1,
+          config.referenceDelta
+        ),
+        config.minScale,
+        1
+      );
+
+
+    const roleOrder =
+      mpPB4RoleOrder(
+        card.role
+      );
+
+
+    const boosts = {
+      pac: 0,
+      sho: 0,
+      pas: 0,
+      dri: 0,
+      def: 0,
+      phy: 0
+    };
+
+
+    /*
+      Primo boost:
+      identità del ruolo.
+    */
+
+    roleOrder.forEach(
+      (stat, index) => {
+        mpPB4AddBoost(
+          boosts,
+          stat,
+          Math.round(
+            mpPB4Number(
+              config.vector[
+                index
+              ],
+              0
+            ) *
+            scale
+          )
+        );
+      }
+    );
+
+
+    const strongest =
+      mpPB4RankStats(
+        base,
+        false
+      );
+
+
+    const weakest =
+      mpPB4RankStats(
+        base,
+        true
+      );
+
+
+    const focus =
+      Array.isArray(
+        card.focusStats
+      )
+        ? card.focusStats
+            .filter(
+              stat =>
+                MP_PB4_STATS
+                  .includes(
+                    stat
+                  )
+            )
+        : [];
+
+
+    /* =====================================================
+       IDENTITÀ DELLE SINGOLE PROMO
+       ===================================================== */
+
+    switch (
+      card.promoId
+    ) {
+
+      /*
+        THUNDERSTRUCK:
+        prima statistica del ruolo
+        leggermente più forte.
+      */
+
+      case "thunderstruck": {
+        mpPB4AddBoost(
+          boosts,
+          roleOrder[0],
+          Math.max(
+            1,
+            Math.round(
+              2 * scale
+            )
+          )
+        );
+
+        break;
+      }
+
+
+      /*
+        TOTY:
+        premia ulteriormente
+        le caratteristiche più forti.
+      */
+
+      case "toty": {
+        strongest
+          .slice(
+            0,
+            3
+          )
+          .forEach(
+            (
+              stat,
+              index
+            ) => {
+              mpPB4AddBoost(
+                boosts,
+                stat,
+                Math.round(
+                  [
+                    3,
+                    2,
+                    1
+                  ][index] *
+                  scale
+                )
+              );
+            }
+          );
+
+        break;
+      }
+
+
+      /*
+        FUTURE STARS:
+        usa le caratteristiche
+        che il vecchio sistema
+        aveva identificato come
+        maggiormente cresciute.
+      */
+
+      case "futureStars": {
+        const growthStats =
+          focus.length
+            ? focus
+            : strongest;
+
+        growthStats
+          .slice(
+            0,
+            3
+          )
+          .forEach(
+            (
+              stat,
+              index
+            ) => {
+              mpPB4AddBoost(
+                boosts,
+                stat,
+                Math.round(
+                  [
+                    4,
+                    3,
+                    2
+                  ][index] *
+                  scale
+                )
+              );
+            }
+          );
+
+        break;
+      }
+
+
+      /*
+        FUT BIRTHDAY:
+        rende migliori soprattutto
+        le caratteristiche deboli.
+      */
+
+      case "futBirthday": {
+        weakest
+          .slice(
+            0,
+            3
+          )
+          .forEach(
+            (
+              stat,
+              index
+            ) => {
+              mpPB4AddBoost(
+                boosts,
+                stat,
+                Math.round(
+                  [
+                    6,
+                    5,
+                    4
+                  ][index] *
+                  scale
+                )
+              );
+            }
+          );
+
+        break;
+      }
+
+
+      /*
+        TIME WARP:
+        ancora più aggressivo
+        sulle statistiche basse.
+      */
+
+      case "timeWarp": {
+        weakest
+          .slice(
+            0,
+            4
+          )
+          .forEach(
+            (
+              stat,
+              index
+            ) => {
+              mpPB4AddBoost(
+                boosts,
+                stat,
+                Math.round(
+                  [
+                    9,
+                    7,
+                    5,
+                    3
+                  ][index] *
+                  scale
+                )
+              );
+            }
+          );
+
+        break;
+      }
+
+
+      /*
+        TOTS:
+        stesso concetto TOTY,
+        leggermente più forte.
+      */
+
+      case "tots": {
+        strongest
+          .slice(
+            0,
+            4
+          )
+          .forEach(
+            (
+              stat,
+              index
+            ) => {
+              mpPB4AddBoost(
+                boosts,
+                stat,
+                Math.round(
+                  [
+                    4,
+                    3,
+                    2,
+                    1
+                  ][index] *
+                  scale
+                )
+              );
+            }
+          );
+
+        break;
+      }
+
+
+      /*
+        SUMMER HEAT:
+        PAC + DRI protagoniste.
+      */
+
+      case "summerHeat": {
+        mpPB4AddBoost(
+          boosts,
+          "pac",
+          Math.max(
+            2,
+            Math.round(
+              5 * scale
+            )
+          )
+        );
+
+        mpPB4AddBoost(
+          boosts,
+          "dri",
+          Math.max(
+            2,
+            Math.round(
+              5 * scale
+            )
+          )
+        );
+
+        mpPB4AddBoost(
+          boosts,
+          roleOrder[0],
+          Math.max(
+            1,
+            Math.round(
+              2 * scale
+            )
+          )
+        );
+
+        break;
+      }
+
+
+      /*
+        FUTTIES:
+        fortissima e più completa,
+        ma NON forza ogni stat a 99.
+      */
+
+      case "futties": {
+        weakest
+          .slice(
+            0,
+            3
+          )
+          .forEach(
+            (
+              stat,
+              index
+            ) => {
+              mpPB4AddBoost(
+                boosts,
+                stat,
+                Math.round(
+                  [
+                    3,
+                    2,
+                    1
+                  ][index] *
+                  scale
+                )
+              );
+            }
+          );
+
+        mpPB4AddBoost(
+          boosts,
+          strongest[0],
+          Math.max(
+            1,
+            Math.round(
+              2 * scale
+            )
+          )
+        );
+
+        break;
+      }
+    }
+
+
+    /* =====================================================
+       APPLICA I BOOST
+       ===================================================== */
+
+    const result = {};
+
+
+    MP_PB4_STATS.forEach(
+      stat => {
+
+        /*
+          Se la carta base è già sopra
+          il cap, non viene abbassata.
+        */
+
+        const statCap =
+          Math.max(
+            config.cap,
+            base[stat]
+          );
+
+
+        result[stat] =
+          Math.round(
+            mpPB4Clamp(
+              base[stat] +
+              mpPB4Number(
+                boosts[stat],
+                0
+              ),
+              base[stat],
+              statCap
+            )
+          );
+      }
+    );
+
+
+    /* =====================================================
+       ULTIMATE SCREAM
+
+       Una sola statistica viene
+       FORZATA a 99.
+
+       Tutte le altre restano sotto
+       il limite normale Scream,
+       salvo che la base fosse già sopra.
+       ===================================================== */
+
+    if (
+      card.promoId ===
+      "ultimateScream"
+    ) {
+      const screamStat =
+        (
+          focus.length &&
+          MP_PB4_STATS.includes(
+            focus[0]
+          )
+        )
+          ? focus[0]
+          : strongest[0];
+
+
+      MP_PB4_STATS.forEach(
+        stat => {
+          if (
+            stat ===
+            screamStat
+          ) {
+            return;
+          }
+
+          const otherCap =
+            Math.max(
+              93,
+              base[stat]
+            );
+
+          result[stat] =
+            Math.min(
+              result[stat],
+              otherCap
+            );
+        }
+      );
+
+
+      result[
+        screamStat
+      ] = 99;
+    }
+
+
+    return {
+      stats:
+        mpPB4CleanStats(
+          result
+        ),
+
+      baseOvr,
+
+      promoOvr
+    };
+  }
+
+
+  /* =======================================================
+     TESTO DELLA PROMO
+     ======================================================= */
+
+  function mpPB4SpecialText(
+    card,
+    built
+  ) {
+    const descriptions = {
+
+      otw:
+        "Upgrade moderato basato sulla carta base",
+
+      ultimateScream:
+        "Una statistica speciale portata a 99",
+
+      thunderstruck:
+        "Boost moderato con una statistica principale potenziata",
+
+      futmas:
+        "Upgrade completo e bilanciato",
+
+      toty:
+        "Carta élite con caratteristiche modellate sul ruolo",
+
+      futureStars:
+        "Premia soprattutto le caratteristiche in crescita",
+
+      futBirthday:
+        "Potenzia maggiormente le caratteristiche deboli",
+
+      timeWarp:
+        "Trasforma soprattutto le statistiche più basse",
+
+      tots:
+        "Carta élite stagionale, leggermente sopra il TOTY",
+
+      summerHeat:
+        "Carta endgame con forte spinta a velocità e dribbling",
+
+      futties:
+        "Carta endgame finale"
+    };
+
+
+    const description =
+      descriptions[
+        card.promoId
+      ] ||
+      card.specialText ||
+      "";
+
+
+    return (
+      `${description} · ` +
+      `${built.promoOvr} OVR`
+    );
+  }
+
+
+  /* =======================================================
+     CARTE SALVATE
+     ======================================================= */
+
+  function mpPB4ReadCards() {
+    try {
+      const cards =
+        JSON.parse(
+          localStorage.getItem(
+            MP_PB4_KEY
+          ) ||
+          "[]"
+        );
+
+      return Array.isArray(
+        cards
+      )
+        ? cards
+        : [];
+
+    } catch {
+      return [];
+    }
+  }
+
+
+  function mpPB4SaveCards(
+    cards
+  ) {
+    localStorage.setItem(
+      MP_PB4_KEY,
+      JSON.stringify(
+        cards
+      )
+    );
+  }
+
+
+  /* =======================================================
+     RIPARA UNA CARTA
+     ======================================================= */
+
+  function mpPB4RepairCard(
+    card
+  ) {
+    const built =
+      mpPB4BuildStats(
+        card
+      );
+
+
+    if (!built) {
+      return card;
+    }
+
+
+    return {
+      ...card,
+
+
+      /*
+        Carta base al momento
+        del rilascio.
+      */
+
+      baseOvr:
+        built.baseOvr,
+
+
+      /*
+        Sei statistiche REALI.
+      */
+
+      stats:
+        built.stats,
+
+
+      /*
+        OVR VISIVO DELLA PROMO.
+
+        NON È PIÙ LA MEDIA.
+      */
+
+      ovr:
+        built.promoOvr,
+
+
+      /*
+        Salviamo anche questi dati
+        per debugging.
+      */
+
+      promoDisplayedOvr:
+        built.promoOvr,
+
+      promoStatsAverage:
+        mpPB4StatsAverage(
+          built.stats
+        ),
+
+
+      specialText:
+        mpPB4SpecialText(
+          card,
+          built
+        ),
+
+
+      promoBalanceVersion:
+        4
+    };
+  }
+
+
+  /* =======================================================
+     RIPARA TUTTE LE CARTE GIÀ ESISTENTI
+     ======================================================= */
+
+  function mpPromoRepairCardsV4(
+    rerender = true
+  ) {
+    const cards =
+      mpPB4ReadCards();
+
+
+    const repaired =
+      cards.map(
+        card =>
+          mpPB4RepairCard(
+            card
+          )
+      );
+
+
+    mpPB4SaveCards(
+      repaired
+    );
+
+
+    if (
+      rerender &&
+      typeof route !==
+        "undefined" &&
+      route === "promos" &&
+      typeof window
+        .renderPromos ===
+        "function"
+    ) {
+      window.renderPromos();
+    }
+
+
+    return repaired;
+  }
+
+
+  /* =======================================================
+     QUANDO GENERI UNA NUOVA PROMO
+     LA V4 VIENE APPLICATA SUBITO
+     ======================================================= */
+
+  const mpPB4PreviousGenerate =
+    typeof window
+      .mpPromoGenerateCard ===
+      "function"
+      ? window.mpPromoGenerateCard
+      : null;
+
+
+  if (
+    mpPB4PreviousGenerate
+  ) {
+    window.mpPromoGenerateCard =
+      function (
+        ...args
+      ) {
+        const generated =
+          mpPB4PreviousGenerate
+            .apply(
+              this,
+              args
+            );
+
+
+        const cards =
+          mpPromoRepairCardsV4(
+            false
+          );
+
+
+        if (
+          typeof route !==
+            "undefined" &&
+          route === "promos" &&
+          typeof window
+            .renderPromos ===
+            "function"
+        ) {
+          window.renderPromos();
+        }
+
+
+        if (
+          !generated?.id
+        ) {
+          return generated;
+        }
+
+
+        return (
+          cards.find(
+            card =>
+              card.id ===
+              generated.id
+          ) ||
+          generated
+        );
+      };
+  }
+
+
+  /* =======================================================
+     GENERA TUTTE
+     ======================================================= */
+
+  const mpPB4PreviousGenerateAll =
+    typeof window
+      .mpPromoGenerateAllCards ===
+      "function"
+      ? window
+          .mpPromoGenerateAllCards
+      : null;
+
+
+  if (
+    mpPB4PreviousGenerateAll
+  ) {
+    window.mpPromoGenerateAllCards =
+      function (
+        ...args
+      ) {
+        const result =
+          mpPB4PreviousGenerateAll
+            .apply(
+              this,
+              args
+            );
+
+
+        mpPromoRepairCardsV4(
+          true
+        );
+
+
+        return result;
+      };
+  }
+
+
+  /* =======================================================
+     IMPORTANTE:
+     OVR PROMO ANCHE NEL CLUB
+
+     La V1 mandava solo le 6 stats.
+     Adesso aggiungiamo promoOvr.
+     ======================================================= */
+
+  const mpPB4PreviousClubStats =
+    typeof window
+      .mpClubGetCardStats ===
+      "function"
+      ? window
+          .mpClubGetCardStats
+      : null;
+
+
+  if (
+    mpPB4PreviousClubStats
+  ) {
+
+    function mpPB4ClubStats() {
+      const stats =
+        mpPB4PreviousClubStats();
+
+
+      const selected =
+        typeof window
+          .mpPromoSelectedCard ===
+          "function"
+          ? window
+              .mpPromoSelectedCard()
+          : null;
+
+
+      if (!selected) {
+        return stats;
+      }
+
+
+      return {
+        ...stats,
+
+        promoOvr:
+          Math.round(
+            mpPB4Number(
+              selected.ovr,
+              60
+            )
+          ),
+
+        promoBaseOvr:
+          Math.round(
+            mpPB4Number(
+              selected.baseOvr,
+              60
+            )
+          ),
+
+        promoBalanceVersion:
+          4
+      };
+    }
+
+
+    try {
+      mpClubGetCardStats =
+        mpPB4ClubStats;
+    } catch {}
+
+
+    window.mpClubGetCardStats =
+      mpPB4ClubStats;
+  }
+
+
+  /* =======================================================
+     NON RICALCOLARE L'OVR PROMO
+     FACENDO LA MEDIA NEL CLUB
+     ======================================================= */
+
+  const mpPB4PreviousClubOvr =
+    typeof mpClubCalculateOvr ===
+      "function"
+      ? mpClubCalculateOvr
+      : (
+          typeof window
+            .mpClubCalculateOvr ===
+            "function"
+            ? window
+                .mpClubCalculateOvr
+            : null
+        );
+
+
+  if (
+    mpPB4PreviousClubOvr
+  ) {
+
+    function mpPB4ClubOvr(
+      stats
+    ) {
+
+      /*
+        CARTA PROMO:
+        usa l'OVR ufficiale
+        salvato nella promo.
+      */
+
+      if (
+        stats?.promoCard ===
+          true &&
+        Number.isFinite(
+          Number(
+            stats?.promoOvr
+          )
+        )
+      ) {
+        return Math.round(
+          mpPB4Clamp(
+            Number(
+              stats.promoOvr
+            ),
+            0,
+            99
+          )
+        );
+      }
+
+
+      /*
+        CARTA BASE:
+        tutto continua come prima.
+      */
+
+      return mpPB4PreviousClubOvr(
+        stats
+      );
+    }
+
+
+    try {
+      mpClubCalculateOvr =
+        mpPB4ClubOvr;
+    } catch {}
+
+
+    window.mpClubCalculateOvr =
+      mpPB4ClubOvr;
+  }
+
+
+  /* =======================================================
+     RISINCRONIZZA LA PROMO SE È
+     ATTUALMENTE SELEZIONATA NEL CLUB
+     ======================================================= */
+
+  async function mpPromoSyncBalanceV4() {
+    try {
+
+      const selectedId =
+        localStorage.getItem(
+          MP_PB4_SELECTED_KEY
+        ) ||
+        "base";
+
+
+      if (
+        selectedId ===
+        "base"
+      ) {
+        return;
+      }
+
+
+      if (
+        typeof window
+          .mpSyncMyClubProfile !==
+          "function"
+      ) {
+        return;
+      }
+
+
+      if (
+        typeof mpGetMyClub !==
+        "function"
+      ) {
+        return;
+      }
+
+
+      const club =
+        await mpGetMyClub();
+
+
+      if (
+        club?.club_id
+      ) {
+        await window
+          .mpSyncMyClubProfile(
+            club.club_id
+          );
+      }
+
+    } catch (
+      error
+    ) {
+      console.warn(
+        "Sync Promo Balance V4:",
+        error
+      );
+    }
+  }
+
+
+  /* =======================================================
+     FUNZIONI GLOBALI DI TEST
+     ======================================================= */
+
+  window.mpPromoRepairCardsV4 =
+    mpPromoRepairCardsV4;
+
+  window.mpPromoSyncBalanceV4 =
+    mpPromoSyncBalanceV4;
+
+
+  /* =======================================================
+     APPLICA AUTOMATICAMENTE
+     ======================================================= */
+
+  setTimeout(
+    () => {
+
+      mpPromoRepairCardsV4(
+        true
+      );
+
+
+      mpPromoSyncBalanceV4();
+
+    },
+    180
+  );
+
+})();
