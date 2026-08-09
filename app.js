@@ -23312,13 +23312,32 @@ if (!window.MP_CLUB_ESCAPE_READY) {
           playStyle.id
       );
 
-    const normalPlayStyles =
-      mpPromoSelectWithCaps(
-        candidates,
-        8,
-        plusIds,
-        3
-      );
+    const normalPlayStyleCounts = {
+  otw: 2,
+  ultimateScream: 2,
+  thunderstruck: 3,
+  futmas: 4,
+  toty: 6,
+  futureStars: 5,
+  futBirthday: 5,
+  timeWarp: 6,
+  tots: 7,
+  summerHeat: 7,
+  futties: 8
+};
+
+const normalPlayStyleCount =
+  normalPlayStyleCounts[
+    definition.id
+  ] ?? 8;
+
+const normalPlayStyles =
+  mpPromoSelectWithCaps(
+    candidates,
+    normalPlayStyleCount,
+    plusIds,
+    3
+  );
 
     return {
       normal:
