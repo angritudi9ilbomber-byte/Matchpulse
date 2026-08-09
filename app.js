@@ -30467,3 +30467,1774 @@ const normalPlayStyles =
     mpFullOpenProfileHub;
 
 })();
+
+/* =========================================================
+   MATCHPULSE
+   PROMO VISUAL V3
+   LAYOUT UNIFICATO BASATO SULLA CARTA BASE
+   ========================================================= */
+
+(function () {
+  if (window.MP_PROMO_VISUAL_V3_READY) {
+    return;
+  }
+
+  window.MP_PROMO_VISUAL_V3_READY = true;
+
+
+  const MP_V3_STATS = [
+    "pac",
+    "sho",
+    "pas",
+    "dri",
+    "def",
+    "phy"
+  ];
+
+
+  /* =======================================================
+     SUPPORTO
+     ======================================================= */
+
+  function mpV3Number(
+    value,
+    fallback = 0
+  ) {
+    const number =
+      Number(
+        String(
+          value ?? ""
+        ).replace(",", ".")
+      );
+
+    return Number.isFinite(number)
+      ? number
+      : fallback;
+  }
+
+
+  function mpV3Clamp(
+    value,
+    min,
+    max
+  ) {
+    return Math.max(
+      min,
+      Math.min(
+        max,
+        mpV3Number(
+          value,
+          min
+        )
+      )
+    );
+  }
+
+
+  function mpV3Escape(value) {
+    if (
+      typeof escapeHtml ===
+      "function"
+    ) {
+      return escapeHtml(value);
+    }
+
+    return String(
+      value ?? ""
+    )
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll(
+        "'",
+        "&#039;"
+      );
+  }
+
+
+  function mpV3Object(value) {
+    if (
+      value &&
+      typeof value === "object" &&
+      !Array.isArray(value)
+    ) {
+      return value;
+    }
+
+    try {
+      const parsed =
+        JSON.parse(
+          value || "{}"
+        );
+
+      return (
+        parsed &&
+        typeof parsed === "object" &&
+        !Array.isArray(parsed)
+      )
+        ? parsed
+        : {};
+
+    } catch {
+      return {};
+    }
+  }
+
+
+  function mpV3SafeClass(value) {
+    return String(
+      value || "promo"
+    )
+      .trim()
+      .toLowerCase()
+      .replace(
+        /[^a-z0-9_-]/g,
+        "-"
+      );
+  }
+
+
+  function mpV3Initials(name) {
+    const words =
+      String(
+        name || "MP"
+      )
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
+
+    if (!words.length) {
+      return "MP";
+    }
+
+    if (words.length === 1) {
+      return words[0]
+        .slice(0, 2)
+        .toUpperCase();
+    }
+
+    return (
+      words[0][0] +
+      words[
+        words.length - 1
+      ][0]
+    ).toUpperCase();
+  }
+
+
+  function mpV3OfficialOvr(card) {
+    return Math.round(
+      mpV3Clamp(
+        card?.promoDisplayedOvr ??
+        card?.promoOvr ??
+        card?.ovr ??
+        60,
+        1,
+        99
+      )
+    );
+  }
+
+
+  function mpV3BaseOvr(card) {
+    return Math.round(
+      mpV3Clamp(
+        card?.promoBaseOvr ??
+        card?.baseOvr ??
+        60,
+        1,
+        99
+      )
+    );
+  }
+
+
+  function mpV3GetCards() {
+    if (
+      typeof window
+        .mpPromoGetCards ===
+      "function"
+    ) {
+      try {
+        return (
+          window
+            .mpPromoGetCards() ||
+          []
+        );
+      } catch {
+        return [];
+      }
+    }
+
+    try {
+      return JSON.parse(
+        localStorage.getItem(
+          "matchpulse_promo_cards_v1"
+        ) || "[]"
+      );
+    } catch {
+      return [];
+    }
+  }
+
+
+  /* =======================================================
+     PLAYSTYLE
+     ======================================================= */
+
+  function mpV3PlayStyle(id) {
+    if (
+      typeof MP_PLAYSTYLES ===
+        "undefined" ||
+      !Array.isArray(
+        MP_PLAYSTYLES
+      )
+    ) {
+      return null;
+    }
+
+    return (
+      MP_PLAYSTYLES.find(
+        item =>
+          item.id === id
+      ) ||
+      null
+    );
+  }
+
+
+  function mpV3PlusIcons(ids) {
+    return (ids || [])
+      .map(id => {
+        const ps =
+          mpV3PlayStyle(id);
+
+        if (!ps) {
+          return "";
+        }
+
+        return `
+          <img
+            src="${mpV3Escape(
+              ps.plusIcon
+            )}"
+            alt="${mpV3Escape(
+              ps.name
+            )}+"
+            title="${mpV3Escape(
+              ps.name
+            )}+"
+          >
+        `;
+      })
+      .join("");
+  }
+
+
+  function mpV3PlayStyleItem(
+    id,
+    type
+  ) {
+    const ps =
+      mpV3PlayStyle(id);
+
+    if (!ps) {
+      return "";
+    }
+
+    const plus =
+      type === "plus";
+
+    return `
+      <div class="
+        mp-pv3-ps-item
+        ${plus
+          ? "is-plus"
+          : "is-normal"}
+      ">
+
+        <img
+          src="${mpV3Escape(
+            plus
+              ? ps.plusIcon
+              : ps.normalIcon
+          )}"
+          alt="${mpV3Escape(
+            ps.name
+          )}"
+        >
+
+        <div>
+          <strong>
+            ${mpV3Escape(
+              ps.name
+            )}
+          </strong>
+
+          <span>
+            ${plus
+              ? "PLAYSTYLE+"
+              : "PLAYSTYLE"}
+          </span>
+        </div>
+
+      </div>
+    `;
+  }
+
+
+  /* =======================================================
+     STELLE
+     ======================================================= */
+
+  function mpV3Stars(value) {
+    const amount =
+      Math.round(
+        mpV3Clamp(
+          value,
+          1,
+          5
+        )
+      );
+
+    return `
+      <span
+        class="mp-promo-v3-stars"
+        aria-label="${amount} stelle"
+      >
+        ${"★".repeat(amount)}
+
+        <i>
+          ${"★".repeat(
+            5 - amount
+          )}
+        </i>
+      </span>
+    `;
+  }
+
+
+  /* =======================================================
+     FOTO LOCALE PROMO
+     ======================================================= */
+
+  function mpV3LocalPhoto(card) {
+    try {
+      const library =
+        JSON.parse(
+          localStorage.getItem(
+            "matchpulse_promo_photos_v1"
+          ) || "{}"
+        );
+
+      if (
+        card?.photoRef &&
+        library[
+          card.photoRef
+        ]
+      ) {
+        return library[
+          card.photoRef
+        ];
+      }
+
+    } catch {}
+
+
+    if (card?.photo) {
+      return card.photo;
+    }
+
+
+    const profile =
+      typeof getPlayerProfile ===
+        "function"
+        ? getPlayerProfile()
+        : {};
+
+    return (
+      profile.photo ||
+      "profile.jpg"
+    );
+  }
+
+
+  /* =======================================================
+     FOTO MEMBRO CLUB
+     ======================================================= */
+
+  function mpV3MemberPhoto(member) {
+    if (
+      typeof window
+        .mpV3PublicAvatarUrl ===
+      "function"
+    ) {
+      try {
+        const url =
+          window
+            .mpV3PublicAvatarUrl(
+              member
+            );
+
+        if (url) {
+          return url;
+        }
+      } catch {}
+    }
+
+
+    if (
+      typeof window
+        .mpClubAvatarPublicUrl ===
+      "function"
+    ) {
+      try {
+        const url =
+          window
+            .mpClubAvatarPublicUrl(
+              member
+            );
+
+        if (url) {
+          return url;
+        }
+      } catch {}
+    }
+
+
+    const path =
+      String(
+        member?.avatar_path ||
+        ""
+      );
+
+    if (
+      path &&
+      typeof matchpulseSupabase !==
+        "undefined" &&
+      matchpulseSupabase
+    ) {
+      try {
+        const result =
+          matchpulseSupabase
+            .storage
+            .from(
+              "matchpulse-avatars"
+            )
+            .getPublicUrl(
+              path
+            );
+
+        return (
+          result?.data?.publicUrl ||
+          ""
+        );
+      } catch {}
+    }
+
+    return "";
+  }
+
+
+  /* =======================================================
+     RENDERER UNICO
+
+     preview = collezione
+     club    = carta Club
+     detail  = carta aperta
+
+     La geometria rimane IDENTICA.
+     Cambia soltanto la scala.
+     ======================================================= */
+
+  function mpPromoV3Card(
+    card,
+    mode = "preview"
+  ) {
+    const promoClass =
+      mpV3SafeClass(
+        card?.promoId
+      );
+
+    const photo =
+      card?.photo ||
+      mpV3LocalPhoto(card);
+
+    const ovr =
+      mpV3OfficialOvr(card);
+
+    const role =
+      card?.role ||
+      "CC";
+
+    const shortName =
+      card?.shortName ||
+      card?.promoName ||
+      "PROMO";
+
+    const shirt =
+      card?.shirtNumber ||
+      "10";
+
+    const foot =
+      card?.preferredFoot ||
+      card?.foot ||
+      "Destro";
+
+    const style =
+      card?.playStyle ||
+      "Equilibrato";
+
+    const weakFoot =
+      mpV3Clamp(
+        card?.weakFoot ?? 3,
+        1,
+        5
+      );
+
+    const skillMoves =
+      mpV3Clamp(
+        card?.skillMoves ?? 3,
+        1,
+        5
+      );
+
+
+    return `
+      <div
+        class="
+          mp-promo-v3-card
+          mp-promo-v3-${mode}
+          mp-promo-v3-theme-${promoClass}
+        "
+
+        data-promo-v3-card="${mpV3Escape(
+          card?.id || ""
+        )}"
+
+        style="
+          --mp-v3-photo-x:
+            ${mpV3Number(
+              card?.photoX,
+              50
+            )}%;
+
+          --mp-v3-photo-y:
+            ${mpV3Number(
+              card?.photoY,
+              8
+            )}%;
+
+          --mp-v3-photo-zoom:
+            ${mpV3Number(
+              card?.photoZoom,
+              1.02
+            )};
+        "
+      >
+
+        <img
+          class="mp-promo-v3-template"
+          src="${mpV3Escape(
+            card?.template || ""
+          )}"
+          alt="${mpV3Escape(
+            card?.promoName ||
+            "Carta promo"
+          )}"
+        >
+
+
+        <!-- OVERALL -->
+
+        <div class="mp-promo-v3-rating">
+          <strong>
+            ${ovr}
+          </strong>
+
+          <span>
+            OVERALL
+          </span>
+        </div>
+
+
+        <!-- RUOLO -->
+
+        <div class="mp-promo-v3-role">
+          <strong>
+            ${mpV3Escape(
+              role
+            )}
+          </strong>
+
+          <span>
+            ${mpV3Escape(
+              shortName
+            )}
+          </span>
+        </div>
+
+
+        <!-- INFO LATERALI -->
+
+        <div class="mp-promo-v3-side">
+
+          <div>
+            <span>
+              MAGLIA
+            </span>
+
+            <strong>
+              #${mpV3Escape(
+                shirt
+              )}
+            </strong>
+          </div>
+
+
+          <div>
+            <span>
+              PIEDE
+            </span>
+
+            <strong>
+              ${mpV3Escape(
+                String(
+                  foot
+                ).toUpperCase()
+              )}
+            </strong>
+          </div>
+
+
+          <div>
+            <span>
+              STILE
+            </span>
+
+            <strong
+              title="${mpV3Escape(
+                style
+              )}"
+            >
+              ${mpV3Escape(
+                String(
+                  style
+                ).toUpperCase()
+              )}
+            </strong>
+          </div>
+
+        </div>
+
+
+        <!-- PLAYSTYLE+ -->
+
+        <div class="mp-promo-v3-plus">
+          ${mpV3PlusIcons(
+            card?.plusPlayStyles
+          )}
+        </div>
+
+
+        <!-- FOTO -->
+
+        <div class="mp-promo-v3-photo">
+          ${
+            photo
+              ? `
+                <img
+                  src="${mpV3Escape(
+                    photo
+                  )}"
+                  alt="${mpV3Escape(
+                    card?.playerName ||
+                    "PLAYER"
+                  )}"
+                >
+              `
+              : `
+                <div class="
+                  mp-promo-v3-initials
+                ">
+                  ${mpV3Escape(
+                    mpV3Initials(
+                      card?.playerName
+                    )
+                  )}
+                </div>
+              `
+          }
+        </div>
+
+
+        <!-- NOME -->
+
+        <div class="mp-promo-v3-name">
+          ${mpV3Escape(
+            card?.playerName ||
+            "PLAYER"
+          )}
+        </div>
+
+
+        <!-- STATISTICHE -->
+
+        <div class="mp-promo-v3-stats">
+
+          ${MP_V3_STATS
+            .map(stat => `
+              <div>
+                <strong>
+                  ${Math.round(
+                    mpV3Number(
+                      card?.stats?.[
+                        stat
+                      ],
+                      60
+                    )
+                  )}
+                </strong>
+
+                <span>
+                  ${stat.toUpperCase()}
+                </span>
+              </div>
+            `)
+            .join("")}
+
+        </div>
+
+
+        <!-- STELLE -->
+
+        <div class="mp-promo-v3-abilities">
+
+          <div>
+            <span>
+              PIEDE DEBOLE
+            </span>
+
+            ${mpV3Stars(
+              weakFoot
+            )}
+          </div>
+
+
+          <div>
+            <span>
+              MOSSE
+            </span>
+
+            ${mpV3Stars(
+              skillMoves
+            )}
+          </div>
+
+        </div>
+
+      </div>
+    `;
+  }
+
+
+  window.mpPromoV3Card =
+    mpPromoV3Card;
+
+
+  /* =======================================================
+     DETTAGLIO CARTA
+     ======================================================= */
+
+  function mpClosePromoCardDetailV3() {
+    document
+      .getElementById(
+        "mpPromoDetailV3"
+      )
+      ?.remove();
+
+    document
+      .getElementById(
+        "mpPromoDetailV2"
+      )
+      ?.remove();
+
+    document.body.classList.remove(
+      "mp-promo-v2-modal-open"
+    );
+
+    document.body.classList.remove(
+      "mp-promo-v3-modal-open"
+    );
+  }
+
+
+  function mpOpenPromoCardDetailV3(
+    cardId
+  ) {
+    const card =
+      mpV3GetCards()
+        .find(
+          item =>
+            item.id === cardId
+        );
+
+    if (!card) {
+      return;
+    }
+
+    mpClosePromoCardDetailV3();
+
+
+    const overlay =
+      document.createElement(
+        "div"
+      );
+
+    overlay.id =
+      "mpPromoDetailV3";
+
+    overlay.className =
+      "mp-promo-v3-detail-backdrop";
+
+
+    overlay.addEventListener(
+      "click",
+      event => {
+        if (
+          event.target ===
+          overlay
+        ) {
+          mpClosePromoCardDetailV3();
+        }
+      }
+    );
+
+
+    const weakFoot =
+      Math.round(
+        mpV3Clamp(
+          card.weakFoot ?? 3,
+          1,
+          5
+        )
+      );
+
+    const skillMoves =
+      Math.round(
+        mpV3Clamp(
+          card.skillMoves ?? 3,
+          1,
+          5
+        )
+      );
+
+
+    overlay.innerHTML = `
+      <section
+        class="mp-promo-v3-detail-modal"
+      >
+
+        <button
+          type="button"
+          class="mp-promo-v3-detail-close"
+          onclick="
+            mpClosePromoCardDetailV3()
+          "
+        >
+          ×
+        </button>
+
+
+        <div
+          class="mp-promo-v3-detail-head"
+        >
+
+          <div
+            class="mp-promo-v3-detail-card"
+          >
+            ${mpPromoV3Card(
+              card,
+              "detail"
+            )}
+          </div>
+
+
+          <div
+            class="mp-promo-v3-detail-info"
+          >
+
+            <span>
+              ${mpV3Escape(
+                card.shortName ||
+                card.promoName
+              )}
+            </span>
+
+            <h2>
+              ${mpV3Escape(
+                card.playerName ||
+                "PLAYER"
+              )}
+            </h2>
+
+            <p>
+              ${mpV3Escape(
+                card.promoName ||
+                "Carta promo"
+              )}
+              ·
+              ${mpV3Escape(
+                card.role ||
+                "CC"
+              )}
+              ·
+              ${mpV3OfficialOvr(
+                card
+              )}
+              OVR
+            </p>
+
+
+            <div
+              class="
+                mp-promo-v3-detail-abilities
+              "
+            >
+
+              <div>
+                <span>
+                  Piede debole
+                </span>
+
+                <strong>
+                  ${mpV3Stars(
+                    weakFoot
+                  )}
+                  ${weakFoot}/5
+                </strong>
+              </div>
+
+
+              <div>
+                <span>
+                  Mosse abilità
+                </span>
+
+                <strong>
+                  ${mpV3Stars(
+                    skillMoves
+                  )}
+                  ${skillMoves}/5
+                </strong>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <section
+          class="mp-promo-v3-ps-section"
+        >
+
+          <div
+            class="mp-promo-v3-ps-group"
+          >
+
+            <header>
+              <span>
+                PLAYSTYLE NORMALI
+              </span>
+
+              <strong>
+                ${
+                  card
+                    .normalPlayStyles
+                    ?.length || 0
+                }
+              </strong>
+            </header>
+
+
+            <div
+              class="mp-promo-v3-ps-grid"
+            >
+              ${
+                card
+                  .normalPlayStyles
+                  ?.length
+
+                  ? card
+                      .normalPlayStyles
+                      .map(
+                        id =>
+                          mpV3PlayStyleItem(
+                            id,
+                            "normal"
+                          )
+                      )
+                      .join("")
+
+                  : `
+                    <p>
+                      Nessun PlayStyle normale.
+                    </p>
+                  `
+              }
+            </div>
+
+          </div>
+
+
+          <div
+            class="mp-promo-v3-ps-group"
+          >
+
+            <header>
+              <span>
+                PLAYSTYLE+
+              </span>
+
+              <strong>
+                ${
+                  card
+                    .plusPlayStyles
+                    ?.length || 0
+                }
+              </strong>
+            </header>
+
+
+            <div
+              class="mp-promo-v3-ps-grid"
+            >
+              ${
+                card
+                  .plusPlayStyles
+                  ?.length
+
+                  ? card
+                      .plusPlayStyles
+                      .map(
+                        id =>
+                          mpV3PlayStyleItem(
+                            id,
+                            "plus"
+                          )
+                      )
+                      .join("")
+
+                  : `
+                    <p>
+                      Nessun PlayStyle+.
+                    </p>
+                  `
+              }
+            </div>
+
+          </div>
+
+        </section>
+
+      </section>
+    `;
+
+
+    document.body.appendChild(
+      overlay
+    );
+
+    document.body.classList.add(
+      "mp-promo-v3-modal-open"
+    );
+  }
+
+
+  window.mpOpenPromoCardDetailV3 =
+    mpOpenPromoCardDetailV3;
+
+  window.mpClosePromoCardDetailV3 =
+    mpClosePromoCardDetailV3;
+
+
+  /*
+    Compatibilità con eventuali
+    pulsanti creati dal V2.
+  */
+
+  window.mpOpenPromoCardDetailV2 =
+    mpOpenPromoCardDetailV3;
+
+  window.mpClosePromoCardDetailV2 =
+    mpClosePromoCardDetailV3;
+
+
+  /* =======================================================
+     COLLEZIONE PROMO
+     ======================================================= */
+
+  function mpV3PatchCollection() {
+    const cards =
+      mpV3GetCards();
+
+    if (!cards.length) {
+      return;
+    }
+
+
+    document
+      .querySelectorAll(
+        ".mp-promo-collection-item"
+      )
+      .forEach(item => {
+
+        let target =
+          item.querySelector(
+            ".mp-promo-v2-open-button"
+          );
+
+        if (!target) {
+          target =
+            item.querySelector(
+              `
+                .mp-promo-card-canvas[
+                  data-promo-card
+                ]
+              `
+            );
+        }
+
+        if (!target) {
+          return;
+        }
+
+
+        let cardId = "";
+
+
+        if (
+          target.classList.contains(
+            "mp-promo-v2-open-button"
+          )
+        ) {
+          const oldV2 =
+            target.querySelector(
+              "[data-promo-v2-card]"
+            );
+
+          cardId =
+            oldV2?.dataset
+              ?.promoV2Card ||
+            "";
+        } else {
+          cardId =
+            target.dataset
+              ?.promoCard ||
+            "";
+        }
+
+
+        const card =
+          cards.find(
+            candidate =>
+              candidate.id ===
+              cardId
+          );
+
+
+        if (!card) {
+          return;
+        }
+
+
+        const button =
+          document.createElement(
+            "button"
+          );
+
+        button.type =
+          "button";
+
+        button.className =
+          "mp-promo-v3-open-button";
+
+        button.setAttribute(
+          "aria-label",
+          `Apri ${
+            card.promoName
+          }`
+        );
+
+
+        button.innerHTML =
+          mpPromoV3Card(
+            card,
+            "preview"
+          );
+
+
+        button.addEventListener(
+          "click",
+          () => {
+            mpOpenPromoCardDetailV3(
+              card.id
+            );
+          }
+        );
+
+
+        target.replaceWith(
+          button
+        );
+
+
+        /*
+          Anche la scritta:
+          BASE → PROMO OVR
+          deve usare l'OVR ufficiale V4.
+        */
+
+        const infoOvr =
+          item.querySelector(
+            ".mp-promo-card-info strong"
+          );
+
+        if (infoOvr) {
+          infoOvr.textContent =
+            `${mpV3BaseOvr(
+              card
+            )} → ${mpV3OfficialOvr(
+              card
+            )} OVR`;
+        }
+      });
+  }
+
+
+  window.mpV3PatchCollection =
+    mpV3PatchCollection;
+
+
+  /* =======================================================
+     DATI PROMO DAL CLUB
+     ======================================================= */
+
+  function mpV3ClubCardData(member) {
+    const stats =
+      mpV3Object(
+        member?.card_stats
+      );
+
+    const playstyles =
+      mpV3Object(
+        member?.playstyles
+      );
+
+
+    const plusPlayStyles =
+      Object.keys(playstyles)
+        .filter(
+          id =>
+            playstyles[id] ===
+            "plus"
+        )
+        .slice(
+          0,
+          Math.max(
+            1,
+            mpV3Number(
+              stats
+                .promoPlusCount,
+              5
+            )
+          )
+        );
+
+
+    const normalPlayStyles =
+      Object.keys(playstyles)
+        .filter(
+          id =>
+            playstyles[id] ===
+            "normal"
+        );
+
+
+    return {
+      id:
+        member?.user_id ||
+        "",
+
+      promoId:
+        stats.promoId ||
+        "promo",
+
+      promoName:
+        stats.promoName ||
+        "Carta promo",
+
+      shortName:
+        stats.promoShortName ||
+        stats.promoName ||
+        "PROMO",
+
+      template:
+        stats.promoTemplate ||
+        "",
+
+      playerName:
+        member?.player_name ||
+        "PLAYER",
+
+      role:
+        member?.role ||
+        "CC",
+
+      ovr:
+        stats.promoOvr ??
+        stats.promoDisplayedOvr ??
+        member?.ovr ??
+        60,
+
+      promoOvr:
+        stats.promoOvr ??
+        stats.promoDisplayedOvr,
+
+      stats: {
+        pac:
+          stats.pac ?? 60,
+
+        sho:
+          stats.sho ?? 60,
+
+        pas:
+          stats.pas ?? 60,
+
+        dri:
+          stats.dri ?? 60,
+
+        def:
+          stats.def ?? 60,
+
+        phy:
+          stats.phy ?? 60
+      },
+
+      shirtNumber:
+        member?.shirt_number ||
+        "10",
+
+      preferredFoot:
+        member?.preferred_foot ||
+        "Destro",
+
+      playStyle:
+        member?.profile_style ||
+        "Equilibrato",
+
+      weakFoot:
+        member?.weak_foot ??
+        3,
+
+      skillMoves:
+        member?.skill_moves ??
+        3,
+
+      normalPlayStyles,
+
+      plusPlayStyles,
+
+      photo:
+        mpV3MemberPhoto(
+          member
+        ),
+
+      photoX:
+        stats.promoPhotoX ??
+        member?.photo_x ??
+        50,
+
+      photoY:
+        stats.promoPhotoY ??
+        member?.photo_y ??
+        8,
+
+      photoZoom:
+        stats.promoPhotoZoom ??
+        member?.photo_zoom ??
+        1.02
+    };
+  }
+
+
+  /* =======================================================
+     CARTA CLUB
+     ======================================================= */
+
+  const mpV3PreviousClubCard =
+    typeof window
+      .mpClubMemberCard ===
+    "function"
+      ? window
+          .mpClubMemberCard
+      : null;
+
+
+  function mpV3ClubMemberCard(
+    member,
+    ownerId
+  ) {
+    const stats =
+      mpV3Object(
+        member?.card_stats
+      );
+
+
+    /*
+      CARTA BASE:
+      non toccarla.
+    */
+
+    if (
+      !stats.promoCard ||
+      !stats.promoTemplate
+    ) {
+      return mpV3PreviousClubCard
+        ? mpV3PreviousClubCard(
+            member,
+            ownerId
+          )
+        : "";
+    }
+
+
+    const card =
+      mpV3ClubCardData(
+        member
+      );
+
+
+    const isFounder =
+      member.user_id ===
+      ownerId;
+
+
+    const canKick =
+      typeof MP_CLUB_CURRENT !==
+        "undefined" &&
+      MP_CLUB_CURRENT
+        ?.is_owner === true &&
+      !isFounder &&
+      typeof window
+        .mpKickClubMember ===
+      "function";
+
+
+    return `
+      <article
+        class="mp-club-promo-v3"
+
+        tabindex="0"
+        role="button"
+
+        onclick="
+          mpOpenClubMember(
+            '${mpV3Escape(
+              member.user_id
+            )}'
+          )
+        "
+
+        onkeydown="
+          if (
+            event.key === 'Enter' ||
+            event.key === ' '
+          ) {
+            event.preventDefault();
+
+            mpOpenClubMember(
+              '${mpV3Escape(
+                member.user_id
+              )}'
+            );
+          }
+        "
+      >
+
+        <div
+          class="
+            mp-club-promo-v3-tools
+          "
+        >
+
+          ${
+            isFounder
+              ? `
+                <span>
+                  FONDATORE
+                </span>
+              `
+              : ""
+          }
+
+
+          ${
+            canKick
+              ? `
+                <button
+                  type="button"
+
+                  onclick="
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    mpKickClubMember(
+                      '${mpV3Escape(
+                        member.user_id
+                      )}'
+                    );
+                  "
+                >
+                  ×
+                </button>
+              `
+              : ""
+          }
+
+        </div>
+
+
+        ${mpPromoV3Card(
+          card,
+          "club"
+        )}
+
+
+        <footer>
+          <span>
+            ${mpV3Escape(
+              card.shortName
+            )}
+          </span>
+
+          <strong>
+            APRI PROFILO
+          </strong>
+        </footer>
+
+      </article>
+    `;
+  }
+
+
+  if (
+    typeof mpV3PreviousClubCard ===
+    "function"
+  ) {
+    try {
+      mpClubMemberCard =
+        mpV3ClubMemberCard;
+    } catch {}
+
+    window.mpClubMemberCard =
+      mpV3ClubMemberCard;
+  }
+
+
+  /* =======================================================
+     CARTA PROMO NEL PROFILO CLUB APERTO
+     ======================================================= */
+
+  function mpV3PatchOpenClubMember(
+    member
+  ) {
+    const stats =
+      mpV3Object(
+        member?.card_stats
+      );
+
+    if (
+      !stats.promoCard ||
+      !stats.promoTemplate
+    ) {
+      return;
+    }
+
+
+    const modal =
+      document.getElementById(
+        "mpClubMemberModal"
+      );
+
+    if (!modal) {
+      return;
+    }
+
+
+    const oldCard =
+      modal.querySelector(
+        ".mp-club-profile-card"
+      );
+
+    if (!oldCard) {
+      return;
+    }
+
+
+    const card =
+      mpV3ClubCardData(
+        member
+      );
+
+
+    oldCard.className =
+      `
+        mp-club-profile-card
+        mp-club-profile-card-promo-v3
+      `;
+
+
+    oldCard.innerHTML =
+      mpPromoV3Card(
+        card,
+        "detail"
+      );
+
+
+    const kicker =
+      modal.querySelector(
+        ".mp-club-profile-title span"
+      );
+
+    if (kicker) {
+      kicker.textContent =
+        String(
+          card.promoName ||
+          "PROMO"
+        ).toUpperCase();
+    }
+  }
+
+
+  const mpV3PreviousOpenMember =
+    typeof window
+      .mpOpenClubMember ===
+    "function"
+      ? window
+          .mpOpenClubMember
+      : null;
+
+
+  if (mpV3PreviousOpenMember) {
+    function mpV3OpenClubMember(
+      userId
+    ) {
+      const result =
+        mpV3PreviousOpenMember(
+          userId
+        );
+
+
+      const patch = () => {
+        const members =
+          typeof MP_CLUB_MEMBERS_CACHE !==
+            "undefined"
+            ? MP_CLUB_MEMBERS_CACHE
+            : (
+                window
+                  .MP_CLUB_MEMBERS_CACHE ||
+                []
+              );
+
+
+        const member =
+          members.find(
+            item =>
+              item.user_id ===
+              userId
+          );
+
+
+        if (member) {
+          mpV3PatchOpenClubMember(
+            member
+          );
+        }
+      };
+
+
+      requestAnimationFrame(
+        () => {
+          setTimeout(
+            patch,
+            20
+          );
+        }
+      );
+
+
+      /*
+        Secondo passaggio perché
+        alcune vecchie patch Club
+        lavorano con setTimeout.
+      */
+
+      setTimeout(
+        patch,
+        140
+      );
+
+
+      return result;
+    }
+
+
+    try {
+      mpOpenClubMember =
+        mpV3OpenClubMember;
+    } catch {}
+
+
+    window.mpOpenClubMember =
+      mpV3OpenClubMember;
+  }
+
+
+  /* =======================================================
+     OBSERVER COLLEZIONE
+     ======================================================= */
+
+  if (
+    typeof app !==
+      "undefined" &&
+    app
+  ) {
+    const observer =
+      new MutationObserver(
+        () => {
+          requestAnimationFrame(
+            mpV3PatchCollection
+          );
+        }
+      );
+
+
+    observer.observe(
+      app,
+      {
+        childList: true,
+        subtree: true
+      }
+    );
+  }
+
+
+  requestAnimationFrame(
+    mpV3PatchCollection
+  );
+
+})();

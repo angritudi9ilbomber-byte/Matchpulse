@@ -12993,3 +12993,1467 @@ body.mp-promo-v2-modal-open {
       8% !important;
   }
 }
+
+/* =========================================================
+   MATCHPULSE
+   PROMO VISUAL V3
+   ========================================================= */
+
+
+/* =========================================================
+   CARTA
+   ========================================================= */
+
+.mp-promo-v3-card {
+  --mp-v3-photo-x: 50%;
+  --mp-v3-photo-y: 8%;
+  --mp-v3-photo-zoom: 1.02;
+
+  --mp-v3-photo-left: 39%;
+  --mp-v3-photo-top: 16%;
+  --mp-v3-photo-width: 48%;
+  --mp-v3-photo-height: 41%;
+
+  --mp-v3-rating-left: 16%;
+  --mp-v3-rating-top: 15%;
+
+  --mp-v3-role-right: 16%;
+  --mp-v3-role-top: 15%;
+
+  --mp-v3-side-left: 15.5%;
+  --mp-v3-side-top: 29%;
+  --mp-v3-side-width: 22%;
+
+  --mp-v3-plus-left: 14.8%;
+  --mp-v3-plus-top: 45%;
+  --mp-v3-plus-width: 25.5%;
+
+  --mp-v3-name-top: 59%;
+
+  --mp-v3-stats-left: 17%;
+  --mp-v3-stats-right: 17%;
+  --mp-v3-stats-top: 66%;
+
+  --mp-v3-abilities-top: 84%;
+
+  position: relative;
+
+  container-type: inline-size;
+
+  width: 100%;
+
+  aspect-ratio: 2 / 3;
+
+  margin: 0 auto;
+
+  overflow: hidden;
+
+  color: #fff;
+
+  isolation: isolate;
+
+  filter:
+    drop-shadow(
+      0 22px 30px
+      rgba(0,0,0,.52)
+    );
+}
+
+
+/* template */
+
+.mp-promo-v3-template {
+  position: absolute;
+
+  z-index: 1;
+
+  inset: 0;
+
+  width: 100%;
+  height: 100%;
+
+  display: block;
+
+  object-fit: contain;
+
+  pointer-events: none;
+}
+
+
+/* =========================================================
+   FOTO
+   ========================================================= */
+
+.mp-promo-v3-photo {
+  position: absolute;
+
+  z-index: 2;
+
+  left:
+    var(--mp-v3-photo-left);
+
+  top:
+    var(--mp-v3-photo-top);
+
+  width:
+    var(--mp-v3-photo-width);
+
+  height:
+    var(--mp-v3-photo-height);
+
+  overflow: hidden;
+
+  border:
+    1px solid
+    rgba(255,255,255,.22);
+
+  border-radius: 8%;
+
+  background:
+    rgba(0,0,0,.18);
+
+  box-shadow:
+    0 10px 24px
+    rgba(0,0,0,.28);
+}
+
+
+/*
+  NIENTE MASCHERA OVALE.
+  Foto rettangolare come
+  la carta base.
+*/
+
+.mp-promo-v3-photo > img {
+  width: 100%;
+  height: 100%;
+
+  display: block;
+
+  object-fit: cover;
+
+  object-position:
+    var(--mp-v3-photo-x)
+    var(--mp-v3-photo-y);
+
+  transform:
+    scale(
+      var(--mp-v3-photo-zoom)
+    );
+
+  transform-origin:
+    center center;
+}
+
+
+.mp-promo-v3-initials {
+  width: 100%;
+  height: 100%;
+
+  display: grid;
+  place-items: center;
+
+  color: #fff;
+
+  background:
+    rgba(0,0,0,.25);
+
+  font-size: 38px;
+  font-size: 12cqw;
+
+  font-weight: 1000;
+}
+
+
+/* =========================================================
+   OVERALL
+   ========================================================= */
+
+.mp-promo-v3-rating {
+  position: absolute;
+
+  z-index: 6;
+
+  left:
+    var(--mp-v3-rating-left);
+
+  top:
+    var(--mp-v3-rating-top);
+
+  width: 20%;
+
+  text-align: center;
+
+  text-shadow:
+    0 3px 5px
+    rgba(0,0,0,.95),
+    0 0 10px
+    rgba(0,0,0,.75);
+}
+
+
+.mp-promo-v3-rating strong {
+  display: block;
+
+  font-size: 45px;
+  font-size: 14.5cqw;
+
+  line-height: .82;
+
+  letter-spacing: -.08em;
+
+  font-weight: 1000;
+}
+
+
+.mp-promo-v3-rating span {
+  display: block;
+
+  margin-top: 5px;
+
+  font-size: 8px;
+  font-size: 2.5cqw;
+
+  font-weight: 1000;
+
+  letter-spacing: .08em;
+}
+
+
+/* =========================================================
+   RUOLO + PROMO
+   ========================================================= */
+
+.mp-promo-v3-role {
+  position: absolute;
+
+  z-index: 6;
+
+  right:
+    var(--mp-v3-role-right);
+
+  top:
+    var(--mp-v3-role-top);
+
+  max-width: 27%;
+
+  text-align: right;
+
+  text-shadow:
+    0 2px 5px
+    rgba(0,0,0,.95);
+}
+
+
+.mp-promo-v3-role strong {
+  display: block;
+
+  font-size: 18px;
+  font-size: 5.8cqw;
+
+  line-height: 1;
+
+  font-weight: 1000;
+}
+
+
+.mp-promo-v3-role span {
+  display: block;
+
+  margin-top: 4px;
+
+  overflow: hidden;
+
+  color:
+    rgba(255,255,255,.88);
+
+  font-size: 7px;
+  font-size: 2.15cqw;
+
+  font-weight: 1000;
+
+  white-space: nowrap;
+
+  text-overflow: ellipsis;
+}
+
+
+/* =========================================================
+   INFO LATERALI
+   ========================================================= */
+
+.mp-promo-v3-side {
+  position: absolute;
+
+  z-index: 6;
+
+  left:
+    var(--mp-v3-side-left);
+
+  top:
+    var(--mp-v3-side-top);
+
+  width:
+    var(--mp-v3-side-width);
+
+  display: grid;
+
+  gap: 3px;
+  gap: .9cqw;
+}
+
+
+.mp-promo-v3-side > div {
+  min-width: 0;
+
+  padding:
+    4px 3px;
+
+  padding:
+    1.25cqw
+    .8cqw;
+
+  overflow: hidden;
+
+  border:
+    1px solid
+    rgba(255,255,255,.16);
+
+  border-radius: 8px;
+
+  background:
+    rgba(0,0,0,.28);
+
+  text-align: center;
+
+  backdrop-filter:
+    blur(4px);
+}
+
+
+.mp-promo-v3-side span,
+.mp-promo-v3-side strong {
+  display: block;
+
+  overflow: hidden;
+
+  white-space: nowrap;
+
+  text-overflow: ellipsis;
+}
+
+
+.mp-promo-v3-side span {
+  color:
+    rgba(255,255,255,.67);
+
+  font-size: 6px;
+  font-size: 1.75cqw;
+
+  font-weight: 1000;
+
+  letter-spacing: .04em;
+}
+
+
+.mp-promo-v3-side strong {
+  margin-top: 1px;
+
+  color: #fff;
+
+  font-size: 7px;
+  font-size: 2.05cqw;
+
+  line-height: 1;
+
+  font-weight: 1000;
+
+  text-shadow:
+    0 2px 4px
+    rgba(0,0,0,.8);
+}
+
+
+/* =========================================================
+   PLAYSTYLE+
+   ========================================================= */
+
+.mp-promo-v3-plus {
+  position: absolute;
+
+  z-index: 7;
+
+  left:
+    var(--mp-v3-plus-left);
+
+  top:
+    var(--mp-v3-plus-top);
+
+  width:
+    var(--mp-v3-plus-width);
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      3,
+      minmax(0, 1fr)
+    );
+
+  align-items: center;
+
+  justify-items: center;
+
+  gap:
+    3px 2px;
+}
+
+
+.mp-promo-v3-plus img {
+  width: 24px;
+  height: 24px;
+
+  width: 7.2cqw;
+  height: 7.2cqw;
+
+  max-width: 29px;
+  max-height: 29px;
+
+  display: block;
+
+  object-fit: contain;
+
+  filter:
+    drop-shadow(
+      0 3px 4px
+      rgba(0,0,0,.92)
+    );
+}
+
+
+/* =========================================================
+   NOME
+   ========================================================= */
+
+.mp-promo-v3-name {
+  position: absolute;
+
+  z-index: 7;
+
+  left: 16%;
+  right: 16%;
+
+  top:
+    var(--mp-v3-name-top);
+
+  overflow: hidden;
+
+  color: #fff;
+
+  text-align: center;
+
+  font-size: 18px;
+  font-size: 5.7cqw;
+
+  font-weight: 1000;
+
+  line-height: 1;
+
+  letter-spacing: .055em;
+
+  text-transform: uppercase;
+
+  white-space: nowrap;
+
+  text-overflow: ellipsis;
+
+  text-shadow:
+    0 3px 5px
+    rgba(0,0,0,.98),
+    0 0 9px
+    rgba(0,0,0,.75);
+}
+
+
+/* =========================================================
+   6 STATISTICHE
+   3 COLONNE × 2 RIGHE
+   ========================================================= */
+
+.mp-promo-v3-stats {
+  position: absolute;
+
+  z-index: 7;
+
+  left:
+    var(--mp-v3-stats-left);
+
+  right:
+    var(--mp-v3-stats-right);
+
+  top:
+    var(--mp-v3-stats-top);
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      3,
+      minmax(0, 1fr)
+    );
+
+  gap:
+    4px 5px;
+
+  gap:
+    1.1cqw 1.4cqw;
+}
+
+
+.mp-promo-v3-stats > div {
+  min-width: 0;
+
+  padding:
+    4px 2px;
+
+  padding:
+    1.15cqw .5cqw;
+
+  border:
+    1px solid
+    rgba(255,255,255,.15);
+
+  border-radius: 8px;
+
+  background:
+    rgba(0,0,0,.24);
+
+  text-align: center;
+
+  backdrop-filter:
+    blur(3px);
+}
+
+
+.mp-promo-v3-stats strong {
+  display: block;
+
+  color: #fff;
+
+  font-size: 18px;
+  font-size: 5.6cqw;
+
+  line-height: .9;
+
+  font-weight: 1000;
+
+  text-shadow:
+    0 2px 4px
+    rgba(0,0,0,.95);
+}
+
+
+.mp-promo-v3-stats span {
+  display: block;
+
+  margin-top: 2px;
+
+  color:
+    rgba(255,255,255,.79);
+
+  font-size: 7px;
+  font-size: 2.05cqw;
+
+  font-weight: 1000;
+}
+
+
+/* =========================================================
+   PIEDE DEBOLE + MOSSE
+   ========================================================= */
+
+.mp-promo-v3-abilities {
+  position: absolute;
+
+  z-index: 7;
+
+  left: 18%;
+  right: 18%;
+
+  top:
+    var(--mp-v3-abilities-top);
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(0, 1fr)
+    );
+
+  gap:
+    5px;
+
+  gap:
+    1.5cqw;
+}
+
+
+.mp-promo-v3-abilities > div {
+  min-width: 0;
+
+  text-align: center;
+}
+
+
+.mp-promo-v3-abilities > div > span {
+  display: block;
+
+  margin-bottom: 2px;
+
+  color:
+    rgba(255,255,255,.66);
+
+  font-size: 5px;
+  font-size: 1.7cqw;
+
+  font-weight: 1000;
+
+  letter-spacing: .03em;
+}
+
+
+.mp-promo-v3-stars {
+  display: block;
+
+  color: #ffd76a;
+
+  font-size: 8px;
+  font-size: 2.65cqw;
+
+  line-height: 1;
+
+  white-space: nowrap;
+
+  text-shadow:
+    0 2px 4px
+    rgba(0,0,0,.9);
+}
+
+
+.mp-promo-v3-stars i {
+  color:
+    rgba(255,255,255,.22);
+
+  font-style: normal;
+}
+
+
+/* =========================================================
+   SAFE AREA SPECIFICHE DEI TEMPLATE
+   ========================================================= */
+
+
+/* OTW */
+
+.mp-promo-v3-theme-otw {
+  --mp-v3-photo-top: 16%;
+  --mp-v3-name-top: 59%;
+}
+
+
+/* ULTIMATE SCREAM */
+
+.mp-promo-v3-theme-ultimatescream {
+  --mp-v3-photo-top: 15.5%;
+  --mp-v3-name-top: 59%;
+}
+
+
+/* THUNDERSTRUCK */
+
+.mp-promo-v3-theme-thunderstruck {
+  --mp-v3-photo-top: 15.5%;
+  --mp-v3-name-top: 58.7%;
+}
+
+
+/* FUTMAS */
+
+.mp-promo-v3-theme-futmas {
+  --mp-v3-photo-top: 16%;
+  --mp-v3-name-top: 59.4%;
+  --mp-v3-stats-top: 66.4%;
+}
+
+
+/* TOTY - bordi interni più stretti */
+
+.mp-promo-v3-theme-toty {
+  --mp-v3-photo-left: 40%;
+  --mp-v3-photo-top: 17%;
+  --mp-v3-photo-width: 45%;
+  --mp-v3-photo-height: 40%;
+
+  --mp-v3-name-top: 60%;
+
+  --mp-v3-stats-left: 19%;
+  --mp-v3-stats-right: 19%;
+  --mp-v3-stats-top: 67%;
+
+  --mp-v3-abilities-top: 85%;
+}
+
+
+/* FUTURE STARS */
+
+.mp-promo-v3-theme-futurestars {
+  --mp-v3-photo-top: 15.5%;
+  --mp-v3-name-top: 58.8%;
+}
+
+
+/* FUT BIRTHDAY */
+
+.mp-promo-v3-theme-futbirthday {
+  --mp-v3-photo-top: 16%;
+  --mp-v3-name-top: 59.2%;
+}
+
+
+/* TIME WARP */
+
+.mp-promo-v3-theme-timewarp {
+  --mp-v3-photo-top: 15.8%;
+  --mp-v3-name-top: 59.2%;
+}
+
+
+/* TOTS */
+
+.mp-promo-v3-theme-tots {
+  --mp-v3-photo-left: 39.5%;
+  --mp-v3-photo-top: 16.5%;
+  --mp-v3-photo-width: 46%;
+  --mp-v3-photo-height: 40.5%;
+
+  --mp-v3-name-top: 59.5%;
+
+  --mp-v3-stats-left: 18.5%;
+  --mp-v3-stats-right: 18.5%;
+  --mp-v3-stats-top: 66.8%;
+}
+
+
+/* SUMMER HEAT */
+
+.mp-promo-v3-theme-summerheat {
+  --mp-v3-photo-top: 15.5%;
+  --mp-v3-name-top: 58.8%;
+}
+
+
+/* FUTTIES */
+
+.mp-promo-v3-theme-futties {
+  --mp-v3-photo-top: 15.8%;
+  --mp-v3-name-top: 59.2%;
+}
+
+
+/* =========================================================
+   DIMENSIONI
+   STESSA CARTA, SOLTANTO SCALATA
+   ========================================================= */
+
+.mp-promo-v3-open-button {
+  display: block;
+
+  width: 100%;
+  max-width: 315px;
+
+  margin: 0 auto;
+
+  padding: 0;
+
+  border: 0;
+
+  color: inherit;
+  background: transparent;
+
+  cursor: pointer;
+}
+
+
+.mp-promo-v3-open-button:hover {
+  transform:
+    translateY(-2px);
+}
+
+
+.mp-promo-v3-preview {
+  max-width: 315px;
+}
+
+
+.mp-promo-v3-club {
+  max-width: 355px;
+}
+
+
+.mp-promo-v3-detail {
+  max-width: 390px;
+}
+
+
+/* =========================================================
+   CLUB
+   ========================================================= */
+
+.mp-club-promo-v3 {
+  position: relative;
+
+  width: 100%;
+  max-width: 405px;
+
+  margin: 0 auto;
+
+  padding: 12px;
+
+  overflow: hidden;
+
+  border:
+    1px solid
+    rgba(255,255,255,.14);
+
+  border-radius: 29px;
+
+  color: #fff;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255,255,255,.09),
+      rgba(255,255,255,.025)
+    );
+
+  box-shadow:
+    0 26px 66px
+    rgba(0,0,0,.42);
+
+  cursor: pointer;
+}
+
+
+.mp-club-promo-v3-tools {
+  position: absolute;
+
+  z-index: 40;
+
+  left: 17px;
+  right: 17px;
+  top: 17px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: space-between;
+
+  pointer-events: none;
+}
+
+
+.mp-club-promo-v3-tools span {
+  padding:
+    5px 8px;
+
+  border-radius:
+    999px;
+
+  color: #04110a;
+
+  background:
+    var(--green);
+
+  font-size: 7px;
+  font-weight: 1000;
+
+  letter-spacing: .08em;
+}
+
+
+.mp-club-promo-v3-tools button {
+  width: 30px;
+  height: 30px;
+
+  display: grid;
+  place-items: center;
+
+  margin-left: auto;
+
+  border:
+    1px solid
+    rgba(255,107,107,.42);
+
+  border-radius:
+    999px;
+
+  color: #fff;
+
+  background:
+    rgba(255,107,107,.25);
+
+  font-size: 18px;
+
+  pointer-events: auto;
+}
+
+
+.mp-club-promo-v3 > footer {
+  display: flex;
+
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 10px;
+
+  margin:
+    7px 13px 2px;
+
+  padding-top: 10px;
+
+  border-top:
+    1px solid
+    rgba(255,255,255,.10);
+}
+
+
+.mp-club-promo-v3 > footer span {
+  color: var(--green);
+
+  font-size: 8px;
+  font-weight: 1000;
+
+  letter-spacing: .12em;
+}
+
+
+.mp-club-promo-v3 > footer strong {
+  color: #fff;
+
+  font-size: 9px;
+
+  letter-spacing: .07em;
+}
+
+
+/* =========================================================
+   CARTA NEL PROFILO CLUB APERTO
+   ========================================================= */
+
+.mp-club-profile-card-promo-v3 {
+  width: 100% !important;
+
+  max-width: 395px !important;
+
+  min-height: 0 !important;
+
+  margin:
+    0 auto !important;
+
+  padding: 0 !important;
+
+  overflow:
+    visible !important;
+
+  border: 0 !important;
+  border-radius: 0 !important;
+
+  background:
+    transparent !important;
+
+  box-shadow:
+    none !important;
+}
+
+
+.mp-club-profile-card-promo-v3::before,
+.mp-club-profile-card-promo-v3::after {
+  display:
+    none !important;
+}
+
+
+/* =========================================================
+   DETTAGLIO
+   ========================================================= */
+
+body.mp-promo-v3-modal-open {
+  overflow: hidden;
+}
+
+
+.mp-promo-v3-detail-backdrop {
+  position: fixed;
+
+  z-index: 11000;
+
+  inset: 0;
+
+  display: grid;
+
+  place-items: center;
+
+  padding: 15px;
+
+  overflow-y: auto;
+
+  background:
+    rgba(0,0,0,.86);
+
+  backdrop-filter:
+    blur(16px);
+}
+
+
+.mp-promo-v3-detail-modal {
+  position: relative;
+
+  width:
+    min(
+      100%,
+      860px
+    );
+
+  max-height:
+    calc(
+      100vh - 30px
+    );
+
+  overflow-y: auto;
+
+  padding: 22px;
+
+  border:
+    1px solid
+    rgba(255,255,255,.15);
+
+  border-radius: 30px;
+
+  background:
+    linear-gradient(
+      160deg,
+      #101c18,
+      #030706
+    );
+
+  box-shadow:
+    0 36px 100px
+    rgba(0,0,0,.78);
+}
+
+
+.mp-promo-v3-detail-close {
+  position: absolute;
+
+  z-index: 30;
+
+  right: 15px;
+  top: 15px;
+
+  width: 42px;
+  height: 42px;
+
+  display: grid;
+  place-items: center;
+
+  border:
+    1px solid
+    rgba(255,255,255,.14);
+
+  border-radius: 14px;
+
+  color: #fff;
+
+  background:
+    rgba(255,255,255,.08);
+
+  font-size: 26px;
+}
+
+
+.mp-promo-v3-detail-head {
+  display: grid;
+
+  grid-template-columns:
+    minmax(
+      300px,
+      410px
+    )
+    minmax(
+      0,
+      1fr
+    );
+
+  align-items: center;
+
+  gap: 26px;
+
+  padding-right: 40px;
+}
+
+
+.mp-promo-v3-detail-card {
+  width: 100%;
+}
+
+
+.mp-promo-v3-detail-info {
+  min-width: 0;
+}
+
+
+.mp-promo-v3-detail-info > span {
+  display: block;
+
+  color: var(--green);
+
+  font-size: 10px;
+  font-weight: 1000;
+
+  letter-spacing: .16em;
+}
+
+
+.mp-promo-v3-detail-info h2 {
+  margin:
+    8px 0 7px;
+
+  font-size:
+    clamp(
+      32px,
+      7vw,
+      52px
+    );
+
+  line-height: .94;
+
+  letter-spacing: -.055em;
+
+  overflow-wrap: anywhere;
+}
+
+
+.mp-promo-v3-detail-info > p {
+  margin: 0;
+
+  color: var(--muted);
+
+  font-size: 14px;
+}
+
+
+/* stelle dettaglio */
+
+.mp-promo-v3-detail-abilities {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(0, 1fr)
+    );
+
+  gap: 9px;
+
+  margin-top: 18px;
+}
+
+
+.mp-promo-v3-detail-abilities > div {
+  padding: 13px;
+
+  border:
+    1px solid
+    rgba(255,255,255,.11);
+
+  border-radius: 17px;
+
+  background:
+    rgba(255,255,255,.055);
+}
+
+
+.mp-promo-v3-detail-abilities
+> div
+> span {
+  display: block;
+
+  color: var(--muted);
+
+  font-size: 10px;
+  font-weight: 900;
+
+  text-transform: uppercase;
+}
+
+
+.mp-promo-v3-detail-abilities
+> div
+> strong {
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  margin-top: 7px;
+
+  color: #fff;
+
+  font-size: 15px;
+}
+
+
+.mp-promo-v3-detail-abilities
+.mp-promo-v3-stars {
+  display: inline-block;
+
+  font-size: 16px;
+}
+
+
+/* =========================================================
+   PLAYSTYLE NEL DETTAGLIO
+   ========================================================= */
+
+.mp-promo-v3-ps-section {
+  display: grid;
+
+  gap: 15px;
+
+  margin-top: 22px;
+}
+
+
+.mp-promo-v3-ps-group {
+  padding: 15px;
+
+  border:
+    1px solid
+    rgba(255,255,255,.11);
+
+  border-radius: 22px;
+
+  background:
+    rgba(255,255,255,.045);
+}
+
+
+.mp-promo-v3-ps-group > header {
+  display: flex;
+
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 10px;
+
+  margin-bottom: 12px;
+}
+
+
+.mp-promo-v3-ps-group
+> header
+> span {
+  color: var(--green);
+
+  font-size: 9px;
+  font-weight: 1000;
+
+  letter-spacing: .13em;
+}
+
+
+.mp-promo-v3-ps-group
+> header
+> strong {
+  min-width: 32px;
+  height: 32px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 999px;
+
+  color: #fff;
+
+  background:
+    rgba(255,255,255,.09);
+
+  font-size: 13px;
+}
+
+
+.mp-promo-v3-ps-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(0, 1fr)
+    );
+
+  gap: 8px;
+}
+
+
+.mp-pv3-ps-item {
+  min-width: 0;
+
+  display: grid;
+
+  grid-template-columns:
+    44px
+    minmax(0, 1fr);
+
+  align-items: center;
+
+  gap: 10px;
+
+  padding: 10px;
+
+  border:
+    1px solid
+    rgba(255,255,255,.09);
+
+  border-radius: 16px;
+
+  background:
+    rgba(0,0,0,.18);
+}
+
+
+.mp-pv3-ps-item img {
+  width: 44px;
+  height: 44px;
+
+  display: block;
+
+  object-fit: contain;
+}
+
+
+.mp-pv3-ps-item div {
+  min-width: 0;
+}
+
+
+.mp-pv3-ps-item strong,
+.mp-pv3-ps-item span {
+  display: block;
+
+  overflow: hidden;
+
+  white-space: nowrap;
+
+  text-overflow: ellipsis;
+}
+
+
+.mp-pv3-ps-item strong {
+  color: #fff;
+
+  font-size: 12px;
+}
+
+
+.mp-pv3-ps-item span {
+  margin-top: 4px;
+
+  color: var(--muted);
+
+  font-size: 8px;
+  font-weight: 1000;
+
+  letter-spacing: .08em;
+}
+
+
+.mp-pv3-ps-item.is-plus {
+  border-color:
+    rgba(255,215,106,.30);
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255,215,106,.12),
+      rgba(0,0,0,.18)
+    );
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+  .mp-promo-v3-open-button,
+  .mp-promo-v3-preview {
+    max-width: 310px;
+  }
+
+
+  .mp-promo-v3-club {
+    max-width: 345px;
+  }
+
+
+  .mp-promo-v3-detail {
+    max-width: 355px;
+  }
+
+
+  .mp-promo-v3-detail-modal {
+    padding:
+      58px 14px 18px;
+  }
+
+
+  .mp-promo-v3-detail-head {
+    grid-template-columns:
+      minmax(0, 1fr);
+
+    gap: 20px;
+
+    padding-right: 0;
+  }
+
+
+  .mp-promo-v3-detail-card {
+    width:
+      min(
+        100%,
+        355px
+      );
+
+    margin: 0 auto;
+  }
+
+
+  .mp-promo-v3-detail-info {
+    text-align: center;
+  }
+
+
+  .mp-promo-v3-detail-abilities {
+    text-align: left;
+  }
+
+
+  .mp-promo-v3-ps-grid {
+    grid-template-columns:
+      minmax(0, 1fr);
+  }
+
+}
