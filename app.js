@@ -779,7 +779,7 @@ function playerCard(r) {
       <img class="player-photo" src="${escapeHtml(photoSrc)}" alt="Foto giocatore">
     </div>
 
-    <h3>${escapeHtml(r.name)}</h3>
+    <h3>${escapeHtml(profile.name || "PLAYER")}</h3>
 
     <div class="player-stats">
   <div>
