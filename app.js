@@ -29663,3 +29663,788 @@ if (!window.MP_CLUB_ESCAPE_READY) {
   );
 
 })();
+
+/* =========================================================
+   MATCHPULSE
+   BACKUP COMPLETO + MIGRAZIONE DOMINIO V1
+   ========================================================= */
+
+(function () {
+  if (window.MP_FULL_BACKUP_V1_READY) {
+    return;
+  }
+
+  window.MP_FULL_BACKUP_V1_READY = true;
+
+
+  /* =======================================================
+     COPIA COMPLETA DI UNO STORAGE
+     ======================================================= */
+
+  function mpFullStorageSnapshot(storage) {
+    const result = {};
+
+    for (
+      let index = 0;
+      index < storage.length;
+      index += 1
+    ) {
+      const key = storage.key(index);
+
+      if (!key) {
+        continue;
+      }
+
+      result[key] =
+        storage.getItem(key);
+    }
+
+    return result;
+  }
+
+
+  function mpFullRestoreStorage(
+    storage,
+    data
+  ) {
+    storage.clear();
+
+    Object.entries(
+      data || {}
+    ).forEach(
+      ([key, value]) => {
+        if (value === null) {
+          return;
+        }
+
+        storage.setItem(
+          key,
+          String(value)
+        );
+      }
+    );
+  }
+
+
+  /* =======================================================
+     NOME FILE
+     ======================================================= */
+
+  function mpFullBackupFilename() {
+    const now =
+      new Date();
+
+    const stamp =
+      now
+        .toISOString()
+        .replaceAll(":", "-")
+        .replaceAll(".", "-");
+
+    return (
+      `matchpulse-backup-completo-${stamp}.json`
+    );
+  }
+
+
+  /* =======================================================
+     SCARICA / CONDIVIDI FILE
+     ======================================================= */
+
+  async function mpFullSaveFile(
+    backup
+  ) {
+    const text =
+      JSON.stringify(
+        backup,
+        null,
+        2
+      );
+
+    const filename =
+      mpFullBackupFilename();
+
+    const file =
+      new File(
+        [text],
+        filename,
+        {
+          type:
+            "application/json"
+        }
+      );
+
+
+    /*
+      Su telefono prova prima
+      il foglio Condividi.
+
+      Permette di scegliere
+      "Salva su File" ecc.
+    */
+
+    const isMobile =
+      /Android|iPhone|iPad|iPod/i
+        .test(
+          navigator.userAgent
+        );
+
+
+    if (
+      isMobile &&
+      navigator.share &&
+      navigator.canShare &&
+      navigator.canShare({
+        files: [file]
+      })
+    ) {
+      try {
+        await navigator.share({
+          title:
+            "Backup MatchPulse",
+
+          text:
+            "Backup completo MatchPulse",
+
+          files: [
+            file
+          ]
+        });
+
+        return;
+      } catch (
+        error
+      ) {
+        /*
+          Se l'utente chiude
+          la condivisione proviamo
+          comunque il download.
+        */
+
+        console.warn(
+          "Condivisione backup:",
+          error
+        );
+      }
+    }
+
+
+    const blob =
+      new Blob(
+        [text],
+        {
+          type:
+            "application/json"
+        }
+      );
+
+    const url =
+      URL.createObjectURL(
+        blob
+      );
+
+    const link =
+      document.createElement(
+        "a"
+      );
+
+    link.href =
+      url;
+
+    link.download =
+      filename;
+
+    document.body.appendChild(
+      link
+    );
+
+    link.click();
+
+    link.remove();
+
+    setTimeout(
+      () => {
+        URL.revokeObjectURL(
+          url
+        );
+      },
+      2000
+    );
+  }
+
+
+  /* =======================================================
+     ESPORTA TUTTO
+     ======================================================= */
+
+  async function mpFullExportBackup() {
+    try {
+      const localData =
+        mpFullStorageSnapshot(
+          localStorage
+        );
+
+      const sessionData =
+        mpFullStorageSnapshot(
+          sessionStorage
+        );
+
+
+      const backup = {
+        app:
+          "MatchPulse",
+
+        type:
+          "full-origin-backup",
+
+        version:
+          1,
+
+        exportedAt:
+          new Date()
+            .toISOString(),
+
+        sourceOrigin:
+          location.origin,
+
+        sourceHost:
+          location.hostname,
+
+        localStorage:
+          localData,
+
+        sessionStorage:
+          sessionData,
+
+        stats: {
+          localKeys:
+            Object.keys(
+              localData
+            ).length,
+
+          sessionKeys:
+            Object.keys(
+              sessionData
+            ).length
+        }
+      };
+
+
+      await mpFullSaveFile(
+        backup
+      );
+
+
+      if (
+        typeof toast ===
+        "function"
+      ) {
+        toast(
+          "Backup completo creato"
+        );
+      }
+
+    } catch (
+      error
+    ) {
+      console.error(
+        "Backup completo:",
+        error
+      );
+
+
+      if (
+        typeof toast ===
+        "function"
+      ) {
+        toast(
+          "Errore durante il backup"
+        );
+      } else {
+        alert(
+          "Errore durante il backup"
+        );
+      }
+    }
+  }
+
+
+  /* =======================================================
+     IMPORTA BACKUP COMPLETO
+     ======================================================= */
+
+  async function mpFullImportBackup(
+    event
+  ) {
+    const input =
+      event?.target;
+
+    const file =
+      input?.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+
+    /*
+      Backup del contenuto attuale.
+
+      Se qualcosa durante
+      l'importazione fallisce,
+      possiamo ripristinarlo.
+    */
+
+    const previousLocal =
+      mpFullStorageSnapshot(
+        localStorage
+      );
+
+    const previousSession =
+      mpFullStorageSnapshot(
+        sessionStorage
+      );
+
+
+    try {
+      const text =
+        await file.text();
+
+      const data =
+        JSON.parse(text);
+
+
+      /* ===================================================
+         NUOVO BACKUP COMPLETO
+         =================================================== */
+
+      if (
+        data?.app ===
+          "MatchPulse" &&
+        data?.type ===
+          "full-origin-backup" &&
+        data?.localStorage &&
+        typeof data.localStorage ===
+          "object"
+      ) {
+        const localCount =
+          Object.keys(
+            data.localStorage
+          ).length;
+
+
+        const source =
+          data.sourceHost ||
+          data.sourceOrigin ||
+          "altra versione";
+
+
+        const confirmed =
+          confirm(
+            "IMPORTA BACKUP COMPLETO\n\n" +
+            `Origine: ${source}\n` +
+            `Dati locali: ${localCount}\n\n` +
+            "I dati presenti su questo dispositivo " +
+            "verranno sostituiti da quelli del backup.\n\n" +
+            "Continuare?"
+          );
+
+
+        if (!confirmed) {
+          return;
+        }
+
+
+        try {
+          mpFullRestoreStorage(
+            localStorage,
+            data.localStorage
+          );
+
+          mpFullRestoreStorage(
+            sessionStorage,
+            data.sessionStorage ||
+            {}
+          );
+
+        } catch (
+          restoreError
+        ) {
+          /*
+            Qualcosa non è entrato
+            nello storage.
+
+            Ripristina i dati
+            precedenti.
+          */
+
+          console.error(
+            "Ripristino fallito:",
+            restoreError
+          );
+
+          mpFullRestoreStorage(
+            localStorage,
+            previousLocal
+          );
+
+          mpFullRestoreStorage(
+            sessionStorage,
+            previousSession
+          );
+
+          throw restoreError;
+        }
+
+
+        alert(
+          "Migrazione MatchPulse completata.\n\n" +
+          "L'app verrà ricaricata."
+        );
+
+
+        location.reload();
+
+        return;
+      }
+
+
+      /* ===================================================
+         COMPATIBILITÀ CON IL VECCHIO BACKUP
+         =================================================== */
+
+      if (
+        data?.app ===
+        "MatchPulse"
+      ) {
+        const confirmed =
+          confirm(
+            "Questo è un vecchio backup MatchPulse.\n\n" +
+            "Verranno importati i dati disponibili, " +
+            "ma potrebbe non contenere tutte le impostazioni.\n\n" +
+            "Continuare?"
+          );
+
+        if (!confirmed) {
+          return;
+        }
+
+
+        if (
+          Array.isArray(
+            data.matches
+          )
+        ) {
+          localStorage.setItem(
+            "matchpulse.matches.v1",
+            JSON.stringify(
+              data.matches
+            )
+          );
+        }
+
+
+        if (
+          data.playerProfile &&
+          typeof data.playerProfile ===
+            "object"
+        ) {
+          localStorage.setItem(
+            "matchpulse_player_profile",
+            JSON.stringify(
+              data.playerProfile
+            )
+          );
+        }
+
+
+        if (
+          Array.isArray(
+            data.customAchievements
+          )
+        ) {
+          localStorage.setItem(
+            "matchpulse_custom_achievements",
+            JSON.stringify(
+              data.customAchievements
+            )
+          );
+        }
+
+
+        if (
+          Array.isArray(
+            data.preMatchGoals
+          )
+        ) {
+          localStorage.setItem(
+            "matchpulse_pre_match_goals",
+            JSON.stringify(
+              data.preMatchGoals
+            )
+          );
+        }
+
+
+        alert(
+          "Vecchio backup importato.\n\n" +
+          "MatchPulse verrà ricaricato."
+        );
+
+        location.reload();
+
+        return;
+      }
+
+
+      throw new Error(
+        "File MatchPulse non riconosciuto"
+      );
+
+    } catch (
+      error
+    ) {
+      console.error(
+        "Importazione backup:",
+        error
+      );
+
+      alert(
+        "Il file selezionato non è " +
+        "un backup MatchPulse valido."
+      );
+
+    } finally {
+      if (input) {
+        input.value =
+          "";
+      }
+    }
+  }
+
+
+  /* =======================================================
+     SOSTITUISCE LE VECCHIE FUNZIONI
+     ======================================================= */
+
+  try {
+    exportMatchPulseBackup =
+      mpFullExportBackup;
+  } catch {}
+
+
+  try {
+    importMatchPulseBackup =
+      mpFullImportBackup;
+  } catch {}
+
+
+  window.exportMatchPulseBackup =
+    mpFullExportBackup;
+
+  window.importMatchPulseBackup =
+    mpFullImportBackup;
+
+
+  /* =======================================================
+     NUOVO PROFILO / BACKUP HUB
+     ======================================================= */
+
+  function mpFullOpenProfileHub() {
+    const profile =
+      typeof getPlayerProfile ===
+        "function"
+        ? getPlayerProfile()
+        : {};
+
+
+    const old =
+      document.querySelector(
+        ".profile-hub-overlay"
+      );
+
+    if (old) {
+      old.remove();
+    }
+
+
+    document.body
+      .insertAdjacentHTML(
+        "beforeend",
+        `
+          <div
+            class="profile-hub-overlay"
+            onclick="
+              closeProfileHub(event)
+            "
+          >
+            <div
+              class="profile-hub-panel"
+              onclick="
+                event.stopPropagation()
+              "
+            >
+
+              <div class="profile-hub-head">
+
+                <div class="profile-hub-avatar">
+                  <img
+                    src="${escapeHtml(
+                      profile.photo ||
+                      "profile.jpg"
+                    )}"
+                    alt="Foto profilo"
+                  >
+                </div>
+
+                <div>
+                  <h3>
+                    ${escapeHtml(
+                      profile.name ||
+                      "PLAYER"
+                    )}
+                  </h3>
+
+                  <span>
+                    ${escapeHtml(
+                      profile.role ||
+                      "PLAYER"
+                    )}
+                    ·
+                    #${escapeHtml(
+                      profile.shirtNumber ||
+                      "10"
+                    )}
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onclick="
+                    closeProfileHub()
+                  "
+                >
+                  ×
+                </button>
+
+              </div>
+
+
+              <div class="profile-hub-tags">
+
+                <span>
+                  🦶
+                  ${escapeHtml(
+                    profile.foot ||
+                    "Destro"
+                  )}
+                </span>
+
+                <span>
+                  🎮
+                  ${escapeHtml(
+                    profile.playStyle ||
+                    "Equilibrato"
+                  )}
+                </span>
+
+                ${
+                  profile.team
+                    ? `
+                      <span>
+                        🛡️
+                        ${escapeHtml(
+                          profile.team
+                        )}
+                      </span>
+                    `
+                    : ""
+                }
+
+              </div>
+
+
+              <div class="profile-hub-actions">
+
+                <button
+                  type="button"
+                  onclick="
+                    closeProfileHub();
+                    renderProfileSetup(true);
+                  "
+                >
+                  👤 Modifica profilo
+                </button>
+
+
+                <button
+                  type="button"
+                  onclick="
+                    exportMatchPulseBackup()
+                  "
+                >
+                  💾 Esporta backup completo
+                </button>
+
+
+                <button
+                  type="button"
+                  onclick="
+                    document
+                      .getElementById(
+                        'backupImportInputHub'
+                      )
+                      .click()
+                  "
+                >
+                  📂 Importa backup completo
+                </button>
+
+
+                <input
+                  id="backupImportInputHub"
+                  type="file"
+
+                  accept="
+                    .json,
+                    application/json
+                  "
+
+                  hidden
+
+                  onchange="
+                    importMatchPulseBackup(event)
+                  "
+                >
+
+              </div>
+
+
+              <p class="profile-hub-note">
+                Backup completo:
+                profilo, foto, partite,
+                carta, PlayStyle, promo,
+                preferenze e identità Club.
+                <br><br>
+                Origine attuale:
+                ${escapeHtml(
+                  location.hostname
+                )}
+              </p>
+
+            </div>
+          </div>
+        `
+      );
+  }
+
+
+  try {
+    openProfileHub =
+      mpFullOpenProfileHub;
+  } catch {}
+
+
+  window.openProfileHub =
+    mpFullOpenProfileHub;
+
+})();
