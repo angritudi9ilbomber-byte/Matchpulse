@@ -33381,3 +33381,4378 @@ const statCap =
     mpClubMemberCardWithBasePhoto;
 
 })();
+
+/* =========================================================
+   MATCHPULSE
+   PARTITE CONDIVISE NEL CLUB V1
+   ========================================================= */
+
+(function () {
+
+  if (
+    window.MP_CLUB_SHARED_MATCHES_V1_READY
+  ) {
+    return;
+  }
+
+  window.MP_CLUB_SHARED_MATCHES_V1_READY =
+    true;
+
+
+  const MP_CSM_TABLE =
+    "matchpulse_club_matches";
+
+
+  /* =======================================================
+     SUPPORTO
+     ======================================================= */
+
+  function mpCSMEscape(value) {
+
+    if (
+      typeof mpClubEscape ===
+      "function"
+    ) {
+      return mpClubEscape(value);
+    }
+
+    return String(
+      value ?? ""
+    )
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+
+  function mpCSMNumber(
+    value,
+    fallback = 0
+  ) {
+
+    const number =
+      Number(
+        String(
+          value ?? ""
+        ).replace(",", ".")
+      );
+
+    return Number.isFinite(number)
+      ? number
+      : fallback;
+  }
+
+
+  function mpCSMNullableRating(
+    value
+  ) {
+
+    const number =
+      Number(
+        String(
+          value ?? ""
+        ).replace(",", ".")
+      );
+
+    if (
+      !Number.isFinite(number) ||
+      number <= 0
+    ) {
+      return null;
+    }
+
+    return Math.max(
+      0,
+      Math.min(
+        10,
+        Number(
+          number.toFixed(1)
+        )
+      )
+    );
+  }
+
+
+  function mpCSMObject(value) {
+
+    if (
+      value &&
+      typeof value === "object" &&
+      !Array.isArray(value)
+    ) {
+      return value;
+    }
+
+    try {
+
+      const parsed =
+        JSON.parse(
+          value || "{}"
+        );
+
+      return (
+        parsed &&
+        typeof parsed === "object" &&
+        !Array.isArray(parsed)
+      )
+        ? parsed
+        : {};
+
+    } catch {
+
+      return {};
+
+    }
+  }
+
+
+  function mpCSMToast(text) {
+
+    if (
+      typeof mpClubToast ===
+      "function"
+    ) {
+      mpClubToast(text);
+      return;
+    }
+
+    if (
+      typeof toast ===
+      "function"
+    ) {
+      toast(text);
+    }
+  }
+
+
+  function mpCSMGetLocalMatch(
+    matchId
+  ) {
+
+    if (
+      typeof getMatches !==
+      "function"
+    ) {
+      return null;
+    }
+
+    return (
+      getMatches().find(
+        match =>
+          String(match.id) ===
+          String(matchId)
+      ) ||
+      null
+    );
+  }
+
+
+  function mpCSMPatchLocalMatch(
+    matchId,
+    patch
+  ) {
+
+    if (
+      typeof getMatches !==
+        "function" ||
+      typeof saveMatches !==
+        "function"
+    ) {
+      return null;
+    }
+
+    const matches =
+      getMatches();
+
+    const index =
+      matches.findIndex(
+        match =>
+          String(match.id) ===
+          String(matchId)
+      );
+
+    if (index < 0) {
+      return null;
+    }
+
+    matches[index] = {
+      ...matches[index],
+      ...patch
+    };
+
+    saveMatches(matches);
+
+    return matches[index];
+  }
+
+
+  async function mpCSMContext() {
+
+    if (
+      typeof matchpulseSupabase ===
+        "undefined" ||
+      !matchpulseSupabase
+    ) {
+      throw new Error(
+        "Supabase non configurato"
+      );
+    }
+
+
+    if (
+      typeof mpEnsureClubAuth !==
+      "function"
+    ) {
+      throw new Error(
+        "Autenticazione Club non disponibile"
+      );
+    }
+
+
+    const user =
+      await mpEnsureClubAuth();
+
+
+    let club =
+      (
+        typeof MP_CLUB_CURRENT !==
+          "undefined" &&
+        MP_CLUB_CURRENT?.club_id
+      )
+        ? MP_CLUB_CURRENT
+        : null;
+
+
+    if (
+      !club?.club_id &&
+      typeof mpGetMyClub ===
+        "function"
+    ) {
+      club =
+        await mpGetMyClub();
+    }
+
+
+    if (!club?.club_id) {
+
+      throw new Error(
+        "Devi entrare in un Club prima di pubblicare una partita"
+      );
+
+    }
+
+
+    return {
+      user,
+      club
+    };
+  }
+
+
+  /* =======================================================
+     DATI DELLA PARTITA DA INVIARE A SUPABASE
+     ======================================================= */
+
+  function mpCSMMatchRow(
+    match,
+    user,
+    club,
+    shareNotes
+  ) {
+
+    const hasSharedNotes =
+      Boolean(
+        shareNotes &&
+        String(
+          match?.notes || ""
+        ).trim()
+      );
+
+
+    return {
+
+      club_id:
+        String(
+          club.club_id
+        ),
+
+      user_id:
+        user.id,
+
+      match_id:
+        String(
+          match.id
+        ),
+
+
+      match_date:
+        match.date ||
+        null,
+
+      result:
+        String(
+          match.result || ""
+        ),
+
+      outcome:
+        String(
+          match.outcome || ""
+        ),
+
+      field:
+        String(
+          match.field || ""
+        ),
+
+      role:
+        String(
+          match.role || ""
+        ),
+
+
+      goals:
+        Math.max(
+          0,
+          Math.round(
+            mpCSMNumber(
+              match.goals,
+              0
+            )
+          )
+        ),
+
+      assists:
+        Math.max(
+          0,
+          Math.round(
+            mpCSMNumber(
+              match.assists,
+              0
+            )
+          )
+        ),
+
+      rating:
+        mpCSMNullableRating(
+          match.rating
+        ),
+
+
+      self_pac:
+        mpCSMNullableRating(
+          match.selfPac
+        ),
+
+      self_sho:
+        mpCSMNullableRating(
+          match.selfSho
+        ),
+
+      self_pas:
+        mpCSMNullableRating(
+          match.selfPas
+        ),
+
+      self_dri:
+        mpCSMNullableRating(
+          match.selfDri
+        ),
+
+      self_def:
+        mpCSMNullableRating(
+          match.selfDef
+        ),
+
+      self_phy:
+        mpCSMNullableRating(
+          match.selfPhy
+        ),
+
+
+      share_notes:
+        hasSharedNotes,
+
+      notes:
+        hasSharedNotes
+          ? String(
+              match.notes
+            )
+          : null,
+
+
+      match_created_at:
+        match.createdAt ||
+        null,
+
+      updated_at:
+        new Date()
+          .toISOString()
+
+    };
+  }
+
+
+  /* =======================================================
+     PUBBLICA
+     ======================================================= */
+
+  async function mpCSMPublishMatchObject(
+    match,
+    shareNotes = false
+  ) {
+
+    if (!match?.id) {
+      throw new Error(
+        "Partita non valida"
+      );
+    }
+
+
+    const {
+      user,
+      club
+    } =
+      await mpCSMContext();
+
+
+    const row =
+      mpCSMMatchRow(
+        match,
+        user,
+        club,
+        shareNotes
+      );
+
+
+    const {
+      error
+    } =
+      await matchpulseSupabase
+        .from(
+          MP_CSM_TABLE
+        )
+        .upsert(
+          row,
+          {
+            onConflict:
+              "club_id,user_id,match_id"
+          }
+        );
+
+
+    if (error) {
+      throw error;
+    }
+
+
+    const updated =
+      mpCSMPatchLocalMatch(
+        match.id,
+        {
+          clubPublished:
+            true,
+
+          clubPublishedClubId:
+            String(
+              club.club_id
+            ),
+
+          clubShareNotes:
+            Boolean(
+              shareNotes
+            ),
+
+          clubPublishedAt:
+            new Date()
+              .toISOString()
+        }
+      );
+
+
+    return (
+      updated ||
+      match
+    );
+  }
+
+
+  async function mpClubPublishSavedMatch(
+    matchId
+  ) {
+
+    const match =
+      mpCSMGetLocalMatch(
+        matchId
+      );
+
+
+    if (!match) {
+
+      mpCSMToast(
+        "Partita non trovata"
+      );
+
+      return;
+
+    }
+
+
+    try {
+
+      await mpCSMPublishMatchObject(
+        match,
+        match.clubShareNotes ===
+          true
+      );
+
+
+      mpCSMToast(
+        "Partita pubblicata nel Club"
+      );
+
+
+      if (
+        typeof route !==
+          "undefined" &&
+        route === "detail" &&
+        String(
+          selectedMatchId
+        ) === String(matchId)
+      ) {
+        renderDetail();
+      }
+
+    } catch (error) {
+
+      console.error(
+        "PUBBLICAZIONE PARTITA CLUB:",
+        error
+      );
+
+      mpCSMToast(
+        error?.message ||
+        "Impossibile pubblicare la partita"
+      );
+
+    }
+  }
+
+
+  /* =======================================================
+     RIMUOVI DAL CLUB
+     ======================================================= */
+
+  async function mpCSMUnpublishMatch(
+    matchId,
+    silent = false
+  ) {
+
+    const match =
+      mpCSMGetLocalMatch(
+        matchId
+      );
+
+
+    const {
+      user,
+      club
+    } =
+      await mpCSMContext();
+
+
+    const {
+      error
+    } =
+      await matchpulseSupabase
+        .from(
+          MP_CSM_TABLE
+        )
+        .delete()
+        .eq(
+          "club_id",
+          String(
+            club.club_id
+          )
+        )
+        .eq(
+          "user_id",
+          user.id
+        )
+        .eq(
+          "match_id",
+          String(
+            matchId
+          )
+        );
+
+
+    if (error) {
+      throw error;
+    }
+
+
+    if (match) {
+
+      mpCSMPatchLocalMatch(
+        matchId,
+        {
+          clubPublished:
+            false,
+
+          clubPublishedClubId:
+            "",
+
+          clubPublishedAt:
+            null
+        }
+      );
+
+    }
+
+
+    if (!silent) {
+
+      mpCSMToast(
+        "Partita rimossa dal Club"
+      );
+
+    }
+  }
+
+
+  async function mpClubUnpublishSavedMatch(
+    matchId
+  ) {
+
+    try {
+
+      await mpCSMUnpublishMatch(
+        matchId
+      );
+
+
+      if (
+        typeof route !==
+          "undefined" &&
+        route === "detail"
+      ) {
+        renderDetail();
+      }
+
+    } catch (error) {
+
+      console.error(
+        "RIMOZIONE PARTITA CLUB:",
+        error
+      );
+
+      mpCSMToast(
+        error?.message ||
+        "Impossibile rimuovere la partita"
+      );
+
+    }
+  }
+
+
+  /* =======================================================
+     NOTE CONDIVISE / PRIVATE
+     ======================================================= */
+
+  async function mpClubToggleMatchNotes(
+    matchId
+  ) {
+
+    const match =
+      mpCSMGetLocalMatch(
+        matchId
+      );
+
+
+    if (!match) {
+      return;
+    }
+
+
+    if (
+      !String(
+        match.notes || ""
+      ).trim()
+    ) {
+
+      mpCSMToast(
+        "Questa partita non contiene note"
+      );
+
+      return;
+
+    }
+
+
+    const newValue =
+      match.clubShareNotes !==
+      true;
+
+
+    const updated =
+      mpCSMPatchLocalMatch(
+        matchId,
+        {
+          clubShareNotes:
+            newValue
+        }
+      );
+
+
+    if (
+      updated?.clubPublished ===
+      true
+    ) {
+
+      try {
+
+        await mpCSMPublishMatchObject(
+          updated,
+          newValue
+        );
+
+      } catch (error) {
+
+        mpCSMPatchLocalMatch(
+          matchId,
+          {
+            clubShareNotes:
+              !newValue
+          }
+        );
+
+
+        console.error(
+          "AGGIORNAMENTO NOTE CLUB:",
+          error
+        );
+
+        mpCSMToast(
+          "Impossibile aggiornare le note"
+        );
+
+        return;
+      }
+
+    }
+
+
+    mpCSMToast(
+      newValue
+        ? "Note visibili nel Club"
+        : "Note rese private"
+    );
+
+
+    if (
+      typeof route !==
+        "undefined" &&
+      route === "detail"
+    ) {
+      renderDetail();
+    }
+  }
+
+
+  window.mpClubPublishSavedMatch =
+    mpClubPublishSavedMatch;
+
+  window.mpClubUnpublishSavedMatch =
+    mpClubUnpublishSavedMatch;
+
+  window.mpClubToggleMatchNotes =
+    mpClubToggleMatchNotes;
+
+
+  /* =======================================================
+     NUOVA PARTITA:
+     AGGIUNGE I CONTROLLI CLUB
+     ======================================================= */
+
+  const mpCSMPreviousRenderNew =
+    renderNew;
+
+
+  renderNew =
+    function () {
+
+      mpCSMPreviousRenderNew();
+
+
+      const form =
+        document.querySelector(
+          "#match-form"
+        );
+
+
+      const actions =
+        form?.querySelector(
+          ".match-form-actions"
+        );
+
+
+      if (
+        !form ||
+        !actions ||
+        form.querySelector(
+          "#mpClubMatchSaveShare"
+        )
+      ) {
+        return;
+      }
+
+
+      actions.insertAdjacentHTML(
+        "beforebegin",
+        `
+          <section
+            id="mpClubMatchSaveShare"
+            class="
+              card
+              form-section
+              match-form-card
+              mp-club-save-share
+            "
+          >
+
+            <div class="
+              mp-club-save-share-head
+            ">
+              <div>
+                <span>CLUB</span>
+
+                <h3>
+                  Condividi la prestazione
+                </h3>
+              </div>
+
+              <strong>↗</strong>
+            </div>
+
+
+            <p>
+              La partita resta sempre salvata
+              nel tuo storico personale.
+              Scegli tu se mostrarla anche
+              ai membri del Club.
+            </p>
+
+
+            <label
+              class="
+                mp-club-save-share-option
+              "
+            >
+
+              <input
+                id="mpClubPublishMatch"
+                name="clubPublishMatch"
+                type="checkbox"
+              >
+
+              <span>
+                <strong>
+                  PUBBLICA NEL CLUB
+                </strong>
+
+                <small>
+                  I membri potranno vedere
+                  voto, gol, assist e le sei
+                  autovalutazioni.
+                </small>
+              </span>
+
+            </label>
+
+
+            <label
+              class="
+                mp-club-save-share-option
+                is-secondary
+              "
+            >
+
+              <input
+                id="mpClubShareMatchNotes"
+                name="clubShareMatchNotes"
+                type="checkbox"
+                disabled
+              >
+
+              <span>
+                <strong>
+                  CONDIVIDI ANCHE LE NOTE
+                </strong>
+
+                <small>
+                  Se disattivato, il commento
+                  personale rimane soltanto tuo.
+                </small>
+              </span>
+
+            </label>
+
+          </section>
+        `
+      );
+
+
+      const publishInput =
+        form.querySelector(
+          "#mpClubPublishMatch"
+        );
+
+      const notesInput =
+        form.querySelector(
+          "#mpClubShareMatchNotes"
+        );
+
+
+      publishInput?.addEventListener(
+        "change",
+        () => {
+
+          if (!notesInput) {
+            return;
+          }
+
+          notesInput.disabled =
+            !publishInput.checked;
+
+          if (
+            !publishInput.checked
+          ) {
+            notesInput.checked =
+              false;
+          }
+
+        }
+      );
+    };
+
+
+  window.renderNew =
+    renderNew;
+
+
+  /* =======================================================
+     SALVATAGGIO:
+     PRIMA SALVA LOCALMENTE,
+     POI EVENTUALMENTE PUBBLICA ONLINE
+     ======================================================= */
+
+  const mpCSMPreviousHandleSave =
+    handleSave;
+
+
+  handleSave =
+    async function (event) {
+
+      const form =
+        event.currentTarget ||
+        event.target;
+
+
+      const publishInput =
+        form?.querySelector(
+          "#mpClubPublishMatch"
+        );
+
+      const notesInput =
+        form?.querySelector(
+          "#mpClubShareMatchNotes"
+        );
+
+
+      const wantsPublish =
+        publishInput?.checked ===
+        true;
+
+      const wantsNotes =
+        wantsPublish &&
+        notesInput?.checked ===
+          true;
+
+
+      /*
+        Li disabilitiamo prima del vecchio
+        handleSave così NON finiscono
+        dentro l'oggetto della partita.
+      */
+
+      if (publishInput) {
+        publishInput.disabled =
+          true;
+      }
+
+      if (notesInput) {
+        notesInput.disabled =
+          true;
+      }
+
+
+      const beforeIds =
+        new Set(
+          getMatches()
+            .map(
+              match =>
+                String(match.id)
+            )
+        );
+
+
+      mpCSMPreviousHandleSave(
+        event
+      );
+
+
+      const matchesAfter =
+        getMatches();
+
+
+      const newMatch =
+        matchesAfter.find(
+          match =>
+            !beforeIds.has(
+              String(match.id)
+            )
+        );
+
+
+      /*
+        Validazione del vecchio form fallita.
+      */
+
+      if (!newMatch) {
+
+        if (publishInput) {
+          publishInput.disabled =
+            false;
+        }
+
+        if (notesInput) {
+
+          notesInput.disabled =
+            !publishInput?.checked;
+
+        }
+
+        return;
+      }
+
+
+      mpCSMPatchLocalMatch(
+        newMatch.id,
+        {
+          clubPublished:
+            false,
+
+          clubPublishedClubId:
+            "",
+
+          clubShareNotes:
+            wantsNotes,
+
+          clubPublishedAt:
+            null
+        }
+      );
+
+
+      if (wantsPublish) {
+
+        try {
+
+          await mpCSMPublishMatchObject(
+            mpCSMGetLocalMatch(
+              newMatch.id
+            ),
+            wantsNotes
+          );
+
+
+          mpCSMToast(
+            "Partita salvata e pubblicata nel Club"
+          );
+
+        } catch (error) {
+
+          console.error(
+            "PUBBLICAZIONE AUTOMATICA CLUB:",
+            error
+          );
+
+
+          mpCSMToast(
+            `Partita salvata, ma non pubblicata: ${
+              error?.message ||
+              "errore Club"
+            }`
+          );
+
+        }
+      }
+
+
+      if (
+        typeof route !==
+          "undefined" &&
+        route === "detail" &&
+        String(
+          selectedMatchId
+        ) ===
+        String(
+          newMatch.id
+        )
+      ) {
+
+        renderDetail();
+
+      }
+    };
+
+
+  /* =======================================================
+     DETTAGLIO PARTITA:
+     PUBBLICA / RIMUOVI / NOTE
+     ======================================================= */
+
+  const mpCSMPreviousRenderDetail =
+    renderDetail;
+
+
+  renderDetail =
+    function () {
+
+      mpCSMPreviousRenderDetail();
+
+
+      const match =
+        mpCSMGetLocalMatch(
+          selectedMatchId
+        );
+
+
+      if (!match) {
+        return;
+      }
+
+
+      const actions =
+        document.querySelector(
+          ".history-detail-actions"
+        ) ||
+        document.querySelector(
+          ".detail-actions"
+        );
+
+
+      if (
+        !actions ||
+        document.querySelector(
+          "#mpClubMatchShareControl"
+        )
+      ) {
+        return;
+      }
+
+
+      const published =
+        match.clubPublished ===
+        true;
+
+      const hasNotes =
+        Boolean(
+          String(
+            match.notes || ""
+          ).trim()
+        );
+
+
+      actions.insertAdjacentHTML(
+        "beforebegin",
+        `
+          <section
+            id="mpClubMatchShareControl"
+            class="
+              mp-match-club-share-control
+              ${published
+                ? "is-published"
+                : ""}
+            "
+          >
+
+            <div class="
+              mp-match-club-share-copy
+            ">
+
+              <span>
+                ${published
+                  ? "PUBBLICATA NEL CLUB"
+                  : "SOLO PRIVATA"}
+              </span>
+
+              <h3>
+                Condivisione Club
+              </h3>
+
+              <p>
+                ${
+                  published
+                    ? "Questa prestazione è visibile ai membri del tuo Club."
+                    : "Questa prestazione è visibile soltanto nel tuo storico."
+                }
+              </p>
+
+            </div>
+
+
+            <div class="
+              mp-match-club-share-actions
+            ">
+
+              ${
+                published
+                  ? `
+                    <button
+                      type="button"
+                      class="secondary-btn"
+                      onclick="
+                        mpClubUnpublishSavedMatch(
+                          '${mpCSMEscape(
+                            match.id
+                          )}'
+                        )
+                      "
+                    >
+                      RIMUOVI DAL CLUB
+                    </button>
+                  `
+                  : `
+                    <button
+                      type="button"
+                      class="primary-btn"
+                      onclick="
+                        mpClubPublishSavedMatch(
+                          '${mpCSMEscape(
+                            match.id
+                          )}'
+                        )
+                      "
+                    >
+                      PUBBLICA NEL CLUB
+                    </button>
+                  `
+              }
+
+
+              ${
+                hasNotes
+                  ? `
+                    <button
+                      type="button"
+                      class="
+                        mp-club-notes-toggle
+                        ${match.clubShareNotes
+                          ? "is-active"
+                          : ""}
+                      "
+                      onclick="
+                        mpClubToggleMatchNotes(
+                          '${mpCSMEscape(
+                            match.id
+                          )}'
+                        )
+                      "
+                    >
+                      ${
+                        match.clubShareNotes
+                          ? "NOTE CONDIVISE"
+                          : "NOTE PRIVATE"
+                      }
+                    </button>
+                  `
+                  : ""
+              }
+
+            </div>
+
+          </section>
+        `
+      );
+    };
+
+
+  window.renderDetail =
+    renderDetail;
+
+
+  /* =======================================================
+     ELIMINAZIONE PARTITA:
+     SE PUBBLICATA VIENE RIMOSSA ANCHE DAL CLUB
+     ======================================================= */
+
+  deleteMatch =
+    async function (matchId) {
+
+      const match =
+        mpCSMGetLocalMatch(
+          matchId
+        );
+
+
+      if (!match) {
+        return;
+      }
+
+
+      const confirmed =
+        confirm(
+          "Eliminare questa partita? Se è pubblicata nel Club verrà rimossa anche da lì."
+        );
+
+
+      if (!confirmed) {
+        return;
+      }
+
+
+      if (
+        match.clubPublished ===
+        true
+      ) {
+
+        try {
+
+          await mpCSMUnpublishMatch(
+            matchId,
+            true
+          );
+
+        } catch (error) {
+
+          console.warn(
+            "Partita Club non rimossa:",
+            error
+          );
+
+        }
+      }
+
+
+      const updatedMatches =
+        getMatches().filter(
+          item =>
+            String(item.id) !==
+            String(matchId)
+        );
+
+
+      saveMatches(
+        updatedMatches
+      );
+
+
+      if (
+        typeof rebuildCardStatsFromHistory ===
+        "function"
+      ) {
+        rebuildCardStatsFromHistory();
+      }
+
+
+      toast(
+        "Partita eliminata"
+      );
+
+
+      setRoute(
+        "history"
+      );
+
+
+      setTimeout(
+        () => {
+
+          if (
+            typeof renderPlayerCardStats ===
+            "function"
+          ) {
+            renderPlayerCardStats();
+          }
+
+        },
+        0
+      );
+    };
+
+
+  window.deleteMatch =
+    deleteMatch;
+
+
+  /* =======================================================
+     PARTITE PUBBLICATE DI UN MEMBRO
+     ======================================================= */
+
+  async function mpCSMFetchMemberMatches(
+    userId
+  ) {
+
+    if (
+      typeof matchpulseSupabase ===
+        "undefined" ||
+      !matchpulseSupabase
+    ) {
+      return [];
+    }
+
+
+    const club =
+      (
+        typeof MP_CLUB_CURRENT !==
+          "undefined"
+      )
+        ? MP_CLUB_CURRENT
+        : null;
+
+
+    if (!club?.club_id) {
+      return [];
+    }
+
+
+    const {
+      data,
+      error
+    } =
+      await matchpulseSupabase
+        .from(
+          MP_CSM_TABLE
+        )
+        .select(`
+          club_id,
+          user_id,
+          match_id,
+          match_date,
+          result,
+          outcome,
+          field,
+          role,
+          goals,
+          assists,
+          rating,
+          self_pac,
+          self_sho,
+          self_pas,
+          self_dri,
+          self_def,
+          self_phy,
+          share_notes,
+          notes,
+          published_at,
+          updated_at
+        `)
+        .eq(
+          "club_id",
+          String(
+            club.club_id
+          )
+        )
+        .eq(
+          "user_id",
+          String(
+            userId
+          )
+        )
+        .order(
+          "match_date",
+          {
+            ascending:
+              false
+          }
+        )
+        .order(
+          "published_at",
+          {
+            ascending:
+              false
+          }
+        )
+        .limit(50);
+
+
+    if (error) {
+      throw error;
+    }
+
+
+    return Array.isArray(data)
+      ? data
+      : [];
+  }
+
+
+  function mpCSMFormatDate(value) {
+
+    if (!value) {
+      return "Senza data";
+    }
+
+
+    if (
+      typeof formatDate ===
+      "function"
+    ) {
+
+      try {
+        return formatDate(value);
+      } catch {}
+    }
+
+
+    return new Date(
+      `${value}T12:00:00`
+    ).toLocaleDateString(
+      "it-IT"
+    );
+  }
+
+
+  function mpCSMDisplay10(value) {
+
+    const number =
+      mpCSMNullableRating(
+        value
+      );
+
+    if (number === null) {
+      return "—";
+    }
+
+    return number
+      .toFixed(1)
+      .replace(
+        ".0",
+        ""
+      );
+  }
+
+
+  function mpCSMPerformanceLabel(
+    rating
+  ) {
+
+    const value =
+      mpCSMNumber(
+        rating,
+        0
+      );
+
+
+    if (value >= 9) {
+      return "ECCEZIONALE";
+    }
+
+    if (value >= 8) {
+      return "GRANDE PARTITA";
+    }
+
+    if (value >= 7) {
+      return "BUONA PARTITA";
+    }
+
+    if (value >= 6) {
+      return "SUFFICIENTE";
+    }
+
+    if (value > 0) {
+      return "SOTTOTONO";
+    }
+
+    return "PRESTAZIONE";
+  }
+
+
+  function mpCSMRatingItem(
+    icon,
+    label,
+    value
+  ) {
+
+    const number =
+      mpCSMNullableRating(
+        value
+      );
+
+    const shown =
+      number === null
+        ? "—"
+        : number
+            .toFixed(1)
+            .replace(
+              ".0",
+              ""
+            );
+
+    const fill =
+      number === null
+        ? 0
+        : Math.max(
+            0,
+            Math.min(
+              100,
+              number * 10
+            )
+          );
+
+
+    return `
+      <div class="
+        mp-club-shared-self-stat
+      ">
+
+        <div>
+          <span>${icon}</span>
+
+          <strong>
+            ${mpCSMEscape(label)}
+          </strong>
+
+          <b>
+            ${shown}
+          </b>
+        </div>
+
+        <i>
+          <u
+            style="
+              width:${fill}%;
+            "
+          ></u>
+        </i>
+
+      </div>
+    `;
+  }
+
+
+  function mpCSMSharedMatchHtml(
+    match
+  ) {
+
+    const rating =
+      mpCSMDisplay10(
+        match.rating
+      );
+
+
+    return `
+      <details
+        class="
+          mp-club-shared-match
+        "
+      >
+
+        <summary>
+
+          <div class="
+            mp-club-shared-match-main
+          ">
+
+            <span>
+              ${mpCSMEscape(
+                mpCSMFormatDate(
+                  match.match_date
+                )
+              )}
+            </span>
+
+            <strong>
+              ${mpCSMEscape(
+                match.result ||
+                "RISULTATO —"
+              )}
+            </strong>
+
+            <small>
+              ${mpCSMEscape(
+                match.outcome ||
+                "Partita"
+              )}
+              ·
+              ${mpCSMEscape(
+                match.role ||
+                "Ruolo —"
+              )}
+            </small>
+
+          </div>
+
+
+          <div class="
+            mp-club-shared-match-kpis
+          ">
+
+            <span>
+              <b>
+                ${Math.round(
+                  mpCSMNumber(
+                    match.goals,
+                    0
+                  )
+                )}
+              </b>
+              GOL
+            </span>
+
+            <span>
+              <b>
+                ${Math.round(
+                  mpCSMNumber(
+                    match.assists,
+                    0
+                  )
+                )}
+              </b>
+              ASSIST
+            </span>
+
+            <span class="is-rating">
+              <b>${rating}</b>
+              VOTO
+            </span>
+
+          </div>
+
+
+          <div class="
+            mp-club-shared-match-open
+          ">
+            APRI
+          </div>
+
+        </summary>
+
+
+        <div class="
+          mp-club-shared-match-detail
+        ">
+
+          <div class="
+            mp-club-shared-performance-head
+          ">
+
+            <div>
+              <span>
+                PRESTAZIONE
+              </span>
+
+              <h4>
+                ${mpCSMEscape(
+                  mpCSMPerformanceLabel(
+                    match.rating
+                  )
+                )}
+              </h4>
+            </div>
+
+            <strong>
+              ${rating}
+              <small>/10</small>
+            </strong>
+
+          </div>
+
+
+          <div class="
+            mp-club-shared-match-meta
+          ">
+
+            <span>
+              RUOLO
+              <strong>
+                ${mpCSMEscape(
+                  match.role ||
+                  "—"
+                )}
+              </strong>
+            </span>
+
+            <span>
+              CAMPO
+              <strong>
+                ${mpCSMEscape(
+                  match.field ||
+                  "—"
+                )}
+              </strong>
+            </span>
+
+            <span>
+              ESITO
+              <strong>
+                ${mpCSMEscape(
+                  match.outcome ||
+                  "—"
+                )}
+              </strong>
+            </span>
+
+          </div>
+
+
+          <div class="
+            mp-club-shared-self-grid
+          ">
+
+            ${mpCSMRatingItem(
+              "⚡",
+              "Velocità",
+              match.self_pac
+            )}
+
+            ${mpCSMRatingItem(
+              "🎯",
+              "Finalizzazione",
+              match.self_sho
+            )}
+
+            ${mpCSMRatingItem(
+              "🧠",
+              "Passaggi",
+              match.self_pas
+            )}
+
+            ${mpCSMRatingItem(
+              "✨",
+              "Dribbling",
+              match.self_dri
+            )}
+
+            ${mpCSMRatingItem(
+              "🛡️",
+              "Difesa",
+              match.self_def
+            )}
+
+            ${mpCSMRatingItem(
+              "💪",
+              "Fisico",
+              match.self_phy
+            )}
+
+          </div>
+
+
+          ${
+            match.share_notes &&
+            String(
+              match.notes || ""
+            ).trim()
+
+              ? `
+                <div class="
+                  mp-club-shared-notes
+                ">
+
+                  <span>
+                    NOTE CONDIVISE
+                  </span>
+
+                  <p>
+                    ${mpCSMEscape(
+                      match.notes
+                    )}
+                  </p>
+
+                </div>
+              `
+              : ""
+          }
+
+        </div>
+
+      </details>
+    `;
+  }
+
+
+  /* =======================================================
+     RIEPILOGO CARRIERA
+     ======================================================= */
+
+  function mpCSMCareerHtml(
+    member
+  ) {
+
+    const stats =
+      mpCSMObject(
+        member?.card_stats
+      );
+
+
+    const visible =
+      stats.careerStatsVisible ===
+      true;
+
+
+    if (!visible) {
+
+      return `
+        <div class="
+          mp-club-career-profile-private
+        ">
+
+          <span>
+            STATISTICHE CARRIERA
+          </span>
+
+          <strong>
+            PRIVATE
+          </strong>
+
+          <p>
+            Questo giocatore non condivide
+            il proprio riepilogo generale.
+            Le partite pubblicate singolarmente
+            rimangono comunque visibili qui sotto.
+          </p>
+
+        </div>
+      `;
+    }
+
+
+    const average =
+      mpCSMNumber(
+        stats.careerAvgRating,
+        0
+      );
+
+
+    return `
+      <div class="
+        mp-club-career-profile-public
+      ">
+
+        <div>
+          <span>PARTITE</span>
+
+          <strong>
+            ${Math.round(
+              mpCSMNumber(
+                stats.careerMatches,
+                0
+              )
+            )}
+          </strong>
+        </div>
+
+
+        <div>
+          <span>GOL</span>
+
+          <strong>
+            ${Math.round(
+              mpCSMNumber(
+                stats.careerGoals,
+                0
+              )
+            )}
+          </strong>
+        </div>
+
+
+        <div>
+          <span>ASSIST</span>
+
+          <strong>
+            ${Math.round(
+              mpCSMNumber(
+                stats.careerAssists,
+                0
+              )
+            )}
+          </strong>
+        </div>
+
+
+        <div>
+          <span>MEDIA VOTO</span>
+
+          <strong>
+            ${
+              average > 0
+                ? average
+                    .toFixed(1)
+                : "—"
+            }
+          </strong>
+        </div>
+
+      </div>
+    `;
+  }
+
+
+  /* =======================================================
+     MONTA LA SEZIONE SOTTO PLAYSTYLE+
+     ======================================================= */
+
+  async function mpCSMMountProfileMatches(
+    userId
+  ) {
+
+    const modal =
+      document.getElementById(
+        "mpClubMemberModal"
+      );
+
+
+    if (!modal) {
+      return;
+    }
+
+
+    modal.dataset
+      .mpSharedUser =
+      String(userId);
+
+
+    const member =
+      (
+        typeof MP_CLUB_MEMBERS_CACHE !==
+          "undefined"
+      )
+        ? MP_CLUB_MEMBERS_CACHE.find(
+            item =>
+              String(
+                item.user_id
+              ) ===
+              String(userId)
+          )
+        : null;
+
+
+    if (!member) {
+      return;
+    }
+
+
+    modal
+      .querySelector(
+        "#mpClubSharedMatchesSection"
+      )
+      ?.remove();
+
+
+    const section =
+      document.createElement(
+        "section"
+      );
+
+
+    section.id =
+      "mpClubSharedMatchesSection";
+
+    section.className =
+      "mp-club-shared-zone";
+
+
+    section.innerHTML = `
+      <div class="
+        mp-club-shared-loading
+      ">
+        Caricamento partite condivise...
+      </div>
+    `;
+
+
+    const psSection =
+      modal.querySelector(
+        ".mp-club-profile-ps-section"
+      );
+
+
+    if (psSection) {
+
+      psSection.insertAdjacentElement(
+        "afterend",
+        section
+      );
+
+    } else {
+
+      modal
+        .querySelector(
+          ".mp-club-profile-modal"
+        )
+        ?.appendChild(
+          section
+        );
+
+    }
+
+
+    try {
+
+      const matches =
+        await mpCSMFetchMemberMatches(
+          userId
+        );
+
+
+      if (
+        !document.body.contains(
+          modal
+        ) ||
+        modal.dataset
+          .mpSharedUser !==
+          String(userId)
+      ) {
+        return;
+      }
+
+
+      section.innerHTML = `
+
+        <div class="
+          mp-club-shared-section-head
+        ">
+
+          <div>
+            <span>
+              RENDIMENTO
+            </span>
+
+            <h3>
+              Statistiche carriera
+            </h3>
+          </div>
+
+        </div>
+
+
+        ${mpCSMCareerHtml(
+          member
+        )}
+
+
+        <div class="
+          mp-club-shared-section-head
+          is-matches
+        ">
+
+          <div>
+            <span>
+              SPOGLIATOIO
+            </span>
+
+            <h3>
+              Partite condivise
+            </h3>
+          </div>
+
+          <strong>
+            ${matches.length}
+          </strong>
+
+        </div>
+
+
+        <div class="
+          mp-club-shared-match-list
+        ">
+
+          ${
+            matches.length
+
+              ? matches
+                  .map(
+                    mpCSMSharedMatchHtml
+                  )
+                  .join("")
+
+              : `
+                <div class="
+                  mp-club-shared-empty
+                ">
+
+                  <strong>
+                    Nessuna partita pubblicata
+                  </strong>
+
+                  <span>
+                    Questo giocatore non ha ancora
+                    condiviso prestazioni nel Club.
+                  </span>
+
+                </div>
+              `
+          }
+
+        </div>
+      `;
+
+    } catch (error) {
+
+      console.error(
+        "PARTITE CONDIVISE CLUB:",
+        error
+      );
+
+
+      section.innerHTML = `
+        <div class="
+          mp-club-shared-empty
+        ">
+
+          <strong>
+            Impossibile caricare le partite
+          </strong>
+
+          <span>
+            ${mpCSMEscape(
+              error?.message ||
+              "Errore sconosciuto"
+            )}
+          </span>
+
+        </div>
+      `;
+
+    }
+  }
+
+
+  /* =======================================================
+     APERTURA PROFILO CLUB
+     ======================================================= */
+
+  const mpCSMPreviousOpenMember =
+    typeof window
+      .mpOpenClubMember ===
+    "function"
+
+      ? window
+          .mpOpenClubMember
+
+      : (
+          typeof mpOpenClubMember ===
+            "function"
+            ? mpOpenClubMember
+            : null
+        );
+
+
+  if (mpCSMPreviousOpenMember) {
+
+    function mpCSMOpenClubMember(
+      userId
+    ) {
+
+      const result =
+        mpCSMPreviousOpenMember(
+          userId
+        );
+
+
+      /*
+        Aspettiamo le patch già esistenti:
+        carta base, promo e foto.
+      */
+
+      setTimeout(
+        () => {
+
+          mpCSMMountProfileMatches(
+            userId
+          );
+
+        },
+        380
+      );
+
+
+      return result;
+    }
+
+
+    try {
+
+      mpOpenClubMember =
+        mpCSMOpenClubMember;
+
+    } catch {}
+
+
+    window.mpOpenClubMember =
+      mpCSMOpenClubMember;
+
+  }
+
+})();
+
+/* =========================================================
+   MATCHPULSE
+   PROMO SECURE RELEASE V1
+   CALENDARIO SEGRETO + FOUNDER SUPABASE
+   ========================================================= */
+
+(function () {
+
+  if (
+    window
+      .MP_PROMO_SECURE_RELEASE_V1_READY
+  ) {
+    return;
+  }
+
+
+  window
+    .MP_PROMO_SECURE_RELEASE_V1_READY =
+    true;
+
+
+  const MP_PSR_SEASON =
+    "2026-27";
+
+
+  let MP_PSR_RELEASED_CACHE =
+    [];
+
+  let MP_PSR_ADMIN_CACHE =
+    null;
+
+
+  /* =======================================================
+     SUPPORTO
+     ======================================================= */
+
+  function mpPSREscape(value) {
+
+    if (
+      typeof escapeHtml ===
+      "function"
+    ) {
+      return escapeHtml(
+        value
+      );
+    }
+
+
+    return String(
+      value ?? ""
+    )
+      .replaceAll(
+        "&",
+        "&amp;"
+      )
+      .replaceAll(
+        "<",
+        "&lt;"
+      )
+      .replaceAll(
+        ">",
+        "&gt;"
+      )
+      .replaceAll(
+        '"',
+        "&quot;"
+      )
+      .replaceAll(
+        "'",
+        "&#039;"
+      );
+  }
+
+
+  function mpPSRToast(text) {
+
+    if (
+      typeof mpClubToast ===
+      "function"
+    ) {
+      mpClubToast(
+        text
+      );
+
+      return;
+    }
+
+
+    if (
+      typeof toast ===
+      "function"
+    ) {
+      toast(
+        text
+      );
+    }
+  }
+
+
+  function mpPSRHasSupabase() {
+
+    return (
+      typeof matchpulseSupabase !==
+        "undefined" &&
+      Boolean(
+        matchpulseSupabase
+      )
+    );
+  }
+
+
+  async function mpPSREnsureAuth() {
+
+    if (
+      !mpPSRHasSupabase()
+    ) {
+      throw new Error(
+        "Supabase non configurato"
+      );
+    }
+
+
+    if (
+      typeof mpEnsureClubAuth ===
+      "function"
+    ) {
+      return await
+        mpEnsureClubAuth();
+    }
+
+
+    const {
+      data
+    } =
+      await matchpulseSupabase
+        .auth
+        .getUser();
+
+
+    if (
+      data?.user
+    ) {
+      return data.user;
+    }
+
+
+    throw new Error(
+      "Utente MatchPulse non autenticato"
+    );
+  }
+
+
+  /* =======================================================
+     FOUNDER
+     ======================================================= */
+
+  async function mpPromoSecureIsAdmin(
+    force = false
+  ) {
+
+    if (
+      MP_PSR_ADMIN_CACHE !==
+        null &&
+      !force
+    ) {
+      return MP_PSR_ADMIN_CACHE;
+    }
+
+
+    await mpPSREnsureAuth();
+
+
+    const {
+      data,
+      error
+    } =
+      await matchpulseSupabase
+        .rpc(
+          "matchpulse_is_app_admin"
+        );
+
+
+    if (error) {
+      throw error;
+    }
+
+
+    MP_PSR_ADMIN_CACHE =
+      data === true;
+
+
+    return (
+      MP_PSR_ADMIN_CACHE
+    );
+  }
+
+
+  /* =======================================================
+     PROMO GIÀ USCITE
+
+     QUESTA RPC NON PUÒ RIVELARE
+     LE PROMO FUTURE.
+     ======================================================= */
+
+  async function mpPromoSecureGetReleased() {
+
+    await mpPSREnsureAuth();
+
+
+    const {
+      data,
+      error
+    } =
+      await matchpulseSupabase
+        .rpc(
+          "matchpulse_get_released_promos",
+          {
+            p_season:
+              MP_PSR_SEASON
+          }
+        );
+
+
+    if (error) {
+      throw error;
+    }
+
+
+    MP_PSR_RELEASED_CACHE =
+      Array.isArray(
+        data
+      )
+        ? data
+        : [];
+
+
+    window
+      .MP_PROMO_RELEASED_CACHE =
+      MP_PSR_RELEASED_CACHE;
+
+
+    return (
+      MP_PSR_RELEASED_CACHE
+    );
+  }
+
+
+  function mpPromoSecureIsReleased(
+    promoId
+  ) {
+
+    return (
+      MP_PSR_RELEASED_CACHE
+        .some(
+          promo =>
+            promo.promo_id ===
+            promoId
+        )
+    );
+  }
+
+
+  /* =======================================================
+     CALENDARIO COMPLETO
+     SOLO FOUNDER
+     ======================================================= */
+
+  async function mpPromoSecureGetSchedule() {
+
+    const admin =
+      await mpPromoSecureIsAdmin();
+
+
+    if (!admin) {
+      return [];
+    }
+
+
+    const {
+      data,
+      error
+    } =
+      await matchpulseSupabase
+        .rpc(
+          "matchpulse_get_promo_schedule_admin",
+          {
+            p_season:
+              MP_PSR_SEASON
+          }
+        );
+
+
+    if (error) {
+      throw error;
+    }
+
+
+    return Array.isArray(
+      data
+    )
+      ? data
+      : [];
+  }
+
+
+  /* =======================================================
+     DATA UTC → INPUT DATETIME-LOCAL
+     ======================================================= */
+
+  function mpPSRToLocalInput(
+    value
+  ) {
+
+    if (!value) {
+      return "";
+    }
+
+
+    const date =
+      new Date(
+        value
+      );
+
+
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
+      return "";
+    }
+
+
+    const local =
+      new Date(
+        date.getTime() -
+        date.getTimezoneOffset() *
+        60000
+      );
+
+
+    return local
+      .toISOString()
+      .slice(
+        0,
+        16
+      );
+  }
+
+
+  /* =======================================================
+     SALVA DATA
+     ======================================================= */
+
+  async function mpPromoSecureSaveRelease(
+    promoId
+  ) {
+
+    try {
+
+      const admin =
+        await mpPromoSecureIsAdmin(
+          true
+        );
+
+
+      if (!admin) {
+
+        mpPSRToast(
+          "Accesso founder richiesto"
+        );
+
+        return;
+      }
+
+
+      const input =
+        document
+          .getElementById(
+            `mpPromoRelease-${promoId}`
+          );
+
+
+      const enabledInput =
+        document
+          .getElementById(
+            `mpPromoEnabled-${promoId}`
+          );
+
+
+      if (
+        !input ||
+        !input.value
+      ) {
+
+        mpPSRToast(
+          "Inserisci data e ora"
+        );
+
+        return;
+      }
+
+
+      /*
+        datetime-local usa il fuso orario
+        del dispositivo.
+
+        Convertiamo quindi in UTC
+        prima di inviarlo a Supabase.
+      */
+
+      const date =
+        new Date(
+          input.value
+        );
+
+
+      if (
+        Number.isNaN(
+          date.getTime()
+        )
+      ) {
+
+        mpPSRToast(
+          "Data non valida"
+        );
+
+        return;
+      }
+
+
+      const button =
+        document
+          .getElementById(
+            `mpPromoSave-${promoId}`
+          );
+
+
+      if (button) {
+
+        button.disabled =
+          true;
+
+        button.textContent =
+          "SALVATAGGIO...";
+
+      }
+
+
+      const {
+        error
+      } =
+        await matchpulseSupabase
+          .rpc(
+            "matchpulse_admin_set_promo_release",
+            {
+
+              p_season:
+                MP_PSR_SEASON,
+
+              p_promo_id:
+                promoId,
+
+              p_release_at:
+                date.toISOString(),
+
+              p_enabled:
+                enabledInput
+                  ?.checked !==
+                  false
+
+            }
+          );
+
+
+      if (error) {
+        throw error;
+      }
+
+
+      await mpPromoSecureGetReleased();
+
+
+      mpPSRToast(
+        "Calendario promo aggiornato"
+      );
+
+
+      await mpPromoSecureMountAdminPanel(
+        true
+      );
+
+    } catch (
+      error
+    ) {
+
+      console.error(
+        "PROMO SECURE RELEASE:",
+        error
+      );
+
+
+      mpPSRToast(
+        error?.message ||
+        "Impossibile salvare la promo"
+      );
+
+    }
+  }
+
+
+  /* =======================================================
+     HTML FOUNDER
+     ======================================================= */
+
+  function mpPSRAdminRow(
+    promo
+  ) {
+
+    const released =
+      promo.release_at &&
+      new Date(
+        promo.release_at
+      ).getTime() <=
+      Date.now();
+
+
+    return `
+      <article
+        class="
+          mp-promo-secure-row
+          ${released
+            ? "is-released"
+            : ""}
+        "
+      >
+
+        <div
+          class="
+            mp-promo-secure-number
+          "
+        >
+          ${String(
+            promo.order_no
+          ).padStart(
+            2,
+            "0"
+          )}
+        </div>
+
+
+        <div
+          class="
+            mp-promo-secure-name
+          "
+        >
+
+          <span>
+            ${mpPSREscape(
+              promo.short_name
+            )}
+          </span>
+
+          <strong>
+            ${mpPSREscape(
+              promo.promo_name
+            )}
+          </strong>
+
+          <small>
+            ${
+              released
+                ? "RILASCIATA"
+                : (
+                    promo.release_at
+                      ? "PROGRAMMATA"
+                      : "NESSUNA DATA"
+                  )
+            }
+          </small>
+
+        </div>
+
+
+        <label
+          class="
+            mp-promo-secure-date
+          "
+        >
+
+          <span>
+            DATA E ORA
+          </span>
+
+          <input
+            id="
+              mpPromoRelease-${mpPSREscape(
+                promo.promo_id
+              )}
+            "
+            type="datetime-local"
+            value="${mpPSRToLocalInput(
+              promo.release_at
+            )}"
+          >
+
+        </label>
+
+
+        <label
+          class="
+            mp-promo-secure-enabled
+          "
+        >
+
+          <input
+            id="
+              mpPromoEnabled-${mpPSREscape(
+                promo.promo_id
+              )}
+            "
+            type="checkbox"
+            ${promo.enabled
+              ? "checked"
+              : ""}
+          >
+
+          <span>
+            ATTIVA
+          </span>
+
+        </label>
+
+
+        <button
+          id="
+            mpPromoSave-${mpPSREscape(
+              promo.promo_id
+            )}
+          "
+          type="button"
+          class="primary-btn"
+
+          onclick="
+            mpPromoSecureSaveRelease(
+              '${mpPSREscape(
+                promo.promo_id
+              )}'
+            )
+          "
+        >
+          SALVA
+        </button>
+
+      </article>
+    `;
+  }
+
+
+  /* =======================================================
+     MONTA PANNELLO FOUNDER
+     ======================================================= */
+
+  async function mpPromoSecureMountAdminPanel(
+    force = false
+  ) {
+
+    if (
+      typeof route ===
+        "undefined" ||
+      route !==
+        "promos"
+    ) {
+      return;
+    }
+
+
+    const page =
+      document.querySelector(
+        ".mp-promos-page"
+      );
+
+
+    if (!page) {
+      return;
+    }
+
+
+    /*
+      ELIMINA SEMPRE IL VECCHIO
+      LABORATORIO LOCALSTORAGE.
+    */
+
+    document
+      .querySelector(
+        ".mp-promo-admin-lab"
+      )
+      ?.remove();
+
+
+    document
+      .getElementById(
+        "mpPromoSecureAdmin"
+      )
+      ?.remove();
+
+
+    try {
+
+      const admin =
+        await mpPromoSecureIsAdmin(
+          force
+        );
+
+
+      if (!admin) {
+        return;
+      }
+
+
+      const schedule =
+        await mpPromoSecureGetSchedule();
+
+
+      const section =
+        document.createElement(
+          "section"
+        );
+
+
+      section.id =
+        "mpPromoSecureAdmin";
+
+      section.className =
+        "mp-promo-secure-admin";
+
+
+      section.innerHTML = `
+
+        <header
+          class="
+            mp-promo-secure-head
+          "
+        >
+
+          <div>
+
+            <span>
+              MATCHPULSE FOUNDER
+            </span>
+
+            <h3>
+              Calendario segreto
+            </h3>
+
+            <p>
+              Solo il tuo account può
+              vedere e modificare queste date.
+              Gli altri utenti ricevono soltanto
+              le promo già rilasciate.
+            </p>
+
+          </div>
+
+
+          <strong>
+            ${MP_PSR_SEASON}
+          </strong>
+
+        </header>
+
+
+        <div
+          class="
+            mp-promo-secure-grid
+          "
+        >
+
+          ${schedule
+            .map(
+              mpPSRAdminRow
+            )
+            .join("")}
+
+        </div>
+      `;
+
+
+      page.appendChild(
+        section
+      );
+
+    } catch (
+      error
+    ) {
+
+      console.error(
+        "PANNELLO FOUNDER PROMO:",
+        error
+      );
+
+    }
+  }
+
+
+  /* =======================================================
+     DISATTIVA IL VECCHIO ADMIN LOCALSTORAGE
+     ======================================================= */
+
+  localStorage.removeItem(
+    "matchpulse_promo_admin_v1"
+  );
+
+
+  window.mpEnablePromoAdmin =
+    function () {
+
+      mpPSRToast(
+        "Il vecchio laboratorio locale è stato disattivato"
+      );
+
+    };
+
+
+  window.mpDisablePromoAdmin =
+    function () {
+
+      localStorage.removeItem(
+        "matchpulse_promo_admin_v1"
+      );
+
+    };
+
+
+  /* =======================================================
+     WRAPPER PAGINA PROMO
+     ======================================================= */
+
+  const mpPSRPreviousRenderPromos =
+    typeof window
+      .renderPromos ===
+    "function"
+
+      ? window
+          .renderPromos
+
+      : null;
+
+
+  if (
+    mpPSRPreviousRenderPromos
+  ) {
+
+    function mpPSRRenderPromos() {
+
+      const result =
+        mpPSRPreviousRenderPromos();
+
+
+      /*
+        Prima chiediamo al server
+        cosa è GIÀ uscito.
+
+        Non viene mai scaricato
+        il calendario futuro.
+      */
+
+      mpPromoSecureGetReleased()
+        .catch(
+          error => {
+
+            console.warn(
+              "Promo release:",
+              error
+            );
+
+          }
+        );
+
+
+      setTimeout(
+        () => {
+
+          mpPromoSecureMountAdminPanel();
+
+        },
+        120
+      );
+
+
+      return result;
+    }
+
+
+    try {
+
+      renderPromos =
+        mpPSRRenderPromos;
+
+    } catch {}
+
+
+    window.renderPromos =
+      mpPSRRenderPromos;
+
+  }
+
+
+  /* =======================================================
+     FUNZIONI GLOBALI
+     ======================================================= */
+
+  window.mpPromoSecureIsAdmin =
+    mpPromoSecureIsAdmin;
+
+  window.mpPromoSecureGetReleased =
+    mpPromoSecureGetReleased;
+
+  window.mpPromoSecureIsReleased =
+    mpPromoSecureIsReleased;
+
+  window.mpPromoSecureGetSchedule =
+    mpPromoSecureGetSchedule;
+
+  window.mpPromoSecureSaveRelease =
+    mpPromoSecureSaveRelease;
+
+
+  /* =======================================================
+     PRIMO CONTROLLO AUTOMATICO
+     ======================================================= */
+
+  setTimeout(
+    () => {
+
+      mpPromoSecureGetReleased()
+        .catch(
+          error => {
+
+            console.warn(
+              "Controllo release promo:",
+              error
+            );
+
+          }
+        );
+
+    },
+    900
+  );
+
+})();
+
+/* =========================================================
+   MATCHPULSE
+   FOUNDER FIX + DEVICE PAIRING V2
+   ========================================================= */
+
+(function () {
+
+  if (
+    window
+      .MP_FOUNDER_DEVICE_PAIR_V2_READY
+  ) {
+    return;
+  }
+
+
+  window
+    .MP_FOUNDER_DEVICE_PAIR_V2_READY =
+    true;
+
+
+  const MP_FOUNDER_PRODUCTION_URL =
+    "https://matchpulse-50t.pages.dev/";
+
+
+  /* =======================================================
+     TOAST
+     ======================================================= */
+
+  function mpFounderToast(
+    text
+  ) {
+
+    if (
+      typeof mpClubToast ===
+      "function"
+    ) {
+
+      mpClubToast(
+        text
+      );
+
+      return;
+    }
+
+
+    if (
+      typeof toast ===
+      "function"
+    ) {
+
+      toast(
+        text
+      );
+
+    }
+
+  }
+
+
+  /* =======================================================
+     FIX IMPORTANTE DEL ROUTER PROMO
+
+     Il vecchio router usa il renderPromos
+     privato del sistema originale.
+
+     Da ora, per la route promos,
+     obblighiamo l'utilizzo di
+     window.renderPromos, cioè quello
+     protetto dal sistema Supabase.
+     ======================================================= */
+
+  const mpFounderPreviousRender =
+    typeof render ===
+      "function"
+
+      ? render
+      : null;
+
+
+  if (
+    mpFounderPreviousRender
+  ) {
+
+    render =
+      function (
+        ...args
+      ) {
+
+        if (
+          typeof route !==
+            "undefined" &&
+
+          route ===
+            "promos" &&
+
+          typeof window
+            .renderPromos ===
+            "function"
+        ) {
+
+          return window
+            .renderPromos(
+              ...args
+            );
+
+        }
+
+
+        return mpFounderPreviousRender
+          .apply(
+            this,
+            args
+          );
+
+      };
+
+
+    window.render =
+      render;
+
+  }
+
+
+  /* =======================================================
+     ELIMINA LE VECCHIE CARTE DI PROVA
+     SOLO FOUNDER
+     ======================================================= */
+
+  async function mpFounderResetTestPromos() {
+
+    try {
+
+      const isAdmin =
+        typeof window
+          .mpPromoSecureIsAdmin ===
+          "function"
+
+          ? await window
+              .mpPromoSecureIsAdmin(
+                true
+              )
+
+          : false;
+
+
+      if (!isAdmin) {
+
+        mpFounderToast(
+          "Accesso founder richiesto"
+        );
+
+        return;
+      }
+
+
+      const confirmed =
+        confirm(
+          "Eliminare tutte le vecchie carte promo di prova da questo dispositivo?"
+        );
+
+
+      if (!confirmed) {
+        return;
+      }
+
+
+      localStorage.removeItem(
+        "matchpulse_promo_cards_v1"
+      );
+
+
+      localStorage.removeItem(
+        "matchpulse_promo_photos_v1"
+      );
+
+
+      localStorage.setItem(
+        "matchpulse_selected_card_v1",
+        "base"
+      );
+
+
+      /*
+        Riporta anche il Club
+        alla carta base.
+      */
+
+      if (
+        typeof window
+          .mpSelectBaseCard ===
+          "function"
+      ) {
+
+        try {
+
+          await window
+            .mpSelectBaseCard();
+
+        } catch {}
+
+      }
+
+
+      mpFounderToast(
+        "Carte promo di prova eliminate"
+      );
+
+
+      setTimeout(
+        () => {
+
+          if (
+            typeof window
+              .renderPromos ===
+              "function"
+          ) {
+
+            window
+              .renderPromos();
+
+          }
+
+        },
+        80
+      );
+
+    } catch (
+      error
+    ) {
+
+      console.error(
+        "RESET PROMO FOUNDER:",
+        error
+      );
+
+
+      mpFounderToast(
+        error?.message ||
+        "Errore eliminazione promo"
+      );
+
+    }
+
+  }
+
+
+  /* =======================================================
+     CREA LINK PER IL TELEFONO
+     ======================================================= */
+
+  async function mpFounderCreatePhoneLink() {
+
+    try {
+
+      const isAdmin =
+        typeof window
+          .mpPromoSecureIsAdmin ===
+          "function"
+
+          ? await window
+              .mpPromoSecureIsAdmin(
+                true
+              )
+
+          : false;
+
+
+      if (!isAdmin) {
+
+        mpFounderToast(
+          "Accesso founder richiesto"
+        );
+
+        return;
+      }
+
+
+      const {
+        data,
+        error
+      } =
+        await matchpulseSupabase
+          .rpc(
+            "matchpulse_admin_create_pair_token"
+          );
+
+
+      if (error) {
+        throw error;
+      }
+
+
+      if (!data) {
+
+        throw new Error(
+          "Token non ricevuto"
+        );
+
+      }
+
+
+      const link =
+        `${
+          MP_FOUNDER_PRODUCTION_URL
+        }?mpFounderPair=${
+          encodeURIComponent(
+            String(data)
+          )
+        }`;
+
+
+      const output =
+        document
+          .getElementById(
+            "mpFounderPairOutput"
+          );
+
+
+      const input =
+        document
+          .getElementById(
+            "mpFounderPairLink"
+          );
+
+
+      if (output) {
+
+        output.hidden =
+          false;
+
+      }
+
+
+      if (input) {
+
+        input.value =
+          link;
+
+        input.select();
+
+      }
+
+
+      try {
+
+        await navigator
+          .clipboard
+          .writeText(
+            link
+          );
+
+
+        mpFounderToast(
+          "Link copiato. Aprilo sul telefono entro 15 minuti."
+        );
+
+      } catch {
+
+        mpFounderToast(
+          "Link creato. Copialo e aprilo sul telefono."
+        );
+
+      }
+
+    } catch (
+      error
+    ) {
+
+      console.error(
+        "CREAZIONE LINK FOUNDER:",
+        error
+      );
+
+
+      mpFounderToast(
+        error?.message ||
+        "Impossibile creare il collegamento"
+      );
+
+    }
+
+  }
+
+
+  /* =======================================================
+     COPIA LINK
+     ======================================================= */
+
+  async function mpFounderCopyPairLink() {
+
+    const input =
+      document
+        .getElementById(
+          "mpFounderPairLink"
+        );
+
+
+    if (
+      !input ||
+      !input.value
+    ) {
+      return;
+    }
+
+
+    try {
+
+      await navigator
+        .clipboard
+        .writeText(
+          input.value
+        );
+
+
+      mpFounderToast(
+        "Link copiato"
+      );
+
+    } catch {
+
+      input.select();
+
+      mpFounderToast(
+        "Link selezionato"
+      );
+
+    }
+
+  }
+
+
+  /* =======================================================
+     AGGIUNGE STRUMENTI AL PANNELLO FOUNDER
+     ======================================================= */
+
+  function mpFounderEnhancePanel() {
+
+    const panel =
+      document
+        .getElementById(
+          "mpPromoSecureAdmin"
+        );
+
+
+    if (
+      !panel ||
+      panel.querySelector(
+        "#mpFounderTools"
+      )
+    ) {
+      return;
+    }
+
+
+    const header =
+      panel.querySelector(
+        ".mp-promo-secure-head"
+      );
+
+
+    if (!header) {
+      return;
+    }
+
+
+    header.insertAdjacentHTML(
+      "afterend",
+      `
+
+        <section
+          id="mpFounderTools"
+          class="mp-founder-tools"
+        >
+
+          <div
+            class="mp-founder-tools-copy"
+          >
+
+            <span>
+              CONTROLLO FOUNDER
+            </span>
+
+            <strong>
+              Dispositivi e test
+            </strong>
+
+            <small>
+              Collega il telefono oppure
+              elimina le vecchie promo
+              create durante i test.
+            </small>
+
+          </div>
+
+
+          <div
+            class="mp-founder-tools-actions"
+          >
+
+            <button
+              type="button"
+              class="primary-btn"
+
+              onclick="
+                mpFounderCreatePhoneLink()
+              "
+            >
+              COLLEGA TELEFONO
+            </button>
+
+
+            <button
+              type="button"
+              class="danger-btn"
+
+              onclick="
+                mpFounderResetTestPromos()
+              "
+            >
+              ELIMINA CARTE DI PROVA
+            </button>
+
+          </div>
+
+
+          <div
+            id="mpFounderPairOutput"
+            class="mp-founder-pair-output"
+            hidden
+          >
+
+            <span>
+              LINK VALIDO 15 MINUTI
+            </span>
+
+
+            <div>
+
+              <input
+                id="mpFounderPairLink"
+                type="text"
+                readonly
+              >
+
+
+              <button
+                type="button"
+                class="secondary-btn"
+
+                onclick="
+                  mpFounderCopyPairLink()
+                "
+              >
+                COPIA
+              </button>
+
+            </div>
+
+
+            <small>
+              Invia questo link al tuo telefono
+              e aprilo nella versione online
+              di MatchPulse.
+            </small>
+
+          </div>
+
+        </section>
+
+      `
+    );
+
+  }
+
+
+  /* =======================================================
+     OSSERVA IL PANNELLO
+
+     Appena il sistema sicuro lo crea,
+     aggiungiamo gli strumenti.
+     ======================================================= */
+
+  const mpFounderObserver =
+    new MutationObserver(
+      () => {
+
+        mpFounderEnhancePanel();
+
+      }
+    );
+
+
+  mpFounderObserver.observe(
+    document.body,
+    {
+      childList:
+        true,
+
+      subtree:
+        true
+    }
+  );
+
+
+  /* =======================================================
+     TELEFONO:
+     RICEVE IL TOKEN DAL LINK
+     ======================================================= */
+
+  async function mpFounderClaimFromUrl() {
+
+    const currentUrl =
+      new URL(
+        window.location.href
+      );
+
+
+    const token =
+      currentUrl
+        .searchParams
+        .get(
+          "mpFounderPair"
+        );
+
+
+    if (!token) {
+      return;
+    }
+
+
+    try {
+
+      /*
+        Sul telefono crea/recupera
+        prima il suo utente Supabase.
+      */
+
+      if (
+        typeof window
+          .mpEnsureClubAuth ===
+          "function"
+      ) {
+
+        await window
+          .mpEnsureClubAuth();
+
+      } else if (
+        typeof mpEnsureClubAuth ===
+          "function"
+      ) {
+
+        await mpEnsureClubAuth();
+
+      }
+
+
+      const {
+        data,
+        error
+      } =
+        await matchpulseSupabase
+          .rpc(
+            "matchpulse_claim_admin_pair_token",
+            {
+              p_token:
+                token
+            }
+          );
+
+
+      if (error) {
+        throw error;
+      }
+
+
+      if (
+        data !==
+        true
+      ) {
+
+        throw new Error(
+          "Link scaduto o già utilizzato"
+        );
+
+      }
+
+
+      /*
+        Toglie il token dall'indirizzo,
+        così non rimane visibile.
+      */
+
+      currentUrl
+        .searchParams
+        .delete(
+          "mpFounderPair"
+        );
+
+
+      window.history
+        .replaceState(
+          {},
+          document.title,
+          currentUrl.pathname +
+          (
+            currentUrl.search ||
+            ""
+          ) +
+          (
+            currentUrl.hash ||
+            ""
+          )
+        );
+
+
+      if (
+        typeof window
+          .mpPromoSecureIsAdmin ===
+          "function"
+      ) {
+
+        await window
+          .mpPromoSecureIsAdmin(
+            true
+          );
+
+      }
+
+
+      mpFounderToast(
+        "Telefono collegato come founder"
+      );
+
+
+      /*
+        Se siamo già nella pagina Promo
+        la aggiorna.
+      */
+
+      setTimeout(
+        () => {
+
+          if (
+            typeof route !==
+              "undefined" &&
+            route ===
+              "promos" &&
+            typeof window
+              .renderPromos ===
+              "function"
+          ) {
+
+            window
+              .renderPromos();
+
+          }
+
+        },
+        100
+      );
+
+    } catch (
+      error
+    ) {
+
+      console.error(
+        "COLLEGAMENTO FOUNDER:",
+        error
+      );
+
+
+      mpFounderToast(
+        error?.message ||
+        "Collegamento founder non riuscito"
+      );
+
+    }
+
+  }
+
+
+  /* =======================================================
+     GLOBALI
+     ======================================================= */
+
+  window.mpFounderCreatePhoneLink =
+    mpFounderCreatePhoneLink;
+
+
+  window.mpFounderCopyPairLink =
+    mpFounderCopyPairLink;
+
+
+  window.mpFounderResetTestPromos =
+    mpFounderResetTestPromos;
+
+
+  /* =======================================================
+     AVVIO
+     ======================================================= */
+
+  mpFounderClaimFromUrl();
+
+
+  /*
+    Se hai aperto app.js mentre eri
+    già nella pagina Promo, forza
+    subito il renderer corretto.
+  */
+
+  setTimeout(
+    () => {
+
+      if (
+        typeof route !==
+          "undefined" &&
+        route ===
+          "promos" &&
+        typeof window
+          .renderPromos ===
+          "function"
+      ) {
+
+        window
+          .renderPromos();
+
+      }
+
+
+      mpFounderEnhancePanel();
+
+    },
+    350
+  );
+
+})();
+
+/* =========================================================
+   MATCHPULSE
+   FOUNDER PANEL UI FIX V3
+   CALENDARIO IN MODALE SEPARATA
+   ========================================================= */
+
+(function () {
+
+  if (
+    window.MP_FOUNDER_PANEL_UI_V3_READY
+  ) {
+    return;
+  }
+
+  window.MP_FOUNDER_PANEL_UI_V3_READY =
+    true;
+
+
+  /* =======================================================
+     APRI
+     ======================================================= */
+
+  function mpOpenFounderPanel() {
+
+    const panel =
+      document.getElementById(
+        "mpPromoSecureAdmin"
+      );
+
+    if (!panel) {
+      return;
+    }
+
+
+    panel.classList.add(
+      "mp-founder-overlay",
+      "is-open"
+    );
+
+
+    document.body.classList.add(
+      "mp-founder-panel-open"
+    );
+
+
+    /*
+      Inserisce il tasto chiudi
+      una sola volta.
+    */
+
+    if (
+      !panel.querySelector(
+        ".mp-founder-overlay-close"
+      )
+    ) {
+
+      panel.insertAdjacentHTML(
+        "afterbegin",
+        `
+          <button
+            type="button"
+            class="mp-founder-overlay-close"
+            onclick="mpCloseFounderPanel()"
+            aria-label="Chiudi pannello founder"
+          >
+            ×
+          </button>
+        `
+      );
+
+    }
+
+
+    panel.scrollTop = 0;
+  }
+
+
+  /* =======================================================
+     CHIUDI
+     ======================================================= */
+
+  function mpCloseFounderPanel() {
+
+    const panel =
+      document.getElementById(
+        "mpPromoSecureAdmin"
+      );
+
+    panel?.classList.remove(
+      "is-open"
+    );
+
+
+    document.body.classList.remove(
+      "mp-founder-panel-open"
+    );
+  }
+
+
+  /* =======================================================
+     PULSANTE FOUNDER
+     ======================================================= */
+
+  function mpFounderInstallLauncher() {
+
+    const page =
+      document.querySelector(
+        ".mp-promos-page"
+      );
+
+
+    const panel =
+      document.getElementById(
+        "mpPromoSecureAdmin"
+      );
+
+
+    if (
+      !page ||
+      !panel
+    ) {
+      return;
+    }
+
+
+    /*
+      Se il pannello esiste significa
+      che Supabase ha già confermato
+      che questo utente è founder.
+    */
+
+    panel.classList.add(
+      "mp-founder-overlay"
+    );
+
+
+    if (
+      page.querySelector(
+        "#mpFounderLauncher"
+      )
+    ) {
+      return;
+    }
+
+
+    const hero =
+      page.querySelector(
+        ".mp-promos-hero"
+      );
+
+
+    const button =
+      document.createElement(
+        "button"
+      );
+
+
+    button.id =
+      "mpFounderLauncher";
+
+    button.type =
+      "button";
+
+    button.className =
+      "mp-founder-launcher";
+
+    button.innerHTML = `
+      <span>⚙</span>
+
+      <div>
+        <small>
+          MATCHPULSE
+        </small>
+
+        <strong>
+          FOUNDER
+        </strong>
+      </div>
+
+      <b>→</b>
+    `;
+
+
+    button.onclick =
+      mpOpenFounderPanel;
+
+
+    if (hero) {
+
+      hero.insertAdjacentElement(
+        "afterend",
+        button
+      );
+
+    } else {
+
+      page.prepend(
+        button
+      );
+
+    }
+  }
+
+
+  /* =======================================================
+     ESC PER CHIUDERE SU PC
+     ======================================================= */
+
+  document.addEventListener(
+    "keydown",
+    event => {
+
+      if (
+        event.key ===
+        "Escape"
+      ) {
+
+        mpCloseFounderPanel();
+
+      }
+
+    }
+  );
+
+
+  /* =======================================================
+     OSSERVA IL PANNELLO FOUNDER
+
+     Il calendario viene creato
+     asincronamente dopo il controllo
+     Supabase.
+     ======================================================= */
+
+  const observer =
+    new MutationObserver(
+      () => {
+
+        mpFounderInstallLauncher();
+
+      }
+    );
+
+
+  observer.observe(
+    document.body,
+    {
+      childList: true,
+      subtree: true
+    }
+  );
+
+
+  window.mpOpenFounderPanel =
+    mpOpenFounderPanel;
+
+  window.mpCloseFounderPanel =
+    mpCloseFounderPanel;
+
+
+  setTimeout(
+    mpFounderInstallLauncher,
+    300
+  );
+
+})();
