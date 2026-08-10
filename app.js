@@ -741,16 +741,19 @@ function playerCard(r) {
     <div class="player-card-glow"></div>
 
     <div class="player-top">
-      <div>
-        <strong class="card-ovr">${cardOvr}</strong>
-        <span class="card-overall-label">OVERALL</span>
-      </div>
+  <div>
+    <strong class="card-ovr">
+      ${cardOvr}
+    </strong>
 
-      <div>
-        <b>${escapeHtml(profile.role || "CC")}</b>
-        <span>${escapeHtml(cardTierLabel)}</span>
-      </div>
-    </div>
+    <span class="card-overall-label">
+      ${escapeHtml(
+        profile.role ||
+        "CC"
+      )}
+    </span>
+  </div>
+</div>
 
     <div class="player-card-side-info">
       <div>
@@ -13328,27 +13331,13 @@ if (!window.MP_CLUB_ESCAPE_READY) {
       </div>
     `;
 
-    if (
-      html.includes(
-        '<div class="player-stats">'
-      )
-    ) {
-      return html.replace(
-        '<div class="player-stats">',
-        `
-          ${abilityHtml}
-          <div class="player-stats">
-        `
-      );
-    }
-
     return html.replace(
-      "</article>",
-      `
-        ${abilityHtml}
-      </article>
-      `
-    );
+  "</article>",
+  `
+    ${abilityHtml}
+  </article>
+  `
+);
   };
 
   window.playerCard =
@@ -14427,36 +14416,94 @@ if (!window.MP_CLUB_ESCAPE_READY) {
       `${user.id}/avatar-${signature}.${extension}`;
 
     const {
-      data,
-      error
-    } =
-      await matchpulseSupabase
-        .storage
-        .from(
-          MP_AVATAR_BUCKET_V2
-        )
-        .upload(
-          path,
-          blob,
-          {
-            cacheControl: "3600",
-            contentType:
-              blob.type ||
-              "image/jpeg",
-            upsert: true
-          }
-        );
+  data,
+  error
+} =
+  await matchpulseSupabase
+    .storage
+    .from(
+      MP_AVATAR_BUCKET_V2
+    )
+    .upload(
+      path,
+      blob,
+      {
+        cacheControl: "3600",
 
-    if (error) {
-      console.error(
-        "UPLOAD AVATAR COMPLETO:",
-        error
-      );
+        contentType:
+          blob.type ||
+          "image/jpeg",
 
-      throw error;
-    }
+        /*
+          IMPORTANTE:
+          niente upsert.
 
-    return data?.path || path;
+          Se la stessa foto esiste già,
+          usiamo semplicemente il file
+          esistente invece di tentare
+          di sovrascriverlo.
+        */
+        upsert: false
+      }
+    );
+
+
+if (error) {
+  const errorText =
+    String(
+      error?.message ||
+      error?.error ||
+      ""
+    ).toLowerCase();
+
+
+  const errorStatus =
+    Number(
+      error?.statusCode ||
+      error?.status ||
+      0
+    );
+
+
+  const alreadyExists =
+    errorStatus === 409 ||
+    errorText.includes(
+      "already exists"
+    ) ||
+    errorText.includes(
+      "resource already exists"
+    ) ||
+    errorText.includes(
+      "duplicate"
+    );
+
+
+  /*
+    Se il file esiste già è PERFETTO:
+    non dobbiamo ricaricarlo.
+
+    Restituiamo comunque il path,
+    così avatar_path viene salvato
+    nella riga del Club.
+  */
+  if (alreadyExists) {
+    return path;
+  }
+
+
+  console.error(
+    "UPLOAD AVATAR COMPLETO:",
+    error
+  );
+
+  throw error;
+}
+
+
+return (
+  data?.path ||
+  path
+);
   }
 
 
@@ -16860,28 +16907,19 @@ if (!window.MP_CLUB_ESCAPE_READY) {
           </div>
 
           <div class="player-top">
-            <div>
-              <strong class="card-ovr">
-                ${ovr}
-              </strong>
+  <div>
+    <strong class="card-ovr">
+      ${ovr}
+    </strong>
 
-              <span>OVERALL</span>
-            </div>
-
-            <div>
-              <b>
-                ${mpFifaEscape(
-                  member.role || "CC"
-                )}
-              </b>
-
-              <span>
-                ${mpFifaEscape(
-                  tierLabel
-                )}
-              </span>
-            </div>
-          </div>
+    <span class="card-overall-label">
+      ${mpFifaEscape(
+        member.role ||
+        "CC"
+      )}
+    </span>
+  </div>
+</div>
 
           <div class="player-card-side-info">
             <div>
@@ -18311,13 +18349,6 @@ if (!window.MP_CLUB_ESCAPE_READY) {
       </article>
     `;
   }
-
-
-  mpClubMemberCard =
-    mpRestoredClubMemberCard;
-
-  window.mpClubMemberCard =
-    mpRestoredClubMemberCard;
 })();
 
 /* =========================================================
@@ -28133,6 +28164,29 @@ const normalPlayStyles =
     }
   };
 
+/* =======================================================
+   MASSIMO DISTACCO TRA OVR PROMO E SINGOLA STAT
+
+   Evita casi assurdi tipo:
+   82 OVR -> 96 DEF
+
+   Ultimate Scream mantiene la sua
+   singola statistica speciale a 99.
+   ======================================================= */
+
+const MP_PB4_MAX_ABOVE_OVR = {
+  otw: 5,
+  ultimateScream: 5,
+  thunderstruck: 6,
+  futmas: 6,
+  toty: 6,
+  futureStars: 6,
+  futBirthday: 6,
+  timeWarp: 6,
+  tots: 6,
+  summerHeat: 6,
+  futties: 6
+};
 
   /* =======================================================
      PRIORITÀ PER RUOLO
@@ -29025,11 +29079,56 @@ const normalPlayStyles =
           il cap, non viene abbassata.
         */
 
-        const statCap =
-          Math.max(
-            config.cap,
-            base[stat]
-          );
+        const maxAboveOvr =
+  mpPB4Number(
+    MP_PB4_MAX_ABOVE_OVR[
+      card.promoId
+    ],
+    6
+  );
+
+
+/*
+  Primo limite:
+  OVR della promo + margine.
+
+  Esempio:
+  TOTY 82 OVR -> massimo 88.
+*/
+
+const relativeCap =
+  promoOvr +
+  maxAboveOvr;
+
+
+/*
+  Secondo limite:
+  cap assoluto della promo.
+
+  TOTY rimane massimo 96,
+  TOTS 97,
+  Summer Heat 98,
+  FUTTIES 99.
+*/
+
+const promoStatCap =
+  Math.min(
+    config.cap,
+    relativeCap
+  );
+
+
+/*
+  Se la carta base possedeva già
+  una statistica superiore,
+  NON la abbassiamo.
+*/
+
+const statCap =
+  Math.max(
+    base[stat],
+    promoStatCap
+  );
 
 
         result[stat] =
@@ -30705,16 +30804,29 @@ const normalPlayStyles =
 
 
   function mpV3PlusIcons(ids) {
-    return (ids || [])
-      .map(id => {
-        const ps =
-          mpV3PlayStyle(id);
+  return (ids || [])
+    .map(id => {
+      const ps =
+        mpV3PlayStyle(id);
 
-        if (!ps) {
-          return "";
-        }
+      if (!ps) {
+        return "";
+      }
 
-        return `
+      const safeId =
+        String(id)
+          .replace(
+            /[^a-z0-9_-]/gi,
+            "-"
+          );
+
+      return `
+        <span
+          class="
+            mp-promo-v3-plus-slot
+            mp-promo-v3-plus-${safeId}
+          "
+        >
           <img
             src="${mpV3Escape(
               ps.plusIcon
@@ -30726,10 +30838,11 @@ const normalPlayStyles =
               ps.name
             )}+"
           >
-        `;
-      })
-      .join("");
-  }
+        </span>
+      `;
+    })
+    .join("");
+}
 
 
   function mpV3PlayStyleItem(
@@ -31049,31 +31162,16 @@ const normalPlayStyles =
         <!-- OVERALL -->
 
         <div class="mp-promo-v3-rating">
-          <strong>
-            ${ovr}
-          </strong>
+  <strong>
+    ${ovr}
+  </strong>
 
-          <span>
-            OVERALL
-          </span>
-        </div>
-
-
-        <!-- RUOLO -->
-
-        <div class="mp-promo-v3-role">
-          <strong>
-            ${mpV3Escape(
-              role
-            )}
-          </strong>
-
-          <span>
-            ${mpV3Escape(
-              shortName
-            )}
-          </span>
-        </div>
+  <span>
+    ${mpV3Escape(
+      role
+    )}
+  </span>
+</div>
 
 
         <!-- INFO LATERALI -->
@@ -32236,5 +32334,1050 @@ const normalPlayStyles =
   requestAnimationFrame(
     mpV3PatchCollection
   );
+
+})();
+
+/* =========================================================
+   MATCHPULSE
+   NORMALIZZAZIONE AUTOMATICA ICONE PLAYSTYLE V1
+   RIMUOVE IL PADDING TRASPARENTE DEI PNG
+   ========================================================= */
+
+(function () {
+  if (
+    window.MP_PS_ICON_NORMALIZER_V1_READY
+  ) {
+    return;
+  }
+
+  window.MP_PS_ICON_NORMALIZER_V1_READY =
+    true;
+
+
+  const cache =
+    new Map();
+
+
+  /* =======================================================
+     RITAGLIA IL TRASPARENTE E CREA
+     UN PNG QUADRATO NORMALIZZATO
+     ======================================================= */
+
+  function mpNormalizePsIcon(
+    sourceUrl
+  ) {
+    if (
+      cache.has(
+        sourceUrl
+      )
+    ) {
+      return Promise.resolve(
+        cache.get(
+          sourceUrl
+        )
+      );
+    }
+
+
+    return new Promise(
+      resolve => {
+
+        const image =
+          new Image();
+
+
+        image.onload =
+          function () {
+
+            try {
+              const width =
+                image.naturalWidth;
+
+              const height =
+                image.naturalHeight;
+
+
+              if (
+                !width ||
+                !height
+              ) {
+                resolve(
+                  sourceUrl
+                );
+
+                return;
+              }
+
+
+              const canvas =
+                document.createElement(
+                  "canvas"
+                );
+
+              canvas.width =
+                width;
+
+              canvas.height =
+                height;
+
+
+              const ctx =
+                canvas.getContext(
+                  "2d",
+                  {
+                    willReadFrequently:
+                      true
+                  }
+                );
+
+
+              ctx.drawImage(
+                image,
+                0,
+                0
+              );
+
+
+              const pixels =
+                ctx.getImageData(
+                  0,
+                  0,
+                  width,
+                  height
+                );
+
+
+              let minX =
+                width;
+
+              let minY =
+                height;
+
+              let maxX =
+                -1;
+
+              let maxY =
+                -1;
+
+
+              /*
+                Cerchiamo solamente
+                i pixel realmente visibili.
+              */
+
+              for (
+                let y = 0;
+                y < height;
+                y += 1
+              ) {
+                for (
+                  let x = 0;
+                  x < width;
+                  x += 1
+                ) {
+                  const alpha =
+                    pixels.data[
+                      (
+                        y * width +
+                        x
+                      ) * 4 +
+                      3
+                    ];
+
+
+                  /*
+                    Ignoriamo gli aloni
+                    quasi completamente
+                    trasparenti.
+                  */
+
+                  if (
+                    alpha > 18
+                  ) {
+                    if (
+                      x < minX
+                    ) {
+                      minX = x;
+                    }
+
+                    if (
+                      x > maxX
+                    ) {
+                      maxX = x;
+                    }
+
+                    if (
+                      y < minY
+                    ) {
+                      minY = y;
+                    }
+
+                    if (
+                      y > maxY
+                    ) {
+                      maxY = y;
+                    }
+                  }
+                }
+              }
+
+
+              if (
+                maxX < minX ||
+                maxY < minY
+              ) {
+                cache.set(
+                  sourceUrl,
+                  sourceUrl
+                );
+
+                resolve(
+                  sourceUrl
+                );
+
+                return;
+              }
+
+
+              const cropWidth =
+                maxX -
+                minX +
+                1;
+
+              const cropHeight =
+                maxY -
+                minY +
+                1;
+
+
+              /*
+                Tutte le icone finali
+                vengono ricostruite
+                dentro un canvas
+                256 × 256 identico.
+              */
+
+              const size =
+                256;
+
+              const contentSize =
+                224;
+
+
+              const output =
+                document.createElement(
+                  "canvas"
+                );
+
+              output.width =
+                size;
+
+              output.height =
+                size;
+
+
+              const outputCtx =
+                output.getContext(
+                  "2d"
+                );
+
+
+              const scale =
+                Math.min(
+                  contentSize /
+                    cropWidth,
+
+                  contentSize /
+                    cropHeight
+                );
+
+
+              const drawWidth =
+                cropWidth *
+                scale;
+
+              const drawHeight =
+                cropHeight *
+                scale;
+
+
+              const drawX =
+                (
+                  size -
+                  drawWidth
+                ) / 2;
+
+              const drawY =
+                (
+                  size -
+                  drawHeight
+                ) / 2;
+
+
+              outputCtx.drawImage(
+                image,
+
+                minX,
+                minY,
+                cropWidth,
+                cropHeight,
+
+                drawX,
+                drawY,
+                drawWidth,
+                drawHeight
+              );
+
+
+              const normalized =
+                output.toDataURL(
+                  "image/png"
+                );
+
+
+              cache.set(
+                sourceUrl,
+                normalized
+              );
+
+
+              resolve(
+                normalized
+              );
+
+            } catch (
+              error
+            ) {
+              console.warn(
+                "Normalizzazione PlayStyle:",
+                error
+              );
+
+              cache.set(
+                sourceUrl,
+                sourceUrl
+              );
+
+              resolve(
+                sourceUrl
+              );
+            }
+          };
+
+
+        image.onerror =
+          function () {
+            resolve(
+              sourceUrl
+            );
+          };
+
+
+        image.src =
+          sourceUrl;
+      }
+    );
+  }
+
+
+  /* =======================================================
+     NORMALIZZA UNA SINGOLA IMG
+     ======================================================= */
+
+  async function mpNormalizePsImg(
+    img
+  ) {
+    if (
+      !img ||
+      img.dataset
+        .mpPsNormalized ===
+        "true"
+    ) {
+      return;
+    }
+
+
+    const source =
+      img.getAttribute(
+        "src"
+      );
+
+
+    if (!source) {
+      return;
+    }
+
+
+    /*
+      La blocchiamo subito
+      per evitare lavorazioni doppie.
+    */
+
+    img.dataset
+      .mpPsNormalized =
+      "true";
+
+
+    const normalized =
+      await mpNormalizePsIcon(
+        source
+      );
+
+
+    img.src =
+      normalized;
+  }
+
+
+  /* =======================================================
+     NORMALIZZA TUTTE LE ICONE VISIBILI
+     ======================================================= */
+
+  function mpNormalizeVisiblePsIcons() {
+    document
+      .querySelectorAll(
+        `
+          .mp-promo-v3-plus-slot img,
+          .mp-pv3-ps-item img
+        `
+      )
+      .forEach(
+        img => {
+          mpNormalizePsImg(
+            img
+          );
+        }
+      );
+  }
+
+
+  window.mpNormalizeVisiblePsIcons =
+    mpNormalizeVisiblePsIcons;
+
+
+  /* =======================================================
+     OSSERVA LE CARTE CREATE DOPO
+     ======================================================= */
+
+  const observer =
+    new MutationObserver(
+      () => {
+        requestAnimationFrame(
+          mpNormalizeVisiblePsIcons
+        );
+      }
+    );
+
+
+  observer.observe(
+    document.body,
+    {
+      childList: true,
+      subtree: true
+    }
+  );
+
+
+  requestAnimationFrame(
+    mpNormalizeVisiblePsIcons
+  );
+
+})();
+
+/* =========================================================
+   MATCHPULSE
+   CLUB BASE CARD = HOME CARD V1
+   CARTA BASE IDENTICA ALLA HOME ANCHE NEL PROFILO APERTO
+   ========================================================= */
+
+(function () {
+  if (
+    window.MP_CLUB_BASE_HOME_CARD_V1_READY
+  ) {
+    return;
+  }
+
+  window.MP_CLUB_BASE_HOME_CARD_V1_READY =
+    true;
+
+
+  const mpBaseHomePreviousOpenMember =
+    typeof window.mpOpenClubMember ===
+      "function"
+      ? window.mpOpenClubMember
+      : null;
+
+
+  if (!mpBaseHomePreviousOpenMember) {
+    return;
+  }
+
+
+  function mpBaseHomeObject(value) {
+    if (
+      value &&
+      typeof value === "object" &&
+      !Array.isArray(value)
+    ) {
+      return value;
+    }
+
+    try {
+      const parsed =
+        JSON.parse(
+          value || "{}"
+        );
+
+      return (
+        parsed &&
+        typeof parsed === "object" &&
+        !Array.isArray(parsed)
+      )
+        ? parsed
+        : {};
+
+    } catch {
+      return {};
+    }
+  }
+
+
+  function mpBaseHomePatchModal(
+    userId
+  ) {
+    const members =
+      typeof MP_CLUB_MEMBERS_CACHE !==
+        "undefined"
+        ? MP_CLUB_MEMBERS_CACHE
+        : (
+            window
+              .MP_CLUB_MEMBERS_CACHE ||
+            []
+          );
+
+
+    const member =
+      members.find(
+        item =>
+          item.user_id ===
+          userId
+      );
+
+
+    if (!member) {
+      return;
+    }
+
+
+    const stats =
+      mpBaseHomeObject(
+        member.card_stats
+      );
+
+
+    /*
+      PROMO:
+      NON TOCCARE.
+
+      OTW, TOTY, TOTS ecc.
+      continuano ad essere gestite
+      dal Promo Visual V3.
+    */
+
+    if (
+      stats.promoCard === true &&
+      stats.promoTemplate
+    ) {
+      return;
+    }
+
+
+    const modal =
+      document.getElementById(
+        "mpClubMemberModal"
+      );
+
+
+    if (!modal) {
+      return;
+    }
+
+
+    const oldCard =
+      modal.querySelector(
+        ".mp-club-profile-card"
+      );
+
+
+    if (!oldCard) {
+      return;
+    }
+
+
+    if (
+      typeof window
+        .mpClubMemberCard !==
+      "function"
+    ) {
+      return;
+    }
+
+
+    /*
+      Usiamo DIRETTAMENTE lo stesso
+      renderer della carta presente
+      nella rosa Club.
+
+      La base quindi non viene
+      ricostruita in un secondo modo.
+    */
+
+    const html =
+      window.mpClubMemberCard(
+        member,
+        MP_CLUB_CURRENT?.owner_id ||
+        ""
+      );
+
+
+    const temporary =
+      document.createElement(
+        "div"
+      );
+
+
+    temporary.innerHTML =
+      html;
+
+
+    const homeWrap =
+      temporary.querySelector(
+        ".mp-club-fifa-wrap"
+      );
+
+
+    if (!homeWrap) {
+      return;
+    }
+
+
+    /*
+      Nel profilo aperto non servono:
+      - pulsante APRI PROFILO
+      - badge rimozione
+      - statistiche carriera aggiuntive
+    */
+
+    homeWrap
+      .querySelector(
+        ".mp-club-fifa-open"
+      )
+      ?.remove();
+
+
+    homeWrap
+      .querySelector(
+        ".mp-club-fifa-kick"
+      )
+      ?.remove();
+
+
+    homeWrap
+      .querySelector(
+        ".mp-club-fifa-career"
+      )
+      ?.remove();
+
+
+    /*
+      La carta nel modal non deve
+      essere cliccabile a sua volta.
+    */
+
+    const card =
+      homeWrap.querySelector(
+        ".player-card"
+      );
+
+
+    if (card) {
+      card.removeAttribute(
+        "onclick"
+      );
+
+      card.removeAttribute(
+        "onkeydown"
+      );
+
+      card.removeAttribute(
+        "tabindex"
+      );
+
+      card.removeAttribute(
+        "role"
+      );
+    }
+
+
+    /*
+      Spegniamo definitivamente
+      la vecchia carta marrone.
+    */
+
+    oldCard.className =
+      `
+        mp-club-profile-card
+        mp-club-profile-card-base-home
+      `;
+
+
+    oldCard.innerHTML =
+      homeWrap.outerHTML;
+  }
+
+
+  function mpBaseHomeOpenMember(
+    userId
+  ) {
+    const result =
+      mpBaseHomePreviousOpenMember(
+        userId
+      );
+
+
+    /*
+      Il vecchio sistema Club e le
+      patch Promo lavorano anche
+      tramite requestAnimationFrame /
+      setTimeout.
+
+      Facciamo il nostro intervento
+      per ultimo.
+    */
+
+    requestAnimationFrame(
+      () => {
+        setTimeout(
+          () => {
+            mpBaseHomePatchModal(
+              userId
+            );
+          },
+          80
+        );
+      }
+    );
+
+
+    setTimeout(
+      () => {
+        mpBaseHomePatchModal(
+          userId
+        );
+      },
+      220
+    );
+
+
+    return result;
+  }
+
+
+  try {
+    mpOpenClubMember =
+      mpBaseHomeOpenMember;
+  } catch {}
+
+
+  window.mpOpenClubMember =
+    mpBaseHomeOpenMember;
+
+})();
+
+/* =========================================================
+   MATCHPULSE
+   FIX FOTO CARTA BASE CLUB V1
+   USA LA STESSA FOTO ONLINE DELLE PROMO
+   ========================================================= */
+
+(function () {
+  if (
+    window.MP_CLUB_BASE_PHOTO_FIX_V1_READY
+  ) {
+    return;
+  }
+
+  window.MP_CLUB_BASE_PHOTO_FIX_V1_READY =
+    true;
+
+
+  const previousClubMemberCard =
+    typeof window.mpClubMemberCard ===
+      "function"
+      ? window.mpClubMemberCard
+      : null;
+
+
+  if (!previousClubMemberCard) {
+    return;
+  }
+
+
+  function mpBaseClubEscape(value) {
+    return String(
+      value ?? ""
+    )
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+
+  function mpBaseClubNumber(
+    value,
+    fallback
+  ) {
+    const number =
+      Number(value);
+
+    return Number.isFinite(number)
+      ? number
+      : fallback;
+  }
+
+
+  function mpBaseClubPhotoUrl(
+    member
+  ) {
+
+    /*
+      PRIMA SCELTA:
+      stessa funzione che già funziona
+      sulle carte promo.
+    */
+
+    if (
+      typeof window
+        .mpV3PublicAvatarUrl ===
+      "function"
+    ) {
+      try {
+        const url =
+          window
+            .mpV3PublicAvatarUrl(
+              member
+            );
+
+        if (url) {
+          return url;
+        }
+      } catch {}
+    }
+
+
+    /*
+      SECONDA SCELTA:
+      vecchio sistema foto Club.
+    */
+
+    if (
+      typeof window
+        .mpClubAvatarPublicUrl ===
+      "function"
+    ) {
+      try {
+        const url =
+          window
+            .mpClubAvatarPublicUrl(
+              member
+            );
+
+        if (url) {
+          return url;
+        }
+      } catch {}
+    }
+
+
+    /*
+      ULTIMO FALLBACK:
+      costruiamo direttamente
+      l'URL dal bucket Supabase.
+    */
+
+    const path =
+      String(
+        member?.avatar_path ||
+        ""
+      );
+
+
+    if (
+      !path ||
+      typeof matchpulseSupabase ===
+        "undefined" ||
+      !matchpulseSupabase
+    ) {
+      return "";
+    }
+
+
+    try {
+      const result =
+        matchpulseSupabase
+          .storage
+          .from(
+            "matchpulse-avatars"
+          )
+          .getPublicUrl(
+            path
+          );
+
+
+      return (
+        result?.data?.publicUrl ||
+        ""
+      );
+
+    } catch {
+      return "";
+    }
+  }
+
+
+  function mpClubMemberCardWithBasePhoto(
+    member,
+    ownerId
+  ) {
+    const html =
+      previousClubMemberCard(
+        member,
+        ownerId
+      );
+
+
+    const stats =
+      member?.card_stats &&
+      typeof member.card_stats ===
+        "object"
+        ? member.card_stats
+        : {};
+
+
+    /*
+      LE PROMO NON SI TOCCANO.
+
+      OTW / TOTY / TOTS ecc.
+      hanno già il loro sistema foto.
+    */
+
+    if (
+      stats.promoCard === true &&
+      stats.promoTemplate
+    ) {
+      return html;
+    }
+
+
+    const photoUrl =
+      mpBaseClubPhotoUrl(
+        member
+      );
+
+
+    if (!photoUrl) {
+      return html;
+    }
+
+
+    const photoX =
+      mpBaseClubNumber(
+        member?.photo_x,
+        50
+      );
+
+    const photoY =
+      mpBaseClubNumber(
+        member?.photo_y,
+        8
+      );
+
+    const photoZoom =
+      mpBaseClubNumber(
+        member?.photo_zoom,
+        1.02
+      );
+
+
+    /*
+      Modifichiamo SOLO il contenuto
+      del riquadro foto della carta Home.
+    */
+
+    const holder =
+      document.createElement(
+        "div"
+      );
+
+
+    holder.innerHTML =
+      html;
+
+
+    const photoWrap =
+      holder.querySelector(
+        `
+          .mp-club-fifa-wrap
+          .player-photo-wrap
+        `
+      );
+
+
+    if (!photoWrap) {
+      return html;
+    }
+
+
+    photoWrap.innerHTML = `
+      <img
+        class="player-photo"
+
+        src="${mpBaseClubEscape(
+          photoUrl
+        )}"
+
+        alt="Foto di ${mpBaseClubEscape(
+          member?.player_name ||
+          "giocatore"
+        )}"
+
+        style="
+          object-position:
+            ${photoX}%
+            ${photoY}%;
+
+          transform:
+            scale(
+              ${photoZoom}
+            );
+        "
+      >
+    `;
+
+
+    return holder.innerHTML;
+  }
+
+
+  try {
+    mpClubMemberCard =
+      mpClubMemberCardWithBasePhoto;
+  } catch {}
+
+
+  window.mpClubMemberCard =
+    mpClubMemberCardWithBasePhoto;
 
 })();

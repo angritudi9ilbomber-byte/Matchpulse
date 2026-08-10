@@ -14457,3 +14457,3380 @@ body.mp-promo-v3-modal-open {
   }
 
 }
+
+/* =========================================================
+   MATCHPULSE
+   PROMO VISUAL V3.1
+   ALLINEAMENTO DEFINITIVO SU CARTA BASE
+   ========================================================= */
+
+
+/* =========================================================
+   GEOMETRIA GENERALE
+
+   - foto più piccola
+   - spazio vero a sinistra
+   - PS+ in colonna verticale
+   - statistiche più pulite
+   ========================================================= */
+
+.mp-promo-v3-card {
+  --mp-v3-photo-left: 42%;
+  --mp-v3-photo-top: 16.5%;
+  --mp-v3-photo-width: 41%;
+  --mp-v3-photo-height: 39%;
+
+  --mp-v3-rating-left: 15%;
+  --mp-v3-rating-top: 15%;
+
+  --mp-v3-role-right: 15%;
+  --mp-v3-role-top: 15%;
+
+  --mp-v3-side-left: 18.5%;
+  --mp-v3-side-top: 29%;
+  --mp-v3-side-width: 22%;
+
+  --mp-v3-plus-left: 9.5%;
+
+  --mp-v3-name-top: 58.5%;
+
+  --mp-v3-stats-left: 17%;
+  --mp-v3-stats-right: 17%;
+  --mp-v3-stats-top: 65.5%;
+
+  --mp-v3-abilities-top: 84%;
+}
+
+
+/* =========================================================
+   FOTO
+
+   Rettangolare come la carta base.
+   Meno invasiva.
+   ========================================================= */
+
+.mp-promo-v3-photo {
+  left:
+    var(--mp-v3-photo-left) !important;
+
+  top:
+    var(--mp-v3-photo-top) !important;
+
+  width:
+    var(--mp-v3-photo-width) !important;
+
+  height:
+    var(--mp-v3-photo-height) !important;
+
+  border-radius: 7% !important;
+
+  border:
+    1px solid
+    rgba(255,255,255,.20) !important;
+
+  box-shadow:
+    0 9px 20px
+    rgba(0,0,0,.30) !important;
+}
+
+
+/* =========================================================
+   BOX MAGLIA / PIEDE / STILE
+   ========================================================= */
+
+.mp-promo-v3-side {
+  left:
+    var(--mp-v3-side-left) !important;
+
+  top:
+    var(--mp-v3-side-top) !important;
+
+  width:
+    var(--mp-v3-side-width) !important;
+
+  gap: .9cqw !important;
+}
+
+
+.mp-promo-v3-side > div {
+  min-height: 6.6cqw;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+
+  padding:
+    .65cqw
+    .7cqw !important;
+}
+
+
+/* =========================================================
+   PLAYSTYLE+
+
+   QUESTA È LA MODIFICA IMPORTANTE.
+
+   Non stanno più sotto i tre box.
+   Formano una colonna sul bordo sinistro,
+   allineata con MAGLIA / PIEDE / STILE.
+
+   Se una promo ha 4 o 5 PS+,
+   continuano verso il basso.
+   ========================================================= */
+
+.mp-promo-v3-plus {
+  left:
+    var(--mp-v3-plus-left) !important;
+
+  top:
+    var(--mp-v3-side-top) !important;
+
+  width: 7.5% !important;
+
+  display: flex !important;
+
+  flex-direction: column !important;
+
+  align-items: center !important;
+  justify-content: flex-start !important;
+
+  gap: .85cqw !important;
+}
+
+
+.mp-promo-v3-plus img {
+  flex: 0 0 auto;
+
+  width: 6.5cqw !important;
+  height: 6.5cqw !important;
+
+  max-width: none !important;
+  max-height: none !important;
+
+  object-fit: contain;
+
+  filter:
+    drop-shadow(
+      0 3px 5px
+      rgba(0,0,0,.95)
+    ) !important;
+}
+
+
+/* =========================================================
+   DIMENSIONI PS+ IN BASE ALLA CARTA
+
+   Anteprima = più piccoli
+   Club = medi
+   Carta aperta = grandi
+   ========================================================= */
+
+.mp-promo-v3-preview
+.mp-promo-v3-plus img {
+  width: 6.1cqw !important;
+  height: 6.1cqw !important;
+}
+
+
+.mp-promo-v3-club
+.mp-promo-v3-plus img {
+  width: 7cqw !important;
+  height: 7cqw !important;
+}
+
+
+.mp-promo-v3-detail
+.mp-promo-v3-plus img {
+  width: 8.2cqw !important;
+  height: 8.2cqw !important;
+
+  filter:
+    drop-shadow(
+      0 4px 7px
+      rgba(0,0,0,.98)
+    ) !important;
+}
+
+
+/* nella carta grande spostiamo
+   leggermente la colonna verso il bordo */
+
+.mp-promo-v3-detail {
+  --mp-v3-plus-left: 8.5%;
+}
+
+
+/* =========================================================
+   NOME
+   ========================================================= */
+
+.mp-promo-v3-name {
+  left: 17% !important;
+  right: 17% !important;
+
+  top:
+    var(--mp-v3-name-top) !important;
+}
+
+
+/* =========================================================
+   STATISTICHE
+
+   Più vicine alla carta base:
+   3 colonne × 2 righe,
+   senza uscire dai bordi.
+   ========================================================= */
+
+.mp-promo-v3-stats {
+  left:
+    var(--mp-v3-stats-left) !important;
+
+  right:
+    var(--mp-v3-stats-right) !important;
+
+  top:
+    var(--mp-v3-stats-top) !important;
+
+  gap:
+    1.2cqw
+    1.5cqw !important;
+}
+
+
+.mp-promo-v3-stats > div {
+  padding:
+    1.25cqw
+    .7cqw !important;
+
+  border-radius:
+    2.4cqw !important;
+}
+
+
+.mp-promo-v3-stats strong {
+  font-size:
+    5.9cqw !important;
+}
+
+
+.mp-promo-v3-stats span {
+  font-size:
+    2cqw !important;
+}
+
+
+/* =========================================================
+   PIEDE DEBOLE / MOSSE
+
+   Rendiamoli realmente leggibili.
+   ========================================================= */
+
+.mp-promo-v3-abilities {
+  top:
+    var(--mp-v3-abilities-top) !important;
+
+  left: 19% !important;
+  right: 19% !important;
+}
+
+
+.mp-promo-v3-abilities
+> div
+> span {
+  font-size:
+    1.85cqw !important;
+}
+
+
+.mp-promo-v3-abilities
+.mp-promo-v3-stars {
+  font-size:
+    2.8cqw !important;
+}
+
+
+/* =========================================================
+   CARTA APERTA
+
+   Prima era ancora troppo piccola.
+   ========================================================= */
+
+.mp-promo-v3-detail {
+  width: 100% !important;
+
+  max-width: 445px !important;
+}
+
+
+.mp-promo-v3-detail-card {
+  width: 100% !important;
+
+  max-width: 445px !important;
+}
+
+
+.mp-promo-v3-detail-head {
+  grid-template-columns:
+    minmax(340px, 445px)
+    minmax(0, 1fr) !important;
+}
+
+
+/* =========================================================
+   TOTY
+
+   Il PNG TOTY ha molto più spazio trasparente
+   intorno al disegno rispetto alle altre carte.
+
+   Quindi ingrandiamo IL TEMPLATE.
+   Questo è ciò che mancava:
+   non bastava spostare le scritte.
+   ========================================================= */
+
+.mp-promo-v3-theme-toty
+.mp-promo-v3-template {
+  transform:
+    scale(1.24) !important;
+
+  transform-origin:
+    center center !important;
+}
+
+
+/*
+   Dopo aver ingrandito il template,
+   ricalibriamo leggermente i contenuti.
+*/
+
+.mp-promo-v3-theme-toty {
+  --mp-v3-photo-left: 41%;
+  --mp-v3-photo-top: 17%;
+  --mp-v3-photo-width: 42%;
+  --mp-v3-photo-height: 38.5%;
+
+  --mp-v3-rating-left: 15%;
+  --mp-v3-rating-top: 15%;
+
+  --mp-v3-role-right: 15%;
+  --mp-v3-role-top: 15%;
+
+  --mp-v3-side-left: 19%;
+  --mp-v3-side-top: 29%;
+  --mp-v3-side-width: 21%;
+
+  --mp-v3-plus-left: 10%;
+
+  --mp-v3-name-top: 59%;
+
+  --mp-v3-stats-left: 18%;
+  --mp-v3-stats-right: 18%;
+  --mp-v3-stats-top: 66%;
+
+  --mp-v3-abilities-top: 84%;
+}
+
+
+/* TOTY aperta ancora più grande */
+
+.mp-promo-v3-detail
+.mp-promo-v3-theme-toty,
+.mp-promo-v3-theme-toty.mp-promo-v3-detail {
+  max-width: 470px !important;
+}
+
+
+/* =========================================================
+   ULTIMATE SCREAM
+
+   Ha il bordo più largo e la parte inferiore lunga.
+   ========================================================= */
+
+.mp-promo-v3-theme-ultimatescream {
+  --mp-v3-photo-left: 43%;
+  --mp-v3-photo-width: 40%;
+
+  --mp-v3-plus-left: 10%;
+  --mp-v3-side-left: 19%;
+}
+
+
+/* =========================================================
+   THUNDERSTRUCK
+   ========================================================= */
+
+.mp-promo-v3-theme-thunderstruck {
+  --mp-v3-photo-left: 42%;
+  --mp-v3-photo-width: 41%;
+
+  --mp-v3-plus-left: 8%;
+  --mp-v3-side-left: 17.5%;
+
+  --mp-v3-name-top: 58.5%;
+}
+
+
+/* =========================================================
+   FUTMAS
+   ========================================================= */
+
+.mp-promo-v3-theme-futmas {
+  --mp-v3-plus-left: 10%;
+  --mp-v3-side-left: 19%;
+
+  --mp-v3-photo-left: 43%;
+  --mp-v3-photo-width: 39.5%;
+
+  --mp-v3-name-top: 59%;
+}
+
+
+/* =========================================================
+   FUTURE STARS
+   ========================================================= */
+
+.mp-promo-v3-theme-futurestars {
+  --mp-v3-plus-left: 9%;
+  --mp-v3-side-left: 18%;
+
+  --mp-v3-photo-left: 41.5%;
+  --mp-v3-photo-width: 41%;
+
+  --mp-v3-name-top: 58.5%;
+}
+
+
+/* =========================================================
+   FUT BIRTHDAY
+   ========================================================= */
+
+.mp-promo-v3-theme-futbirthday {
+  --mp-v3-plus-left: 9%;
+  --mp-v3-side-left: 18%;
+
+  --mp-v3-photo-left: 42%;
+  --mp-v3-photo-width: 41%;
+}
+
+
+/* =========================================================
+   TIME WARP
+   ========================================================= */
+
+.mp-promo-v3-theme-timewarp {
+  --mp-v3-plus-left: 8.5%;
+  --mp-v3-side-left: 17.5%;
+
+  --mp-v3-photo-left: 41%;
+  --mp-v3-photo-width: 42%;
+}
+
+
+/* =========================================================
+   TOTS
+   ========================================================= */
+
+.mp-promo-v3-theme-tots {
+  --mp-v3-plus-left: 9%;
+  --mp-v3-side-left: 18%;
+
+  --mp-v3-photo-left: 42%;
+  --mp-v3-photo-width: 40.5%;
+
+  --mp-v3-name-top: 58.5%;
+
+  --mp-v3-stats-left: 18%;
+  --mp-v3-stats-right: 18%;
+}
+
+
+/* =========================================================
+   SUMMER HEAT
+   ========================================================= */
+
+.mp-promo-v3-theme-summerheat {
+  --mp-v3-plus-left: 9%;
+  --mp-v3-side-left: 18%;
+
+  --mp-v3-photo-left: 42%;
+  --mp-v3-photo-width: 41%;
+
+  --mp-v3-name-top: 58.5%;
+}
+
+
+/* =========================================================
+   FUTTIES
+
+   5 PS+:
+   la colonna può continuare sotto i tre box.
+   ========================================================= */
+
+.mp-promo-v3-theme-futties {
+  --mp-v3-plus-left: 8.5%;
+  --mp-v3-side-left: 18%;
+
+  --mp-v3-photo-left: 41%;
+  --mp-v3-photo-width: 42%;
+
+  --mp-v3-name-top: 58.7%;
+}
+
+
+.mp-promo-v3-theme-futties
+.mp-promo-v3-plus {
+  gap: .55cqw !important;
+}
+
+
+/* =========================================================
+   TELEFONO
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+  .mp-promo-v3-detail {
+    max-width: 390px !important;
+  }
+
+
+  .mp-promo-v3-detail-card {
+    width:
+      min(
+        100%,
+        390px
+      ) !important;
+
+    max-width:
+      390px !important;
+
+    margin:
+      0 auto !important;
+  }
+
+
+  .mp-promo-v3-detail-head {
+    grid-template-columns:
+      minmax(
+        0,
+        1fr
+      ) !important;
+  }
+
+
+  /*
+    Anche TOTY sfrutta tutta
+    la larghezza disponibile
+    sul telefono.
+  */
+
+  .mp-promo-v3-theme-toty.mp-promo-v3-detail {
+    width: 100% !important;
+    max-width: 405px !important;
+  }
+
+}
+
+/* =========================================================
+   MATCHPULSE
+   PROMO VISUAL V3.2
+   ALLINEAMENTO PS+ / STELLE / TOTY
+   ========================================================= */
+
+
+/* =========================================================
+   TOGLIE DEFINITIVAMENTE IL NOME PROMO
+   ACCANTO ALLA POSIZIONE
+   ========================================================= */
+
+.mp-promo-v3-role span {
+  display: none !important;
+}
+
+
+.mp-promo-v3-role {
+  right: 14.5% !important;
+  top: 14.7% !important;
+}
+
+
+.mp-promo-v3-role strong {
+  font-size: 6.4cqw !important;
+  line-height: 1 !important;
+}
+
+
+/* =========================================================
+   COLONNA PLAYSTYLE+
+
+   Ogni riga corrisponde esattamente a:
+
+   1 = MAGLIA
+   2 = PIEDE
+   3 = STILE
+
+   Eventuali 4° e 5° continuano sotto.
+   ========================================================= */
+
+.mp-promo-v3-plus {
+  left: 10.8% !important;
+
+  top:
+    var(--mp-v3-side-top) !important;
+
+  width: 8% !important;
+
+  display: grid !important;
+
+  grid-template-columns:
+    1fr !important;
+
+  grid-auto-flow:
+    row !important;
+
+  grid-auto-rows:
+    7.45cqw !important;
+
+  align-items:
+    center !important;
+
+  justify-items:
+    center !important;
+
+  gap:
+    .9cqw !important;
+}
+
+
+/* =========================================================
+   SLOT PLAYSTYLE+
+
+   Tutti gli slot sono IDENTICI.
+   ========================================================= */
+
+.mp-promo-v3-plus-slot {
+  width: 7.3cqw !important;
+  height: 7.3cqw !important;
+
+  display: flex !important;
+
+  align-items: center !important;
+  justify-content: center !important;
+
+  overflow: visible !important;
+}
+
+
+/* =========================================================
+   ICONE
+
+   Altezza uguale per tutte.
+   Non forziamo più contemporaneamente
+   width + height, che rendeva alcune
+   otticamente più piccole.
+   ========================================================= */
+
+.mp-promo-v3-plus-slot img {
+  display: block !important;
+
+  width: auto !important;
+
+  height: 6.7cqw !important;
+
+  max-width: 7.4cqw !important;
+  max-height: 6.7cqw !important;
+
+  object-fit: contain !important;
+
+  transform:
+    scale(1.08);
+
+  transform-origin:
+    center center;
+
+  filter:
+    drop-shadow(
+      0 3px 5px
+      rgba(0,0,0,.96)
+    ) !important;
+}
+
+
+/* =========================================================
+   ICONE CHE HANNO PIÙ SPAZIO TRASPARENTE
+   NEL FILE PNG.
+
+   Le allarghiamo leggermente per renderle
+   visivamente uguali alle altre.
+   ========================================================= */
+
+.mp-promo-v3-plus-precisionHeader img,
+.mp-promo-v3-plus-incisivePass img,
+.mp-promo-v3-plus-pingedPass img,
+.mp-promo-v3-plus-longBallPass img,
+.mp-promo-v3-plus-whippedPass img,
+.mp-promo-v3-plus-firstTouch img,
+.mp-promo-v3-plus-pressProven img,
+.mp-promo-v3-plus-technical img,
+.mp-promo-v3-plus-quickStep img,
+.mp-promo-v3-plus-relentless img {
+  transform:
+    scale(1.20) !important;
+}
+
+
+/* altri particolarmente compatti */
+
+.mp-promo-v3-plus-anticipate img,
+.mp-promo-v3-plus-intercept img,
+.mp-promo-v3-plus-enforcer img,
+.mp-promo-v3-plus-bruiser img {
+  transform:
+    scale(1.16) !important;
+}
+
+
+/* =========================================================
+   CARTA GRANDE
+
+   Non serve una misura diversa in cqw:
+   essendo container units, quando la carta
+   diventa più grande anche i PS+ diventano
+   automaticamente più grandi.
+   ========================================================= */
+
+.mp-promo-v3-detail
+.mp-promo-v3-plus-slot {
+  width: 7.5cqw !important;
+  height: 7.5cqw !important;
+}
+
+
+.mp-promo-v3-detail
+.mp-promo-v3-plus-slot img {
+  height: 7cqw !important;
+  max-height: 7cqw !important;
+  max-width: 7.7cqw !important;
+}
+
+
+/* =========================================================
+   BOX MAGLIA / PIEDE / STILE
+
+   Stessa scansione verticale dei PS+.
+   ========================================================= */
+
+.mp-promo-v3-side {
+  top: 29% !important;
+
+  left: 19.2% !important;
+
+  width: 22.5% !important;
+
+  gap: .9cqw !important;
+}
+
+
+.mp-promo-v3-side > div {
+  box-sizing: border-box !important;
+
+  height: 7.45cqw !important;
+  min-height: 7.45cqw !important;
+
+  padding:
+    .5cqw .7cqw !important;
+
+  display: flex !important;
+
+  flex-direction:
+    column !important;
+
+  align-items:
+    center !important;
+
+  justify-content:
+    center !important;
+}
+
+
+/* =========================================================
+   FOTO
+
+   Ancora un po' più piccola,
+   soprattutto per non schiacciare
+   la parte alta delle carte.
+   ========================================================= */
+
+.mp-promo-v3-card {
+  --mp-v3-photo-left: 42.5%;
+  --mp-v3-photo-top: 16.5%;
+  --mp-v3-photo-width: 39.5%;
+  --mp-v3-photo-height: 38%;
+
+  --mp-v3-name-top: 57.8%;
+
+  --mp-v3-stats-top: 64.5%;
+
+  --mp-v3-abilities-top: 80.5%;
+}
+
+
+/* =========================================================
+   NOME
+   ========================================================= */
+
+.mp-promo-v3-name {
+  top:
+    var(--mp-v3-name-top) !important;
+
+  left: 17% !important;
+  right: 17% !important;
+
+  font-size: 5.5cqw !important;
+}
+
+
+/* =========================================================
+   STATISTICHE
+
+   Le alziamo leggermente per creare
+   spazio vero per stelle e abilità.
+   ========================================================= */
+
+.mp-promo-v3-stats {
+  top:
+    var(--mp-v3-stats-top) !important;
+
+  left: 17% !important;
+  right: 17% !important;
+
+  row-gap: 1.1cqw !important;
+}
+
+
+.mp-promo-v3-stats > div {
+  padding:
+    1.05cqw
+    .55cqw !important;
+}
+
+
+.mp-promo-v3-stats strong {
+  font-size:
+    5.6cqw !important;
+}
+
+
+.mp-promo-v3-stats span {
+  margin-top:
+    .4cqw !important;
+
+  font-size:
+    1.85cqw !important;
+}
+
+
+/* =========================================================
+   PIEDE DEBOLE / MOSSE
+
+   DEVONO STARE DENTRO LA CARTA.
+   ========================================================= */
+
+.mp-promo-v3-abilities {
+  top:
+    var(--mp-v3-abilities-top) !important;
+
+  left: 20% !important;
+  right: 20% !important;
+
+  align-items: start !important;
+}
+
+
+.mp-promo-v3-abilities > div {
+  padding:
+    .8cqw
+    .5cqw !important;
+
+  border-radius:
+    1.6cqw;
+
+  background:
+    rgba(0,0,0,.14);
+}
+
+
+.mp-promo-v3-abilities
+> div
+> span {
+  margin-bottom:
+    .7cqw !important;
+
+  font-size:
+    1.65cqw !important;
+
+  line-height: 1 !important;
+}
+
+
+.mp-promo-v3-abilities
+.mp-promo-v3-stars {
+  font-size:
+    2.45cqw !important;
+
+  line-height: 1 !important;
+}
+
+
+/* =========================================================
+   CARTA IN GENERALE PIÙ GRANDE
+   ========================================================= */
+
+.mp-promo-v3-open-button {
+  max-width:
+    335px !important;
+}
+
+
+.mp-promo-v3-preview {
+  max-width:
+    335px !important;
+}
+
+
+.mp-promo-v3-club {
+  max-width:
+    385px !important;
+}
+
+
+.mp-promo-v3-detail {
+  max-width:
+    470px !important;
+}
+
+
+.mp-promo-v3-detail-card {
+  max-width:
+    470px !important;
+}
+
+
+.mp-promo-v3-detail-head {
+  grid-template-columns:
+    minmax(
+      370px,
+      470px
+    )
+    minmax(
+      0,
+      1fr
+    ) !important;
+}
+
+
+/* =========================================================
+   OTW
+   ========================================================= */
+
+.mp-promo-v3-theme-otw {
+  --mp-v3-photo-left: 42.5%;
+  --mp-v3-photo-width: 39.5%;
+
+  --mp-v3-name-top: 57.7%;
+
+  --mp-v3-stats-top: 64.3%;
+
+  --mp-v3-abilities-top: 80.2%;
+}
+
+
+/* =========================================================
+   SCREAM
+   ========================================================= */
+
+.mp-promo-v3-theme-ultimatescream {
+  --mp-v3-photo-left: 43%;
+  --mp-v3-photo-top: 17%;
+  --mp-v3-photo-width: 39%;
+  --mp-v3-photo-height: 37%;
+
+  --mp-v3-name-top: 58.2%;
+
+  --mp-v3-stats-top: 65%;
+
+  --mp-v3-abilities-top: 80%;
+}
+
+
+/* =========================================================
+   THUNDERSTRUCK
+   ========================================================= */
+
+.mp-promo-v3-theme-thunderstruck {
+  --mp-v3-photo-left: 42.5%;
+  --mp-v3-photo-top: 16.5%;
+  --mp-v3-photo-width: 39.5%;
+  --mp-v3-photo-height: 38%;
+
+  --mp-v3-name-top: 57.5%;
+
+  --mp-v3-stats-top: 64%;
+
+  --mp-v3-abilities-top: 80.2%;
+}
+
+
+/* =========================================================
+   FUTMAS
+   ========================================================= */
+
+.mp-promo-v3-theme-futmas {
+  --mp-v3-photo-left: 43%;
+  --mp-v3-photo-width: 39%;
+
+  --mp-v3-name-top: 58%;
+
+  --mp-v3-stats-top: 64.7%;
+
+  --mp-v3-abilities-top: 80%;
+}
+
+
+/* =========================================================
+   TOTY
+
+   QUESTA VOLTA LA INGRANDIAMO
+   MOLTO PIÙ DECISAMENTE.
+   ========================================================= */
+
+.mp-promo-v3-theme-toty
+.mp-promo-v3-template {
+  transform:
+    scale(1.43) !important;
+
+  transform-origin:
+    center center !important;
+}
+
+
+.mp-promo-v3-theme-toty {
+  --mp-v3-photo-left: 42%;
+  --mp-v3-photo-top: 16.5%;
+  --mp-v3-photo-width: 39%;
+  --mp-v3-photo-height: 37.5%;
+
+  --mp-v3-name-top: 57.5%;
+
+  --mp-v3-stats-top: 64%;
+
+  --mp-v3-abilities-top: 79.7%;
+}
+
+
+/*
+   Anche i contenuti TOTY vengono
+   leggermente più centrati.
+*/
+
+.mp-promo-v3-theme-toty
+.mp-promo-v3-rating {
+  left: 14% !important;
+  top: 14.3% !important;
+}
+
+
+.mp-promo-v3-theme-toty
+.mp-promo-v3-role {
+  right: 13.8% !important;
+  top: 14.4% !important;
+}
+
+
+.mp-promo-v3-theme-toty
+.mp-promo-v3-side {
+  left: 18.5% !important;
+}
+
+
+.mp-promo-v3-theme-toty
+.mp-promo-v3-plus {
+  left: 10% !important;
+}
+
+
+/* TOTY aperta */
+
+.mp-promo-v3-theme-toty.mp-promo-v3-detail {
+  max-width:
+    500px !important;
+}
+
+
+/* =========================================================
+   FUTURE STARS
+   ========================================================= */
+
+.mp-promo-v3-theme-futurestars {
+  --mp-v3-photo-left: 41.5%;
+  --mp-v3-photo-width: 40%;
+
+  --mp-v3-name-top: 57.5%;
+
+  --mp-v3-stats-top: 64%;
+
+  --mp-v3-abilities-top: 80.2%;
+}
+
+
+/* =========================================================
+   FUT BIRTHDAY
+   ========================================================= */
+
+.mp-promo-v3-theme-futbirthday {
+  --mp-v3-photo-left: 42%;
+  --mp-v3-photo-width: 40%;
+
+  --mp-v3-name-top: 57.8%;
+
+  --mp-v3-stats-top: 64.2%;
+
+  --mp-v3-abilities-top: 80.2%;
+}
+
+
+/* =========================================================
+   TIME WARP
+   ========================================================= */
+
+.mp-promo-v3-theme-timewarp {
+  --mp-v3-photo-left: 41.5%;
+  --mp-v3-photo-width: 40%;
+
+  --mp-v3-name-top: 57.5%;
+
+  --mp-v3-stats-top: 64%;
+
+  --mp-v3-abilities-top: 80%;
+}
+
+
+/* =========================================================
+   TOTS
+   ========================================================= */
+
+.mp-promo-v3-theme-tots {
+  --mp-v3-photo-left: 42%;
+  --mp-v3-photo-width: 39.5%;
+
+  --mp-v3-name-top: 57.5%;
+
+  --mp-v3-stats-top: 64%;
+
+  --mp-v3-abilities-top: 79.8%;
+}
+
+
+/* =========================================================
+   SUMMER HEAT
+   ========================================================= */
+
+.mp-promo-v3-theme-summerheat {
+  --mp-v3-photo-left: 42%;
+  --mp-v3-photo-width: 39.5%;
+
+  --mp-v3-name-top: 57.4%;
+
+  --mp-v3-stats-top: 63.8%;
+
+  --mp-v3-abilities-top: 79.8%;
+}
+
+
+/* =========================================================
+   FUTTIES
+   ========================================================= */
+
+.mp-promo-v3-theme-futties {
+  --mp-v3-photo-left: 41.5%;
+  --mp-v3-photo-width: 40%;
+
+  --mp-v3-name-top: 57.5%;
+
+  --mp-v3-stats-top: 64%;
+
+  --mp-v3-abilities-top: 79.8%;
+}
+
+
+/*
+   Cinque PS+:
+   stessa distanza verticale,
+   nessun mucchio.
+*/
+
+.mp-promo-v3-theme-futties
+.mp-promo-v3-plus {
+  gap:
+    .55cqw !important;
+
+  grid-auto-rows:
+    7.1cqw !important;
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+  .mp-promo-v3-detail {
+    width:
+      min(
+        100%,
+        420px
+      ) !important;
+
+    max-width:
+      420px !important;
+  }
+
+
+  .mp-promo-v3-detail-card {
+    width:
+      min(
+        100%,
+        420px
+      ) !important;
+
+    max-width:
+      420px !important;
+
+    margin:
+      0 auto !important;
+  }
+
+
+  .mp-promo-v3-detail-head {
+    grid-template-columns:
+      minmax(
+        0,
+        1fr
+      ) !important;
+  }
+
+
+  .mp-promo-v3-theme-toty.mp-promo-v3-detail {
+    width:
+      min(
+        100%,
+        440px
+      ) !important;
+
+    max-width:
+      440px !important;
+  }
+
+}
+
+/* =========================================================
+   MATCHPULSE
+   PLAYSTYLE ICON NORMALIZATION V1
+   ========================================================= */
+
+
+/*
+   Dopo il ritaglio automatico JS
+   ogni immagine ha già un canvas
+   256×256 con la grafica centrata.
+
+   Quindi NIENTE più scale diverse
+   PlayStyle per PlayStyle.
+*/
+
+.mp-promo-v3-plus-slot {
+  width: 7.2cqw !important;
+  height: 7.2cqw !important;
+
+  display: grid !important;
+  place-items: center !important;
+
+  overflow: visible !important;
+}
+
+
+.mp-promo-v3-plus-slot img {
+  width: 100% !important;
+  height: 100% !important;
+
+  max-width: none !important;
+  max-height: none !important;
+
+  object-fit: contain !important;
+
+  transform: none !important;
+
+  transform-origin:
+    center center !important;
+
+  filter:
+    drop-shadow(
+      0 3px 5px
+      rgba(0,0,0,.95)
+    ) !important;
+}
+
+
+/* DETTAGLIO GRANDE */
+
+.mp-promo-v3-detail
+.mp-promo-v3-plus-slot {
+  width: 8cqw !important;
+  height: 8cqw !important;
+}
+
+
+.mp-promo-v3-detail
+.mp-promo-v3-plus-slot img {
+  width: 100% !important;
+  height: 100% !important;
+
+  transform: none !important;
+}
+
+
+/* CLUB */
+
+.mp-promo-v3-club
+.mp-promo-v3-plus-slot {
+  width: 7.6cqw !important;
+  height: 7.6cqw !important;
+}
+
+
+/* =========================================================
+   CANCELLA LE VECCHIE SCALE INDIVIDUALI
+   ========================================================= */
+
+.mp-promo-v3-plus-precisionHeader img,
+.mp-promo-v3-plus-incisivePass img,
+.mp-promo-v3-plus-pingedPass img,
+.mp-promo-v3-plus-longBallPass img,
+.mp-promo-v3-plus-whippedPass img,
+.mp-promo-v3-plus-firstTouch img,
+.mp-promo-v3-plus-pressProven img,
+.mp-promo-v3-plus-technical img,
+.mp-promo-v3-plus-quickStep img,
+.mp-promo-v3-plus-relentless img,
+.mp-promo-v3-plus-anticipate img,
+.mp-promo-v3-plus-intercept img,
+.mp-promo-v3-plus-enforcer img,
+.mp-promo-v3-plus-bruiser img {
+  transform: none !important;
+}
+
+
+/* Anche nella lista del dettaglio */
+
+.mp-pv3-ps-item img {
+  width: 44px !important;
+  height: 44px !important;
+
+  object-fit: contain !important;
+
+  transform: none !important;
+}
+
+/* =========================================================
+   MATCHPULSE
+   PROMO VISUAL V3.3
+   DIMENSIONE UNIFORME + FOTO RIDOTTA + PS AL BORDO
+   ========================================================= */
+
+
+/* =========================================================
+   GEOMETRIA UNICA DI TUTTI I CONTENUTI
+
+   Da questo punto:
+   - stessa geometria per ogni promo
+   - foto più piccola
+   - OVR e ruolo più interni
+   - statistiche più interne
+   - stelle dentro la carta
+   ========================================================= */
+
+.mp-promo-v3-card {
+  --mp-v3-photo-left: 44.5% !important;
+  --mp-v3-photo-top: 17.2% !important;
+  --mp-v3-photo-width: 35.5% !important;
+  --mp-v3-photo-height: 34.5% !important;
+
+  --mp-v3-name-top: 56.7% !important;
+
+  --mp-v3-stats-left: 19% !important;
+  --mp-v3-stats-right: 19% !important;
+  --mp-v3-stats-top: 63.3% !important;
+
+  --mp-v3-abilities-top: 79.3% !important;
+}
+
+
+/* =========================================================
+   OVERALL
+
+   Più dentro al frame.
+   ========================================================= */
+
+.mp-promo-v3-rating {
+  left: 16.5% !important;
+  top: 15.5% !important;
+
+  width: 20% !important;
+}
+
+
+/* =========================================================
+   POSIZIONE
+
+   Solo DC / ATT / CC ecc.
+   Più dentro al bordo destro.
+   ========================================================= */
+
+.mp-promo-v3-role {
+  right: 16.5% !important;
+  top: 15.5% !important;
+
+  max-width: 21% !important;
+}
+
+
+/* La rarità resta definitivamente nascosta */
+
+.mp-promo-v3-role span {
+  display: none !important;
+}
+
+
+/* =========================================================
+   MAGLIA / PIEDE / STILE
+
+   Rimangono dove sono perché ora sono
+   correttamente leggibili.
+   ========================================================= */
+
+.mp-promo-v3-side {
+  left: 19.2% !important;
+  top: 29% !important;
+
+  width: 22.5% !important;
+
+  gap: .9cqw !important;
+}
+
+
+/* =========================================================
+   PLAYSTYLE+
+
+   QUESTO È IL NUOVO BORDO SINISTRO.
+
+   Prima:
+   left: 10.8%
+
+   Ora:
+   left: 5.8%
+
+   Quindi vengono spostati nettamente
+   verso il bordo della carta.
+   ========================================================= */
+
+.mp-promo-v3-plus {
+  left: 5.8% !important;
+  top: 29% !important;
+
+  width: 8% !important;
+
+  display: grid !important;
+
+  grid-template-columns:
+    1fr !important;
+
+  grid-auto-flow:
+    row !important;
+
+  grid-auto-rows:
+    7.45cqw !important;
+
+  align-items:
+    center !important;
+
+  justify-items:
+    center !important;
+
+  gap: .9cqw !important;
+}
+
+
+/* =========================================================
+   PLAYSTYLE+
+
+   Manteniamo tutti gli slot esattamente uguali.
+   Il JS che hai già adesso elimina il padding
+   trasparente dei PNG.
+   ========================================================= */
+
+.mp-promo-v3-plus-slot {
+  width: 7.2cqw !important;
+  height: 7.2cqw !important;
+
+  display: grid !important;
+
+  place-items: center !important;
+
+  overflow: visible !important;
+}
+
+
+.mp-promo-v3-plus-slot img {
+  width: 100% !important;
+  height: 100% !important;
+
+  max-width: none !important;
+  max-height: none !important;
+
+  object-fit: contain !important;
+
+  transform: none !important;
+}
+
+
+/* =========================================================
+   FOTO
+
+   Era circa:
+   39.5% × 38%
+
+   Ora:
+   35.5% × 34.5%
+
+   Quindi viene ridotta chiaramente,
+   ma senza diventare troppo piccola.
+   ========================================================= */
+
+.mp-promo-v3-photo {
+  left:
+    var(--mp-v3-photo-left) !important;
+
+  top:
+    var(--mp-v3-photo-top) !important;
+
+  width:
+    var(--mp-v3-photo-width) !important;
+
+  height:
+    var(--mp-v3-photo-height) !important;
+}
+
+
+/* =========================================================
+   NOME
+   ========================================================= */
+
+.mp-promo-v3-name {
+  top:
+    var(--mp-v3-name-top) !important;
+
+  left: 18% !important;
+  right: 18% !important;
+
+  font-size: 5.3cqw !important;
+}
+
+
+/* =========================================================
+   STATISTICHE
+
+   Un po' più strette e più alte.
+   In questo modo non arrivano sui bordi.
+   ========================================================= */
+
+.mp-promo-v3-stats {
+  left:
+    var(--mp-v3-stats-left) !important;
+
+  right:
+    var(--mp-v3-stats-right) !important;
+
+  top:
+    var(--mp-v3-stats-top) !important;
+
+  column-gap: 1.5cqw !important;
+  row-gap: 1cqw !important;
+}
+
+
+.mp-promo-v3-stats > div {
+  padding:
+    1cqw
+    .5cqw !important;
+}
+
+
+.mp-promo-v3-stats strong {
+  font-size: 5.45cqw !important;
+}
+
+
+.mp-promo-v3-stats span {
+  font-size: 1.8cqw !important;
+}
+
+
+/* =========================================================
+   PIEDE DEBOLE / MOSSE
+
+   Devono essere chiaramente DENTRO la carta.
+   ========================================================= */
+
+.mp-promo-v3-abilities {
+  top:
+    var(--mp-v3-abilities-top) !important;
+
+  left: 21% !important;
+  right: 21% !important;
+}
+
+
+.mp-promo-v3-abilities > div {
+  padding:
+    .6cqw
+    .4cqw !important;
+
+  background:
+    rgba(0,0,0,.10) !important;
+}
+
+
+.mp-promo-v3-abilities
+> div
+> span {
+  margin-bottom:
+    .45cqw !important;
+
+  font-size:
+    1.55cqw !important;
+}
+
+
+.mp-promo-v3-abilities
+.mp-promo-v3-stars {
+  font-size:
+    2.35cqw !important;
+}
+
+
+/* =========================================================
+   DIMENSIONE VISIVA DEI TEMPLATE
+
+   Scream e FUTMAS sono il riferimento.
+
+   Non tocchiamo il contenitore:
+   ingrandiamo solamente il PNG interno
+   di quelle carte che hanno più spazio
+   trasparente attorno.
+   ========================================================= */
+
+
+/* ONES TO WATCH */
+
+.mp-promo-v3-theme-otw
+.mp-promo-v3-template {
+  transform:
+    scale(1.10) !important;
+
+  transform-origin:
+    center center !important;
+}
+
+
+/* ULTIMATE SCREAM
+   RIFERIMENTO */
+
+.mp-promo-v3-theme-ultimatescream
+.mp-promo-v3-template {
+  transform:
+    scale(1) !important;
+
+  transform-origin:
+    center center !important;
+}
+
+
+/* THUNDERSTRUCK */
+
+.mp-promo-v3-theme-thunderstruck
+.mp-promo-v3-template {
+  transform:
+    scale(1.13) !important;
+
+  transform-origin:
+    center center !important;
+}
+
+
+/* FUTMAS
+   RIFERIMENTO */
+
+.mp-promo-v3-theme-futmas
+.mp-promo-v3-template {
+  transform:
+    scale(1) !important;
+
+  transform-origin:
+    center center !important;
+}
+
+
+/* =========================================================
+   TOTY
+
+   Attualmente nel tuo CSS è 1.43.
+   È ancora più piccola visivamente
+   delle Scream/FUTMAS.
+
+   La portiamo a 1.66.
+   ========================================================= */
+
+.mp-promo-v3-theme-toty
+.mp-promo-v3-template {
+  transform:
+    scale(1.66) !important;
+
+  transform-origin:
+    center center !important;
+}
+
+
+/* FUTURE STARS */
+
+.mp-promo-v3-theme-futurestars
+.mp-promo-v3-template {
+  transform:
+    scale(1.16) !important;
+
+  transform-origin:
+    center center !important;
+}
+
+
+/* FUT BIRTHDAY */
+
+.mp-promo-v3-theme-futbirthday
+.mp-promo-v3-template {
+  transform:
+    scale(1.16) !important;
+
+  transform-origin:
+    center center !important;
+}
+
+
+/* TIME WARP */
+
+.mp-promo-v3-theme-timewarp
+.mp-promo-v3-template {
+  transform:
+    scale(1.19) !important;
+
+  transform-origin:
+    center center !important;
+}
+
+
+/* TOTS */
+
+.mp-promo-v3-theme-tots
+.mp-promo-v3-template {
+  transform:
+    scale(1.12) !important;
+
+  transform-origin:
+    center center !important;
+}
+
+
+/* SUMMER HEAT */
+
+.mp-promo-v3-theme-summerheat
+.mp-promo-v3-template {
+  transform:
+    scale(1.06) !important;
+
+  transform-origin:
+    center center !important;
+}
+
+
+/* FUTTIES */
+
+.mp-promo-v3-theme-futties
+.mp-promo-v3-template {
+  transform:
+    scale(1.11) !important;
+
+  transform-origin:
+    center center !important;
+}
+
+
+/* =========================================================
+   DIMENSIONI DEL CONTENITORE
+
+   Sono IDENTICHE per tutte le promo.
+   ========================================================= */
+
+.mp-promo-v3-open-button,
+.mp-promo-v3-preview {
+  width: 100% !important;
+
+  max-width:
+    335px !important;
+}
+
+
+.mp-promo-v3-club {
+  width: 100% !important;
+
+  max-width:
+    385px !important;
+}
+
+
+.mp-promo-v3-detail {
+  width: 100% !important;
+
+  max-width:
+    470px !important;
+}
+
+
+.mp-promo-v3-detail-card {
+  width: 100% !important;
+
+  max-width:
+    470px !important;
+}
+
+
+/* =========================================================
+   TOTY APERTA
+
+   Nessuna dimensione speciale del contenitore.
+   Deve usare la stessa carta grande delle altre.
+
+   È il TEMPLATE interno che è ingrandito a 1.66.
+   ========================================================= */
+
+.mp-promo-v3-theme-toty.mp-promo-v3-detail {
+  width: 100% !important;
+
+  max-width:
+    470px !important;
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+  .mp-promo-v3-detail,
+  .mp-promo-v3-detail-card,
+  .mp-promo-v3-theme-toty.mp-promo-v3-detail {
+    width:
+      min(
+        100%,
+        420px
+      ) !important;
+
+    max-width:
+      420px !important;
+  }
+
+}
+
+/* =========================================================
+   MATCHPULSE
+   PROMO VISUAL V3.4
+   PS+ GRANDI E SUL BORDO SINISTRO
+   ========================================================= */
+
+
+/*
+   MAGLIA / PIEDE / STILE:
+   NON VIENE MODIFICATO NIENTE.
+
+   Questa patch agisce ESCLUSIVAMENTE
+   sulla colonna dei PlayStyle+.
+*/
+
+
+/* =========================================================
+   POSIZIONE DEL BORDO PER OGNI TEMPLATE
+
+   I PNG non hanno tutti lo stesso margine trasparente,
+   quindi il bordo grafico della carta non cade
+   nello stesso punto percentuale.
+
+   Questo valore indica il punto in cui deve
+   TROVARSI IL CENTRO dell'icona PS+.
+   ========================================================= */
+
+.mp-promo-v3-card {
+  --mp-v3-ps-edge: 5.2%;
+}
+
+
+/* OTW */
+
+.mp-promo-v3-theme-otw {
+  --mp-v3-ps-edge: 5.4%;
+}
+
+
+/* ULTIMATE SCREAM */
+
+.mp-promo-v3-theme-ultimatescream {
+  --mp-v3-ps-edge: 4.7%;
+}
+
+
+/* THUNDERSTRUCK */
+
+.mp-promo-v3-theme-thunderstruck {
+  --mp-v3-ps-edge: 5.6%;
+}
+
+
+/* FUTMAS */
+
+.mp-promo-v3-theme-futmas {
+  --mp-v3-ps-edge: 5.3%;
+}
+
+
+/* TOTY */
+
+.mp-promo-v3-theme-toty {
+  --mp-v3-ps-edge: 5.5%;
+}
+
+
+/* FUTURE STARS */
+
+.mp-promo-v3-theme-futurestars {
+  --mp-v3-ps-edge: 5.2%;
+}
+
+
+/* FUT BIRTHDAY */
+
+.mp-promo-v3-theme-futbirthday {
+  --mp-v3-ps-edge: 5.0%;
+}
+
+
+/* TIME WARP */
+
+.mp-promo-v3-theme-timewarp {
+  --mp-v3-ps-edge: 5.2%;
+}
+
+
+/* TOTS */
+
+.mp-promo-v3-theme-tots {
+  --mp-v3-ps-edge: 5.3%;
+}
+
+
+/* SUMMER HEAT */
+
+.mp-promo-v3-theme-summerheat {
+  --mp-v3-ps-edge: 6.2%;
+}
+
+
+/* FUTTIES */
+
+.mp-promo-v3-theme-futties {
+  --mp-v3-ps-edge: 4.9%;
+}
+
+
+/* =========================================================
+   COLONNA PS+
+
+   Questo selettore è volutamente più specifico
+   dei vecchi override delle singole promo.
+
+   Il translateX(-50%) fa sì che:
+   --mp-v3-ps-edge
+   rappresenti il CENTRO dell'icona.
+
+   Quindi le icone stanno realmente A CAVALLO
+   DEL BORDO SINISTRO DELLA CARTA.
+   ========================================================= */
+
+.mp-promo-v3-card[class*="mp-promo-v3-theme-"]
+.mp-promo-v3-plus {
+  left:
+    var(--mp-v3-ps-edge) !important;
+
+  top: 28.5% !important;
+
+  width: 9.2% !important;
+
+  transform:
+    translateX(-50%) !important;
+
+  display: grid !important;
+
+  grid-template-columns:
+    1fr !important;
+
+  grid-auto-flow:
+    row !important;
+
+  grid-auto-rows:
+    9.1cqw !important;
+
+  align-items:
+    center !important;
+
+  justify-items:
+    center !important;
+
+  gap:
+    .6cqw !important;
+
+  z-index: 12 !important;
+}
+
+
+/* =========================================================
+   GRANDEZZA PLAYSTYLE+
+
+   Prima erano 7.2cqw.
+   Ora diventano 8.8cqw.
+
+   Il normalizzatore JS che hai già
+   continua a rendere uniforme il contenuto
+   dei vari PNG.
+   ========================================================= */
+
+.mp-promo-v3-card
+.mp-promo-v3-plus-slot {
+  width: 8.8cqw !important;
+  height: 8.8cqw !important;
+
+  display: grid !important;
+
+  place-items:
+    center !important;
+
+  overflow:
+    visible !important;
+}
+
+
+.mp-promo-v3-card
+.mp-promo-v3-plus-slot img {
+  width: 100% !important;
+  height: 100% !important;
+
+  max-width:
+    none !important;
+
+  max-height:
+    none !important;
+
+  object-fit:
+    contain !important;
+
+  transform:
+    none !important;
+}
+
+
+/* =========================================================
+   CARTA APERTA
+
+   Essendo cqw, le icone diventerebbero già
+   più grandi in pixel quando la carta cresce.
+
+   Qui però le rendiamo ANCHE leggermente più
+   grandi in proporzione, come mi hai chiesto.
+   ========================================================= */
+
+.mp-promo-v3-detail
+.mp-promo-v3-plus-slot {
+  width: 9.4cqw !important;
+  height: 9.4cqw !important;
+}
+
+
+.mp-promo-v3-detail
+.mp-promo-v3-plus {
+  grid-auto-rows:
+    9.7cqw !important;
+
+  gap:
+    .65cqw !important;
+}
+
+
+/* =========================================================
+   CLUB
+
+   Un po' più grandi rispetto all'anteprima,
+   ma meno della carta aperta.
+   ========================================================= */
+
+.mp-promo-v3-club
+.mp-promo-v3-plus-slot {
+  width: 9.1cqw !important;
+  height: 9.1cqw !important;
+}
+
+
+/* =========================================================
+   FUTTIES - 5 PS+
+
+   Manteniamo tutti e 5 ordinati verticalmente.
+   ========================================================= */
+
+.mp-promo-v3-theme-futties
+.mp-promo-v3-plus {
+  grid-auto-rows:
+    8.8cqw !important;
+
+  gap:
+    .35cqw !important;
+}
+
+/* =========================================================
+   MATCHPULSE
+   PROMO VISUAL V3.5
+   SPAZI STAT + RUOLO SOTTO OVR
+   ========================================================= */
+
+
+/* Il vecchio ruolo in alto a destra
+   non deve occupare spazio */
+
+.mp-promo-v3-role {
+  display: none !important;
+}
+
+
+/* Il ruolo sotto all'OVR */
+
+.mp-promo-v3-rating span {
+  margin-top: 4px !important;
+
+  font-size: 3.1cqw !important;
+
+  line-height: 1 !important;
+
+  font-weight: 1000 !important;
+
+  letter-spacing: .04em !important;
+}
+
+
+/* =========================================================
+   STATISTICHE PIÙ DISTANZIATE
+   ========================================================= */
+
+.mp-promo-v3-stats {
+  left: 16.5% !important;
+  right: 16.5% !important;
+
+  column-gap: 2.6cqw !important;
+  row-gap: 1.7cqw !important;
+}
+
+
+.mp-promo-v3-stats > div {
+  padding:
+    1.05cqw
+    .45cqw !important;
+}
+
+/* =========================================================
+   SUMMER HEAT
+   CORREZIONE SOLO DELLA COLONNA PS+
+   ========================================================= */
+
+.mp-promo-v3-theme-summerheat {
+  --mp-v3-ps-edge: 9% !important;
+}
+
+/* =========================================================
+   CARTA BASE
+   STELLE DOPO LE STATISTICHE
+   ========================================================= */
+
+.player-card
+.mp-card-ability-stars {
+  margin:
+    12px 0 0 !important;
+
+  position: relative;
+
+  z-index: 5;
+}
+
+
+.player-card
+.mp-card-ability-stars > div {
+  padding:
+    7px 5px !important;
+}
+
+/* =========================================================
+   MATCHPULSE
+   PROMO MANUAL CONTROL FINAL V1
+
+   DA ORA MODIFICA SOLTANTO I VALORI NELLE SEZIONI
+   DELLE SINGOLE PROMO QUI SOTTO.
+   ========================================================= */
+
+
+/* =========================================================
+   VALORI GENERALI DI FALLBACK
+   ========================================================= */
+
+.mp-promo-v3-card {
+  --manual-template-scale: 1;
+
+  --manual-photo-left: 44%;
+  --manual-photo-top: 17%;
+  --manual-photo-width: 35.5%;
+  --manual-photo-height: 34.5%;
+  --manual-photo-zoom: 1;
+
+  --manual-ovr-left: 16.5%;
+  --manual-ovr-top: 15.5%;
+
+  --manual-side-left: 19.2%;
+  --manual-side-top: 29%;
+  --manual-side-width: 22.5%;
+
+  --manual-ps-left: 5%;
+  --manual-ps-top: 28.5%;
+  --manual-ps-size: 8.8cqw;
+  --manual-ps-row: 9.1cqw;
+  --manual-ps-gap: .6cqw;
+
+  --manual-name-top: 56.5%;
+  --manual-name-left: 18%;
+  --manual-name-right: 18%;
+  --manual-name-size: 5.3cqw;
+
+  --manual-stats-left: 16.5%;
+  --manual-stats-right: 16.5%;
+  --manual-stats-top: 63.3%;
+  --manual-stats-column-gap: 2.6cqw;
+  --manual-stats-row-gap: 1.7cqw;
+
+  --manual-abilities-top: 79.3%;
+}
+
+
+/* =========================================================
+   OTW
+   ========================================================= */
+
+.mp-promo-v3-theme-otw {
+  --manual-template-scale: 1.10;
+
+  --manual-photo-left: 49%;
+  --manual-photo-top: 15%;
+  --manual-photo-width: 35.5%;
+  --manual-photo-height: 34.5%;
+
+  --manual-ps-left: 5.4%;
+
+  --manual-name-top: 56.5%;
+
+  --manual-stats-top: 63.3%;
+  --manual-abilities-top: 80.3%;
+}
+
+
+/* =========================================================
+   ULTIMATE SCREAM
+
+   QUESTA È GIÀ CORRETTA PER LA FOTO:
+   - più a sinistra
+   - più in alto
+   - nome dentro la fascia arancione
+   ========================================================= */
+
+.mp-promo-v3-theme-ultimatescream {
+  --manual-template-scale: 1;
+
+  --manual-photo-left: 50.5%;
+  --manual-photo-top: 12.5%;
+  --manual-photo-width: 35.5%;
+  --manual-photo-height: 34.5%;
+  --manual-photo-zoom: 1;
+
+  --manual-ovr-left: 16.5%;
+  --manual-ovr-top: 15.5%;
+
+  --manual-side-left: 19.2%;
+  --manual-side-top: 29%;
+
+  --manual-ps-left: 4.7%;
+  --manual-ps-top: 28.5%;
+
+  --manual-name-top: 52.5%;
+
+  --manual-stats-top: 62.5%;
+  --manual-abilities-top: 79%;
+}
+
+
+/* =========================================================
+   THUNDERSTRUCK
+   ========================================================= */
+
+.mp-promo-v3-theme-thunderstruck {
+  --manual-template-scale: 1.13;
+
+  --manual-photo-left: 50%;
+  --manual-photo-top: 16.5%;
+  --manual-photo-width: 35.5%;
+  --manual-photo-height: 34.5%;
+
+  --manual-ps-left: 5.6%;
+
+  --manual-name-top: 56.5%;
+
+  --manual-stats-top: 66.3%;
+  --manual-abilities-top: 83.3%;
+}
+
+
+/* =========================================================
+   FUTMAS
+   ========================================================= */
+
+.mp-promo-v3-theme-futmas {
+  --manual-template-scale: 1;
+
+  --manual-photo-left: 50%;
+  --manual-photo-top: 16.5%;
+  --manual-photo-width: 35.5%;
+  --manual-photo-height: 34.5%;
+
+  --manual-ps-left: 5.3%;
+
+  --manual-name-top: 56.5%;
+
+  --manual-stats-top: 63.3%;
+  --manual-abilities-top: 80.3%;
+}
+
+
+/* =========================================================
+   TOTY
+   ========================================================= */
+
+.mp-promo-v3-theme-toty {
+  --manual-template-scale: 1.66;
+
+  --manual-photo-left: 50%;
+  --manual-photo-top: 16.5%;
+  --manual-photo-width: 35.5%;
+  --manual-photo-height: 34.5%;
+
+  --manual-ps-left: 4.5%;
+
+  --manual-name-top: 56.5%;
+
+  --manual-stats-top: 66.3%;
+  --manual-abilities-top: 83.3%;
+}
+
+
+/* =========================================================
+   FUTURE STARS
+   ========================================================= */
+
+.mp-promo-v3-theme-futurestars {
+  --manual-template-scale: 1.16;
+
+  --manual-photo-left: 50%;
+  --manual-photo-top: 16.5%;
+  --manual-photo-width: 35.5%;
+  --manual-photo-height: 34.5%;
+
+  --manual-ps-left: 5.2%;
+
+  --manual-name-top: 54.5%;
+
+  --manual-stats-top: 64.3%;
+  --manual-abilities-top: 83.3%;
+}
+
+
+/* =========================================================
+   FUT BIRTHDAY
+   ========================================================= */
+
+.mp-promo-v3-theme-futbirthday {
+  --manual-template-scale: 1.16;
+
+  --manual-photo-left: 50%;
+  --manual-photo-top: 19.5%;
+  --manual-photo-width: 35.5%;
+  --manual-photo-height: 34.5%;
+
+  --manual-ps-left: 5%;
+
+  --manual-name-top: 56.5%;
+
+  --manual-stats-top: 66.3%;
+  --manual-abilities-top: 83.3%;
+}
+
+
+/* =========================================================
+   TIME WARP
+   ========================================================= */
+
+.mp-promo-v3-theme-timewarp {
+  --manual-template-scale: 1.19;
+
+  --manual-photo-left: 50%;
+  --manual-photo-top: 18.5%;
+  --manual-photo-width: 35.5%;
+  --manual-photo-height: 34.5%;
+
+  --manual-ps-left: 4%;
+
+  --manual-name-top: 56.5%;
+
+  --manual-stats-top: 66.3%;
+  --manual-abilities-top: 83.3%;
+}
+
+
+/* =========================================================
+   TOTS
+   ========================================================= */
+
+.mp-promo-v3-theme-tots {
+  --manual-template-scale: 1.12;
+
+  --manual-photo-left: 50%;
+  --manual-photo-top: 16.5%;
+  --manual-photo-width: 35.5%;
+  --manual-photo-height: 34.5%;
+
+  --manual-ps-left: 5.3%;
+
+  --manual-name-top: 56.5%;
+
+  --manual-stats-top: 66.3%;
+  --manual-abilities-top: 83.3%;
+}
+
+
+/* =========================================================
+   SUMMER HEAT
+   ========================================================= */
+
+.mp-promo-v3-theme-summerheat {
+  --manual-template-scale: 1.06;
+
+  --manual-photo-left: 50%;
+  --manual-photo-top: 16.5%;
+  --manual-photo-width: 35.5%;
+  --manual-photo-height: 34.5%;
+
+  /* SOLO SUMMER HEAT:
+     questo è il numero che stavi regolando */
+  --manual-ps-left: 8.8%;
+
+  --manual-name-top: 56.5%;
+
+  --manual-stats-top: 63.6%;
+  --manual-abilities-top: 81.3%;
+}
+
+
+/* =========================================================
+   FUTTIES
+   ========================================================= */
+
+.mp-promo-v3-theme-futties {
+  --manual-template-scale: 1.11;
+
+  --manual-photo-left: 50%;
+  --manual-photo-top: 16.5%;
+  --manual-photo-width: 35.5%;
+  --manual-photo-height: 34.5%;
+
+  --manual-ps-left: 4.9%;
+
+  --manual-ps-row: 8.8cqw;
+  --manual-ps-gap: .35cqw;
+
+  --manual-name-top: 56.5%;
+
+  --manual-stats-top: 66.3%;
+  --manual-abilities-top: 83.3%;
+}
+
+
+/* =========================================================
+   DA QUI IN GIÙ NON TOCCARE.
+
+   È IL MOTORE CHE APPLICA I VALORI SOPRA.
+   ========================================================= */
+
+
+/* TEMPLATE */
+
+.mp-promo-v3-card
+.mp-promo-v3-template {
+  transform:
+    scale(
+      var(--manual-template-scale)
+    ) !important;
+
+  transform-origin:
+    center center !important;
+}
+
+
+/* FOTO */
+
+.mp-promo-v3-card
+.mp-promo-v3-photo {
+  left:
+    var(--manual-photo-left) !important;
+
+  top:
+    var(--manual-photo-top) !important;
+
+  width:
+    var(--manual-photo-width) !important;
+
+  height:
+    var(--manual-photo-height) !important;
+}
+
+
+.mp-promo-v3-card
+.mp-promo-v3-photo > img {
+  transform:
+    scale(
+      var(--manual-photo-zoom)
+    ) !important;
+}
+
+
+/* OVR + RUOLO */
+
+.mp-promo-v3-card
+.mp-promo-v3-rating {
+  left:
+    var(--manual-ovr-left) !important;
+
+  top:
+    var(--manual-ovr-top) !important;
+}
+
+
+/* ruolo vecchio in alto a destra spento */
+
+.mp-promo-v3-card
+.mp-promo-v3-role {
+  display: none !important;
+}
+
+
+/* MAGLIA / PIEDE / STILE */
+
+.mp-promo-v3-card
+.mp-promo-v3-side {
+  left:
+    var(--manual-side-left) !important;
+
+  top:
+    var(--manual-side-top) !important;
+
+  width:
+    var(--manual-side-width) !important;
+}
+
+
+/* PLAYSTYLE+ */
+
+.mp-promo-v3-card[class*="mp-promo-v3-theme-"]
+.mp-promo-v3-plus {
+  left:
+    var(--manual-ps-left) !important;
+
+  top:
+    var(--manual-ps-top) !important;
+
+  width:
+    var(--manual-ps-size) !important;
+
+  grid-auto-rows:
+    var(--manual-ps-row) !important;
+
+  gap:
+    var(--manual-ps-gap) !important;
+
+  transform:
+    translateX(-50%) !important;
+}
+
+
+.mp-promo-v3-card
+.mp-promo-v3-plus-slot {
+  width:
+    var(--manual-ps-size) !important;
+
+  height:
+    var(--manual-ps-size) !important;
+}
+
+
+/* NOME */
+
+.mp-promo-v3-card
+.mp-promo-v3-name {
+  top:
+    var(--manual-name-top) !important;
+
+  left:
+    var(--manual-name-left) !important;
+
+  right:
+    var(--manual-name-right) !important;
+
+  font-size:
+    var(--manual-name-size) !important;
+}
+
+
+/* STATS */
+
+.mp-promo-v3-card
+.mp-promo-v3-stats {
+  left:
+    var(--manual-stats-left) !important;
+
+  right:
+    var(--manual-stats-right) !important;
+
+  top:
+    var(--manual-stats-top) !important;
+
+  column-gap:
+    var(--manual-stats-column-gap) !important;
+
+  row-gap:
+    var(--manual-stats-row-gap) !important;
+}
+
+
+/* STELLE */
+
+.mp-promo-v3-card
+.mp-promo-v3-abilities {
+  top:
+    var(--manual-abilities-top) !important;
+}
+
+/* =========================================================
+   MATCHPULSE
+   CARTA BASE - MANUAL CONTROL FINAL V1
+
+   DA ORA PER SPOSTARE / RIDIMENSIONARE
+   GLI ELEMENTI DELLA CARTA BASE
+   MODIFICA SOLO I VALORI QUI SOTTO.
+   ========================================================= */
+
+
+.featured-card-wrap .player-card {
+
+  /* =======================================================
+     CARTA INTERA
+
+     0.94 = dimensione attuale
+     1.00 = più grande
+     1.05 = ancora più grande
+     ======================================================= */
+
+  --base-card-scale: .94;
+
+
+  /* =======================================================
+     OVR + RUOLO
+
+     LEFT:
+     aumenta = destra
+     diminuisce = sinistra
+
+     TOP:
+     aumenta = basso
+     diminuisce = alto
+     ======================================================= */
+
+  --base-rating-left: 15.8%;
+  --base-rating-top: 16.2%;
+
+  --base-ovr-size: 50px;
+  --base-role-size: 13px;
+
+  --base-role-gap: 5px;
+
+
+  /* =======================================================
+     MAGLIA / PIEDE / STILE
+     ======================================================= */
+
+  --base-side-left: 10.6%;
+  --base-side-top: 34.5%;
+
+  --base-side-width: 22.4%;
+
+  --base-side-gap: 6px;
+
+
+  /* =======================================================
+     PLAYSTYLE+
+
+     Sono agganciati ai box laterali.
+
+     OFFSET più negativo = più a sinistra
+     SIZE = grandezza icona
+     ======================================================= */
+
+  --base-ps-offset: -60px;
+  --base-ps-size: 62px;
+
+
+  /* =======================================================
+     FOTO
+
+     LEFT indica IL CENTRO della foto.
+
+     aumenta LEFT = destra
+     diminuisce LEFT = sinistra
+
+     aumenta TOP = basso
+     diminuisce TOP = alto
+
+     WIDTH / HEIGHT = grandezza riquadro foto
+     ======================================================= */
+
+  --base-photo-left: 64%;
+  --base-photo-top: 26.1%;
+
+  --base-photo-width: 54%;
+  --base-photo-height: 33.7%;
+
+  --base-photo-radius: 20px;
+
+
+  /* =======================================================
+     CONTENUTO DENTRO LA FOTO
+
+     Di default usa i valori salvati
+     dal sistema foto del profilo.
+
+     Se vuoi forzarlo manualmente:
+     cambia per esempio
+
+     --base-photo-object-x: 50%;
+     --base-photo-object-y: 15%;
+     --base-photo-zoom: 1.05;
+     ======================================================= */
+
+  --base-photo-object-x:
+    var(--photo-x, 50%);
+
+  --base-photo-object-y:
+    var(--photo-y, 14%);
+
+  --base-photo-zoom:
+    var(--photo-zoom, 1.02);
+
+
+  /* =======================================================
+     NOME
+     ======================================================= */
+
+  --base-name-top: 63.4%;
+
+  --base-name-left: 13%;
+  --base-name-right: 13%;
+
+  --base-name-size: 22px;
+
+
+  /* =======================================================
+     STATISTICHE
+
+     TOP = altezza dell'intero blocco
+
+     LEFT / RIGHT:
+     aumentandoli restringi il blocco
+     diminuendoli allarghi il blocco
+
+     GAP X = spazio orizzontale
+     GAP Y = spazio verticale
+     ======================================================= */
+
+  --base-stats-left: 14.5%;
+  --base-stats-right: 14.5%;
+  --base-stats-top: 68.5%;
+
+  --base-stats-gap-x: 8px;
+  --base-stats-gap-y: 5px;
+
+  --base-stat-number-size: 22px;
+  --base-stat-label-size: 10px;
+
+
+  /* =======================================================
+     PIEDE DEBOLE + MOSSE ABILITÀ
+
+     Adesso sono SOTTO le statistiche.
+     ======================================================= */
+
+  --base-abilities-left: 19%;
+  --base-abilities-right: 19%;
+  --base-abilities-top: 87%;
+
+  --base-abilities-gap: 14px;
+
+  --base-ability-title-size: 7px;
+  --base-star-size: 12px;
+}
+
+
+/* =========================================================
+   DA QUI IN GIÙ NON TOCCARE.
+
+   È IL MOTORE CHE APPLICA I VALORI SOPRA.
+   ========================================================= */
+
+
+/* =========================================================
+   CARTA INTERA
+   ========================================================= */
+
+.featured-card-wrap .player-card {
+  transform:
+    scale(
+      var(--base-card-scale)
+    ) !important;
+
+  transform-origin:
+    center bottom !important;
+}
+
+
+/* =========================================================
+   OVR + RUOLO SOTTO
+   ========================================================= */
+
+.featured-card-wrap
+.player-top {
+  position: absolute !important;
+
+  left:
+    var(--base-rating-left) !important;
+
+  top:
+    var(--base-rating-top) !important;
+
+  right: auto !important;
+
+  width: auto !important;
+
+  display: block !important;
+
+  z-index: 15 !important;
+}
+
+
+.featured-card-wrap
+.player-top > div {
+  display: block !important;
+
+  text-align: center !important;
+}
+
+
+.featured-card-wrap
+.player-top strong {
+  display: block !important;
+
+  font-size:
+    var(--base-ovr-size) !important;
+
+  line-height: .82 !important;
+}
+
+
+/* DC / ATT / CC ecc. */
+
+.featured-card-wrap
+.player-top
+.card-overall-label {
+  display: block !important;
+
+  margin-top:
+    var(--base-role-gap) !important;
+
+  font-size:
+    var(--base-role-size) !important;
+
+  line-height: 1 !important;
+
+  font-weight: 1000 !important;
+
+  letter-spacing: .04em !important;
+
+  text-align: center !important;
+
+  text-transform: uppercase !important;
+}
+
+
+/*
+  Sicurezza:
+  qualunque eventuale vecchio
+  secondo blocco ruolo/rarità sparisce.
+*/
+
+.featured-card-wrap
+.player-top > div:nth-child(2) {
+  display: none !important;
+}
+
+
+/* =========================================================
+   MAGLIA / PIEDE / STILE
+   ========================================================= */
+
+.featured-card-wrap
+.player-card-side-info {
+  position: absolute !important;
+
+  left:
+    var(--base-side-left) !important;
+
+  top:
+    var(--base-side-top) !important;
+
+  width:
+    var(--base-side-width) !important;
+
+  display: grid !important;
+
+  gap:
+    var(--base-side-gap) !important;
+
+  z-index: 14 !important;
+}
+
+
+/* =========================================================
+   PLAYSTYLE+
+   ========================================================= */
+
+.featured-card-wrap
+.player-card-side-info
+.card-ps-plus-icon {
+  position: absolute !important;
+
+  left:
+    var(--base-ps-offset) !important;
+
+  top: 50% !important;
+
+  width:
+    var(--base-ps-size) !important;
+
+  height:
+    var(--base-ps-size) !important;
+
+  transform:
+    translateY(-50%) !important;
+
+  object-fit: contain !important;
+
+  z-index: 20 !important;
+}
+
+
+/* =========================================================
+   FOTO
+   ========================================================= */
+
+.featured-card-wrap
+.player-photo-wrap {
+  position: absolute !important;
+
+  left:
+    var(--base-photo-left) !important;
+
+  top:
+    var(--base-photo-top) !important;
+
+  width:
+    var(--base-photo-width) !important;
+
+  height:
+    var(--base-photo-height) !important;
+
+  transform:
+    translateX(-50%) !important;
+
+  margin: 0 !important;
+
+  border-radius:
+    var(--base-photo-radius) !important;
+
+  overflow: hidden !important;
+
+  z-index: 10 !important;
+}
+
+
+.featured-card-wrap
+.player-photo {
+  width: 100% !important;
+  height: 100% !important;
+
+  object-fit: cover !important;
+
+  object-position:
+    var(--base-photo-object-x)
+    var(--base-photo-object-y) !important;
+
+  transform:
+    scale(
+      var(--base-photo-zoom)
+    ) !important;
+
+  transform-origin:
+    center center !important;
+}
+
+
+/* =========================================================
+   NOME
+   ========================================================= */
+
+.featured-card-wrap
+.player-card h3 {
+  position: absolute !important;
+
+  left:
+    var(--base-name-left) !important;
+
+  right:
+    var(--base-name-right) !important;
+
+  top:
+    var(--base-name-top) !important;
+
+  margin: 0 !important;
+
+  font-size:
+    var(--base-name-size) !important;
+
+  line-height: 1 !important;
+
+  text-align: center !important;
+
+  z-index: 14 !important;
+}
+
+
+/* =========================================================
+   STATISTICHE
+   ========================================================= */
+
+.featured-card-wrap
+.player-stats {
+  position: absolute !important;
+
+  left:
+    var(--base-stats-left) !important;
+
+  right:
+    var(--base-stats-right) !important;
+
+  top:
+    var(--base-stats-top) !important;
+
+  bottom: auto !important;
+
+  display: grid !important;
+
+  grid-template-columns:
+    repeat(
+      3,
+      minmax(0, 1fr)
+    ) !important;
+
+  column-gap:
+    var(--base-stats-gap-x) !important;
+
+  row-gap:
+    var(--base-stats-gap-y) !important;
+
+  padding: 0 !important;
+
+  border: 0 !important;
+
+  z-index: 14 !important;
+}
+
+
+.featured-card-wrap
+.player-stats div {
+  min-width: 0 !important;
+
+  padding:
+    3px 2px !important;
+
+  text-align:
+    center !important;
+}
+
+
+.featured-card-wrap
+.player-stats strong {
+  display: block !important;
+
+  font-size:
+    var(--base-stat-number-size) !important;
+
+  line-height: 1 !important;
+}
+
+
+.featured-card-wrap
+.player-stats span {
+  display: block !important;
+
+  margin-top: 3px !important;
+
+  font-size:
+    var(--base-stat-label-size) !important;
+
+  line-height: 1 !important;
+}
+
+
+/* =========================================================
+   PIEDE DEBOLE + MOSSE ABILITÀ
+   SOTTO LE STATISTICHE
+   ========================================================= */
+
+.featured-card-wrap
+.player-card
+.mp-card-ability-stars {
+  position: absolute !important;
+
+  left:
+    var(--base-abilities-left) !important;
+
+  right:
+    var(--base-abilities-right) !important;
+
+  top:
+    var(--base-abilities-top) !important;
+
+  bottom: auto !important;
+
+  margin: 0 !important;
+
+  display: grid !important;
+
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(0, 1fr)
+    ) !important;
+
+  gap:
+    var(--base-abilities-gap) !important;
+
+  z-index: 15 !important;
+}
+
+
+.featured-card-wrap
+.player-card
+.mp-card-ability-stars > div {
+  min-width: 0 !important;
+
+  display: flex !important;
+
+  flex-direction: column !important;
+
+  align-items: center !important;
+
+  justify-content: center !important;
+
+  gap: 3px !important;
+
+  padding: 0 !important;
+
+  border: 0 !important;
+
+  border-radius: 0 !important;
+
+  background: transparent !important;
+
+  box-shadow: none !important;
+}
+
+
+.featured-card-wrap
+.player-card
+.mp-card-ability-stars
+> div
+> span {
+  display: block !important;
+
+  margin: 0 0 3px !important;
+
+  font-size:
+    var(--base-ability-title-size) !important;
+
+  line-height: 1 !important;
+
+  font-weight: 1000 !important;
+
+  text-align: center !important;
+
+  white-space: nowrap !important;
+}
+
+
+.featured-card-wrap
+.player-card
+.mp-card-ability-stars strong {
+  display: flex !important;
+
+  align-items: center !important;
+  justify-content: center !important;
+
+  font-size:
+    var(--base-star-size) !important;
+
+  line-height: 1 !important;
+
+  white-space: nowrap !important;
+}
+
+/* =========================================================
+   CLUB
+   CARTA BASE IDENTICA ALLA HOME
+   ========================================================= */
+
+/*
+  La carta base del Club non deve
+  aggiungere GOL / ASSIST / MEDIA
+  dentro alla carta.
+*/
+
+.mp-club-fifa-wrap
+.mp-club-fifa-career {
+  display: none !important;
+}
+
+/* =========================================================
+   PROFILO CLUB APERTO
+   CARTA BASE IDENTICA ALLA HOME
+   ========================================================= */
+
+.mp-club-profile-card-base-home {
+  width: 100% !important;
+
+  max-width: 370px !important;
+
+  min-height: 0 !important;
+
+  margin: 0 auto !important;
+
+  padding: 0 !important;
+
+  overflow: visible !important;
+
+  border: 0 !important;
+  border-radius: 0 !important;
+
+  background: none !important;
+  background-color: transparent !important;
+  background-image: none !important;
+
+  box-shadow: none !important;
+}
+
+
+.mp-club-profile-card-base-home::before,
+.mp-club-profile-card-base-home::after {
+  display: none !important;
+
+  content: none !important;
+}
+
+
+.mp-club-profile-card-base-home
+.mp-club-fifa-wrap {
+  width: 100% !important;
+
+  margin: 0 auto !important;
+
+  padding: 0 !important;
+
+  background: none !important;
+
+  box-shadow: none !important;
+}
+
+
+/* Niente pulsante duplicato */
+
+.mp-club-profile-card-base-home
+.mp-club-fifa-open {
+  display: none !important;
+}
+
+
+/* Niente record extra nella carta */
+
+.mp-club-profile-card-base-home
+.mp-club-fifa-career {
+  display: none !important;
+}
