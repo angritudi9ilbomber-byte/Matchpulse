@@ -22974,12 +22974,12 @@ return (
     }
 
     const categoryStats = {
-      shooting: "sho",
-      passing: "pas",
-      defense: "def",
-      ballControl: "dri",
-      physical: "phy"
-    };
+  shooting: "sho",
+  passing: "pas",
+  defending: "def",
+  ballControl: "dri",
+  physical: "phy"
+};
 
     return (
       categoryStats[
@@ -23084,9 +23084,10 @@ return (
       },
 
       Difensore: {
-        defense: 7,
+        defending: 7,
         physical: 3
       },
+      
 
       Motore: {
         physical: 5,
@@ -23188,52 +23189,667 @@ return (
     return selected;
   }
 
-  function mpPromoGeneratePlayStyles(
-    definition,
-    cardStats,
-    profile,
-    focusStats,
-    seed
+  /* =========================================================
+   MATCHPULSE
+   PROMO PLAYSTYLE INTELLIGENCE V2
+
+   Recupera i PlayStyle consigliati.
+
+   TEST:
+   usa i consigli attuali.
+
+   PROMO REALE:
+   usa i consigli congelati nello snapshot.
+   ========================================================= */
+
+function mpPromoGetRecommendationContext() {
+
+  let raw =
+    [];
+
+
+  /*
+    Se stiamo generando una promo reale,
+    questo valore viene impostato dal
+    Real Release Engine usando lo snapshot.
+  */
+
+  if (
+    Array.isArray(
+      window
+        .MP_PROMO_FROZEN_RECOMMENDATIONS
+    )
   ) {
-    const catalog =
-      typeof MP_PLAYSTYLES !==
-        "undefined" &&
-      Array.isArray(MP_PLAYSTYLES)
-        ? MP_PLAYSTYLES
-        : [];
 
-    const baseData =
-      typeof mpGetPsData ===
-      "function"
-        ? mpGetPsData()
-        : {};
+    raw =
+      window
+        .MP_PROMO_FROZEN_RECOMMENDATIONS;
 
-    const roleScores =
-      mpPromoRoleCategoryScores(
-        profile.role
+  } else {
+
+    /*
+      Laboratorio Founder / test:
+      usa i consigli DEL MOMENTO.
+    */
+
+    try {
+
+      const builder =
+        typeof window
+          .mpBuildPsRecommendations ===
+          "function"
+
+          ? window
+              .mpBuildPsRecommendations
+
+          : typeof
+              mpBuildPsRecommendations ===
+              "function"
+
+            ? mpBuildPsRecommendations
+
+            : null;
+
+
+      const matches =
+        typeof getMatches ===
+          "function"
+
+          ? getMatches()
+
+          : [];
+
+
+      if (builder) {
+
+        raw =
+          builder(
+            matches,
+            {
+              mode:
+                "profile",
+
+              limit:
+                4
+            }
+          ) || [];
+
+      }
+
+    } catch (
+      error
+    ) {
+
+      console.warn(
+        "Promo recommendation context:",
+        error
       );
 
-    const styleScores =
-      mpPromoStyleCategoryBonus(
-        profile.playStyle
-      );
+      raw =
+        [];
 
-    const candidates =
-      catalog
-        .map(playStyle => {
+    }
+
+  }
+
+
+  /*
+    Salviamo soltanto dati semplici.
+    Niente riferimenti DOM o funzioni.
+  */
+
+  return raw
+
+    .map(
+      (
+        recommendation,
+        index
+      ) => {
+
+        const id =
+          String(
+            recommendation?.id ||
+            recommendation
+              ?.playStyle
+              ?.id ||
+            ""
+          );
+
+
+        const category =
+          String(
+            recommendation
+              ?.category ||
+
+            recommendation
+              ?.playStyle
+              ?.category ||
+
+            ""
+          );
+
+
+        const numericScore =
+          Number(
+            recommendation
+              ?.score
+          );
+
+
+        return {
+
+          id,
+
+          category,
+
+          score:
+            Number.isFinite(
+              numericScore
+            )
+              ? numericScore
+              : 0,
+
+          reason:
+            String(
+              recommendation
+                ?.reason ||
+              ""
+            ),
+
+          rank:
+            index + 1
+
+        };
+
+      }
+    )
+
+    .filter(
+      recommendation =>
+        Boolean(
+          recommendation.id
+        )
+    );
+
+}
+
+  function mpPromoGeneratePlayStyles(
+  definition,
+  cardStats,
+  profile,
+  focusStats,
+  seed
+) {
+
+  const catalog =
+    typeof MP_PLAYSTYLES !==
+      "undefined" &&
+    Array.isArray(MP_PLAYSTYLES)
+      ? MP_PLAYSTYLES
+      : [];
+
+
+  /* =====================================================
+   PLAYSTYLE BASE
+
+   Nelle promo reali usiamo quelli congelati
+   nello snapshot.
+
+   Nel Laboratorio usiamo quelli attuali.
+   ===================================================== */
+
+const frozenEquipped =
+  window
+    .MP_PROMO_FROZEN_EQUIPPED_PLAYSTYLES;
+
+
+const baseData =
+
+  frozenEquipped &&
+  typeof frozenEquipped ===
+    "object" &&
+  !Array.isArray(
+    frozenEquipped
+  )
+
+    ? frozenEquipped
+
+    : typeof mpGetPsData ===
+        "function"
+
+      ? mpGetPsData()
+
+      : {};
+
+
+/* =====================================================
+   CONSIGLI PLAYSTYLE
+
+   Sono il collegamento tra:
+   PARTITE → STILE REALE → PROMO
+   ===================================================== */
+
+const recommendations =
+  mpPromoGetRecommendationContext();
+
+
+const recommendationById =
+  new Map(
+
+    recommendations.map(
+      recommendation => [
+
+        recommendation.id,
+
+        recommendation
+
+      ]
+    )
+
+  );
+
+
+const recommendationSource =
+  Array.isArray(
+    window
+      .MP_PROMO_FROZEN_RECOMMENDATIONS
+  )
+
+    ? "snapshot"
+
+    : "live";
+
+
+  const role =
+    String(
+      profile?.role || "CC"
+    )
+      .trim()
+      .toUpperCase();
+
+
+  /* =====================================================
+     IDENTITÀ PLAYSTYLE PER RUOLO
+
+     plusPlan:
+     ordine delle categorie per i PS+
+
+     normalPlan:
+     ordine delle categorie per i PS normali
+
+     allowed:
+     categorie che quel ruolo può ricevere
+
+     boost:
+     peso usato per scegliere IL PLAYSTYLE
+     all'interno della categoria
+     ===================================================== */
+
+  const roleRules = {
+
+    /* ===================================================
+       ATTACCANTE
+       Tiro nettamente dominante.
+       Nessun PlayStyle difensivo.
+       =================================================== */
+
+    ATT: {
+
+      allowed: [
+        "shooting",
+        "ballControl",
+        "physical",
+        "passing"
+      ],
+
+      boost: {
+        shooting: 60,
+        ballControl: 42,
+        physical: 30,
+        passing: 22
+      },
+
+      plusPlan: [
+        "shooting",
+        "ballControl",
+        "shooting",
+        "physical",
+        "passing"
+      ],
+
+      normalPlan: [
+        "shooting",
+        "ballControl",
+        "physical",
+        "shooting",
+        "passing",
+        "ballControl",
+        "physical",
+        "shooting"
+      ]
+
+    },
+
+
+    /* ===================================================
+       ALA
+       Dribbling/controllo + tiro + passaggio.
+       =================================================== */
+
+    ALA: {
+
+      allowed: [
+        "ballControl",
+        "shooting",
+        "passing",
+        "physical"
+      ],
+
+      boost: {
+        ballControl: 58,
+        shooting: 46,
+        passing: 40,
+        physical: 27
+      },
+
+      plusPlan: [
+        "ballControl",
+        "shooting",
+        "passing",
+        "ballControl",
+        "physical"
+      ],
+
+      normalPlan: [
+        "ballControl",
+        "shooting",
+        "passing",
+        "ballControl",
+        "physical",
+        "shooting",
+        "passing",
+        "ballControl"
+      ]
+
+    },
+
+
+    /* ===================================================
+       TREQUARTISTA / COC
+       Passaggio e tecnica prima di tutto,
+       tiro come terza arma.
+       =================================================== */
+
+    COC: {
+
+      allowed: [
+        "passing",
+        "ballControl",
+        "shooting",
+        "physical"
+      ],
+
+      boost: {
+        passing: 60,
+        ballControl: 54,
+        shooting: 40,
+        physical: 18
+      },
+
+      plusPlan: [
+        "passing",
+        "ballControl",
+        "shooting",
+        "passing",
+        "ballControl"
+      ],
+
+      normalPlan: [
+        "passing",
+        "ballControl",
+        "shooting",
+        "passing",
+        "ballControl",
+        "shooting",
+        "physical",
+        "passing"
+      ]
+
+    },
+
+
+    /* ===================================================
+       CENTROCAMPISTA
+       Regia + controllo.
+       Nelle promo più ricche può avere
+       anche tiro e difesa.
+       =================================================== */
+
+    CC: {
+
+      allowed: [
+        "passing",
+        "ballControl",
+        "physical",
+        "shooting",
+        "defending"
+      ],
+
+      boost: {
+        passing: 60,
+        ballControl: 48,
+        physical: 34,
+        defending: 28,
+        shooting: 27
+      },
+
+      plusPlan: [
+        "passing",
+        "ballControl",
+        "physical",
+        "shooting",
+        "defending"
+      ],
+
+      normalPlan: [
+        "passing",
+        "ballControl",
+        "physical",
+        "passing",
+        "shooting",
+        "defending",
+        "ballControl",
+        "physical"
+      ]
+
+    },
+
+
+    /* ===================================================
+       MEDIANO / CDC
+       Difesa + fisico + distribuzione.
+       NIENTE Shooting.
+       =================================================== */
+
+    CDC: {
+
+      allowed: [
+        "defending",
+        "physical",
+        "passing",
+        "ballControl"
+      ],
+
+      boost: {
+        defending: 65,
+        physical: 56,
+        passing: 43,
+        ballControl: 18
+      },
+
+      plusPlan: [
+        "defending",
+        "physical",
+        "passing",
+        "defending",
+        "physical"
+      ],
+
+      normalPlan: [
+        "defending",
+        "physical",
+        "passing",
+        "defending",
+        "physical",
+        "passing",
+        "ballControl",
+        "defending"
+      ]
+
+    },
+
+
+    /* ===================================================
+       DIFENSORE CENTRALE
+       Difesa e fisico quasi assoluti.
+       Un po' di passaggio.
+       NIENTE tiro e niente dribbling.
+       =================================================== */
+
+    DC: {
+
+      allowed: [
+        "defending",
+        "physical",
+        "passing"
+      ],
+
+      boost: {
+        defending: 70,
+        physical: 58,
+        passing: 32
+      },
+
+      plusPlan: [
+        "defending",
+        "physical",
+        "defending",
+        "passing",
+        "physical"
+      ],
+
+      normalPlan: [
+        "defending",
+        "physical",
+        "defending",
+        "passing",
+        "physical",
+        "defending",
+        "passing",
+        "physical"
+      ]
+
+    },
+
+
+    /* ===================================================
+       TERZINO
+       Difesa, corsa/fisico, passaggio
+       e controllo palla.
+       NIENTE Shooting.
+       =================================================== */
+
+    TERZINO: {
+
+      allowed: [
+        "defending",
+        "physical",
+        "passing",
+        "ballControl"
+      ],
+
+      boost: {
+        defending: 57,
+        passing: 46,
+        physical: 45,
+        ballControl: 35
+      },
+
+      plusPlan: [
+        "defending",
+        "passing",
+        "physical",
+        "ballControl",
+        "defending"
+      ],
+
+      normalPlan: [
+        "defending",
+        "passing",
+        "physical",
+        "ballControl",
+        "defending",
+        "passing",
+        "ballControl",
+        "physical"
+      ]
+
+    }
+
+  };
+
+
+  const rule =
+    roleRules[role] ||
+    roleRules.CC;
+
+
+  const styleScores =
+    mpPromoStyleCategoryBonus(
+      profile.playStyle
+    );
+
+
+  /* =====================================================
+     CREA I CANDIDATI
+
+     PRIMA FILTRIAMO LE CATEGORIE.
+
+     Quindi un DC non avrà proprio
+     PlayStyle shooting nella lista.
+     ===================================================== */
+
+  const candidates =
+    catalog
+
+      .filter(
+        playStyle =>
+          rule.allowed.includes(
+            playStyle.category
+          )
+      )
+
+      .map(
+        playStyle => {
+
           const relevantStat =
             mpPromoRelevantStat(
               playStyle
             );
 
+
           let score =
             mpPromoNumber(
-              roleScores[
+              rule.boost[
                 playStyle.category
               ],
               0
-            ) *
-            5;
+            );
+
+
+          /* ===========================================
+             STILE DEL GIOCATORE
+             =========================================== */
 
           score +=
             mpPromoNumber(
@@ -23242,7 +23858,12 @@ return (
               ],
               0
             ) *
-            3;
+            2;
+
+
+          /* ===========================================
+             STATISTICA REALE DELLA CARTA
+             =========================================== */
 
           score +=
             mpPromoNumber(
@@ -23253,29 +23874,137 @@ return (
             ) /
             4;
 
+
+          /* ===========================================
+             STATISTICA FOCUS DELLA PROMO
+             =========================================== */
+
           if (
             focusStats.includes(
               relevantStat
             )
           ) {
-            score += 25;
+
+            score += 14;
+
           }
+
+
+          /* ===========================================
+             PLAYSTYLE GIÀ PRESENTE NELLA CARTA BASE
+
+             Mantiene parte dell'identità
+             del giocatore.
+             =========================================== */
 
           if (
             baseData[
               playStyle.id
             ] === "plus"
           ) {
-            score += 18;
+
+            score += 16;
+
           }
+
 
           if (
             baseData[
               playStyle.id
             ] === "normal"
           ) {
-            score += 10;
+
+            score += 9;
+
           }
+
+          /* ===========================================
+   PLAYSTYLE CONSIGLIATO DALLE PARTITE
+
+   È un bonus molto forte.
+
+   IMPORTANTE:
+   non può scavalcare il filtro del ruolo,
+   perché il PlayStyle è già passato da:
+
+   rule.allowed.includes(category)
+
+   Quindi:
+   - DC resta DC
+   - ATT resta ATT
+   - CC resta CC
+
+   ma dentro le categorie corrette
+   privilegiamo COME GIOCA DAVVERO
+   il giocatore.
+   =========================================== */
+
+const recommendation =
+  recommendationById.get(
+    playStyle.id
+  );
+
+
+if (recommendation) {
+
+  /*
+    Priorità del consiglio:
+
+    #1 = +64
+    #2 = +54
+    #3 = +44
+    #4 = +34
+  */
+
+  const rankBonus =
+    Math.max(
+      34,
+
+      64 -
+      (
+        Math.max(
+          1,
+          recommendation.rank
+        ) -
+        1
+      ) *
+      10
+    );
+
+
+  /*
+    Anche il punteggio reale
+    calcolato dalle partite conta.
+
+    Evitiamo però numeri assurdi.
+  */
+
+  const recommendationScore =
+    Math.max(
+      0,
+
+      Math.min(
+        12,
+
+        Number(
+          recommendation.score
+        ) ||
+        0
+      )
+    );
+
+
+  score +=
+    rankBonus +
+    recommendationScore *
+    2;
+
+}
+
+
+          /* ===========================================
+             SUMMER HEAT
+             =========================================== */
 
           if (
             definition.type ===
@@ -23285,8 +24014,17 @@ return (
               relevantStat === "dri"
             )
           ) {
-            score += 12;
+
+            score += 10;
+
           }
+
+
+          /* ===========================================
+             BIRTHDAY / TIME WARP
+             aiutano caratteristiche più basse,
+             MA NON cambiano categoria consentita.
+             =========================================== */
 
           if (
             definition.type ===
@@ -23294,20 +24032,39 @@ return (
             definition.type ===
               "timeWarp"
           ) {
+
             const weakest =
               mpPromoRankStats(
                 cardStats,
                 true
-              ).slice(0, 3);
+              )
+                .slice(
+                  0,
+                  3
+                );
+
 
             if (
               weakest.includes(
                 relevantStat
               )
             ) {
-              score += 10;
+
+              score += 8;
+
             }
+
           }
+
+
+          /*
+            Piccolissima variazione
+            deterministica.
+
+            Serve solo a non produrre
+            sempre lo stesso ordine in
+            caso di punteggio identico.
+          */
 
           score +=
             (
@@ -23318,69 +24075,269 @@ return (
             ) /
             10000;
 
+
           return {
             playStyle,
             score
           };
-        })
-        .sort(
-          (a, b) =>
-            b.score -
-            a.score
+
+        }
+      )
+
+      .sort(
+        (a, b) =>
+          b.score -
+          a.score
+      );
+
+
+  /* =====================================================
+     SELEZIONE A PIANO DI RUOLO
+
+     Prima decide LA CATEGORIA,
+     poi prende il miglior PlayStyle
+     disponibile di quella categoria.
+     ===================================================== */
+
+  function selectByPlan(
+    plan,
+    amount,
+    excludedIds = []
+  ) {
+
+    const selected = [];
+
+
+    const usedIds =
+      new Set(
+        excludedIds
+      );
+
+
+    for (
+      const category of plan
+    ) {
+
+      if (
+        selected.length >=
+        amount
+      ) {
+        break;
+      }
+
+
+      const candidate =
+        candidates.find(
+          item =>
+
+            item.playStyle.category ===
+              category &&
+
+            !usedIds.has(
+              item.playStyle.id
+            )
         );
 
-    const plusPlayStyles =
-      mpPromoSelectWithCaps(
-        candidates,
-        definition.plusCount,
-        [],
-        2
+
+      if (!candidate) {
+        continue;
+      }
+
+
+      selected.push(
+        candidate.playStyle
       );
 
-    const plusIds =
-      plusPlayStyles.map(
-        playStyle =>
-          playStyle.id
+
+      usedIds.add(
+        candidate.playStyle.id
       );
 
-    const normalPlayStyleCounts = {
-  otw: 2,
-  ultimateScream: 2,
-  thunderstruck: 3,
-  futmas: 4,
-  toty: 6,
-  futureStars: 5,
-  futBirthday: 5,
-  timeWarp: 6,
-  tots: 7,
-  summerHeat: 7,
-  futties: 8
+    }
+
+
+    /*
+      Sicurezza:
+      se un piano non riesce a riempire
+      tutti gli slot, completa usando
+      SOLO le categorie consentite.
+    */
+
+    if (
+      selected.length <
+      amount
+    ) {
+
+      for (
+        const item of candidates
+      ) {
+
+        if (
+          selected.length >=
+          amount
+        ) {
+          break;
+        }
+
+
+        if (
+          usedIds.has(
+            item.playStyle.id
+          )
+        ) {
+          continue;
+        }
+
+
+        selected.push(
+          item.playStyle
+        );
+
+
+        usedIds.add(
+          item.playStyle.id
+        );
+
+      }
+
+    }
+
+
+    return selected;
+
+  }
+
+
+  /* =====================================================
+     PLAYSTYLE+
+     ===================================================== */
+
+  const plusPlayStyles =
+    selectByPlan(
+
+      rule.plusPlan,
+
+      definition.plusCount,
+
+      []
+
+    );
+
+
+  const plusIds =
+    plusPlayStyles.map(
+      playStyle =>
+        playStyle.id
+    );
+
+
+  /* =====================================================
+     NUMERO PLAYSTYLE NORMALI PER PROMO
+     ===================================================== */
+
+  const normalPlayStyleCounts = {
+
+    otw:
+      2,
+
+    ultimateScream:
+      2,
+
+    thunderstruck:
+      3,
+
+    futmas:
+      4,
+
+    toty:
+      6,
+
+    futureStars:
+      5,
+
+    futBirthday:
+      5,
+
+    timeWarp:
+      6,
+
+    tots:
+      7,
+
+    summerHeat:
+      7,
+
+    futties:
+      8
+
+  };
+
+
+  const normalPlayStyleCount =
+    normalPlayStyleCounts[
+      definition.id
+    ] ?? 8;
+
+
+  /* =====================================================
+     PLAYSTYLE NORMALI
+     ===================================================== */
+
+  const normalPlayStyles =
+    selectByPlan(
+
+      rule.normalPlan,
+
+      normalPlayStyleCount,
+
+      plusIds
+
+    );
+
+
+  return {
+
+  normal:
+    normalPlayStyles.map(
+      playStyle =>
+        playStyle.id
+    ),
+
+  plus:
+    plusIds,
+
+
+  /*
+    Metadati utili anche per
+    controllare in futuro perché
+    una carta ha ricevuto certi PS.
+  */
+
+  recommendations:
+    recommendations.map(
+      recommendation => ({
+        id:
+          recommendation.id,
+
+        category:
+          recommendation.category,
+
+        score:
+          recommendation.score,
+
+        reason:
+          recommendation.reason,
+
+        rank:
+          recommendation.rank
+      })
+    ),
+
+  recommendationSource
+
 };
 
-const normalPlayStyleCount =
-  normalPlayStyleCounts[
-    definition.id
-  ] ?? 8;
-
-const normalPlayStyles =
-  mpPromoSelectWithCaps(
-    candidates,
-    normalPlayStyleCount,
-    plusIds,
-    3
-  );
-
-    return {
-      normal:
-        normalPlayStyles.map(
-          playStyle =>
-            playStyle.id
-        ),
-
-      plus:
-        plusIds
-    };
-  }
+}
 
 
   /* =======================================================
@@ -23778,13 +24735,37 @@ const normalPlayStyles =
         abilities.skillMoves,
 
       normalPlayStyles:
-        playstyles.normal,
+  playstyles.normal,
 
-      plusPlayStyles:
-        playstyles.plus,
+plusPlayStyles:
+  playstyles.plus,
 
-      plusCount:
-        definition.plusCount,
+
+/*
+  Consigli che hanno influenzato
+  QUESTA specifica carta.
+*/
+
+recommendedPlayStyles:
+  Array.isArray(
+    playstyles.recommendations
+  )
+    ? playstyles.recommendations
+    : [],
+
+
+playStyleRecommendationSource:
+  playstyles
+    .recommendationSource ||
+  "live",
+
+
+playStyleGenerationVersion:
+  2,
+
+
+plusCount:
+  definition.plusCount,
 
       focusStats:
         generated.focusStats,
@@ -36296,16 +37277,10 @@ const statCap =
           </span>
 
           <input
-            id="
-              mpPromoRelease-${mpPSREscape(
-                promo.promo_id
-              )}
-            "
-            type="datetime-local"
-            value="${mpPSRToLocalInput(
-              promo.release_at
-            )}"
-          >
+  id="mpPromoRelease-${mpPSREscape(promo.promo_id)}"
+  type="datetime-local"
+  value="${mpPSRToLocalInput(promo.release_at)}"
+>
 
         </label>
 
@@ -36317,16 +37292,10 @@ const statCap =
         >
 
           <input
-            id="
-              mpPromoEnabled-${mpPSREscape(
-                promo.promo_id
-              )}
-            "
-            type="checkbox"
-            ${promo.enabled
-              ? "checked"
-              : ""}
-          >
+  id="mpPromoEnabled-${mpPSREscape(promo.promo_id)}"
+  type="checkbox"
+  ${promo.enabled ? "checked" : ""}
+>
 
           <span>
             ATTIVA
@@ -36336,24 +37305,13 @@ const statCap =
 
 
         <button
-          id="
-            mpPromoSave-${mpPSREscape(
-              promo.promo_id
-            )}
-          "
-          type="button"
-          class="primary-btn"
-
-          onclick="
-            mpPromoSecureSaveRelease(
-              '${mpPSREscape(
-                promo.promo_id
-              )}'
-            )
-          "
-        >
-          SALVA
-        </button>
+  id="mpPromoSave-${mpPSREscape(promo.promo_id)}"
+  type="button"
+  class="primary-btn"
+  onclick="mpPromoSecureSaveRelease('${mpPSREscape(promo.promo_id)}')"
+>
+  SALVA
+</button>
 
       </article>
     `;
@@ -41181,6 +42139,7 @@ const statCap =
       "matchpulse_card_stats",
 
       "matchpulse_playstyles_v1"
+      
 
     ]);
 
@@ -41662,6 +42621,130 @@ const statCap =
   }
 
 
+/* =======================================================
+   CONSIGLI PLAYSTYLE DEL MOMENTO DELLO SNAPSHOT
+   ======================================================= */
+
+function mpPRCurrentRecommendations() {
+
+  try {
+
+    const builder =
+
+      typeof window
+        .mpBuildPsRecommendations ===
+        "function"
+
+        ? window
+            .mpBuildPsRecommendations
+
+        : typeof
+            mpBuildPsRecommendations ===
+            "function"
+
+          ? mpBuildPsRecommendations
+
+          : null;
+
+
+    if (!builder) {
+      return [];
+    }
+
+
+    const matches =
+
+      typeof getMatches ===
+        "function"
+
+        ? getMatches()
+
+        : [];
+
+
+    const recommendations =
+      builder(
+        matches,
+        {
+          mode:
+            "profile",
+
+          limit:
+            4
+        }
+      ) || [];
+
+
+    return recommendations
+
+      .map(
+        (
+          recommendation,
+          index
+        ) => ({
+
+          id:
+            String(
+              recommendation?.id ||
+              recommendation
+                ?.playStyle
+                ?.id ||
+              ""
+            ),
+
+          category:
+            String(
+              recommendation
+                ?.category ||
+
+              recommendation
+                ?.playStyle
+                ?.category ||
+
+              ""
+            ),
+
+          score:
+            Number(
+              recommendation
+                ?.score
+            ) || 0,
+
+          reason:
+            String(
+              recommendation
+                ?.reason ||
+              ""
+            ),
+
+          rank:
+            index + 1
+
+        })
+      )
+
+      .filter(
+        recommendation =>
+          Boolean(
+            recommendation.id
+          )
+      );
+
+
+  } catch (
+    error
+  ) {
+
+    console.warn(
+      "Snapshot PlayStyle recommendations:",
+      error
+    );
+
+    return [];
+
+  }
+
+}
 
   /* =======================================================
      DATI DELLA CARTA BASE
@@ -41669,39 +42752,68 @@ const statCap =
 
   function mpPRCurrentData() {
 
-    const profile =
-      typeof getPlayerProfile ===
-        "function"
+  const profile =
+    typeof getPlayerProfile ===
+      "function"
 
-        ? mpPRClone(
-            getPlayerProfile()
-          )
+      ? mpPRClone(
+          getPlayerProfile()
+        )
 
-        : {};
-
-
-    const cardStats =
-      typeof getCardStats ===
-        "function"
-
-        ? mpPRClone(
-            getCardStats()
-          )
-
-        : {};
+      : {};
 
 
-    const playstyles =
-      mpPRBasePlayStyles();
+  const cardStats =
+    typeof getCardStats ===
+      "function"
+
+      ? mpPRClone(
+          getCardStats()
+        )
+
+      : {};
 
 
-    return {
-      profile,
-      cardStats,
-      playstyles
-    };
+  const equippedPlaystyles =
+    mpPRBasePlayStyles();
 
-  }
+
+  const recommendations =
+    mpPRCurrentRecommendations();
+
+
+  /*
+    Usiamo il vecchio campo JSONB
+    "playstyles", ma da ora contiene
+    un pacchetto versionato.
+
+    NON serve modificare Supabase.
+  */
+
+  const playstyles = {
+
+    schemaVersion:
+      2,
+
+    equipped:
+      equippedPlaystyles,
+
+    recommendations
+
+  };
+
+
+  return {
+
+    profile,
+
+    cardStats,
+
+    playstyles
+
+  };
+
+}
 
 
 
@@ -42175,6 +43287,19 @@ const statCap =
         ? getCardStats
         : null;
 
+        /*
+  Conserviamo eventuali context precedenti.
+*/
+
+const oldFrozenEquipped =
+  window
+    .MP_PROMO_FROZEN_EQUIPPED_PLAYSTYLES;
+
+
+const oldFrozenRecommendations =
+  window
+    .MP_PROMO_FROZEN_RECOMMENDATIONS;
+
 
     const rawCardsBefore =
       localStorage.getItem(
@@ -42204,6 +43329,90 @@ const statCap =
         mpPRClone(
           snapshot.card_stats
         );
+
+        /* =====================================================
+   PLAYSTYLE CONGELATI NELLO SNAPSHOT
+
+   Compatibilità:
+
+   snapshot vecchio:
+   playstyles = mappa semplice
+
+   snapshot nuovo V2:
+   playstyles = {
+     schemaVersion,
+     equipped,
+     recommendations
+   }
+   ===================================================== */
+
+const snapshotPlaystyles =
+  mpPRClone(
+    snapshot.playstyles ||
+    {}
+  );
+
+
+const isPlayStyleBundleV2 =
+  snapshotPlaystyles &&
+  typeof snapshotPlaystyles ===
+    "object" &&
+  !Array.isArray(
+    snapshotPlaystyles
+  ) &&
+  Number(
+    snapshotPlaystyles
+      .schemaVersion
+  ) >= 2;
+
+
+const snapshotEquipped =
+  isPlayStyleBundleV2
+
+    ? mpPRClone(
+        snapshotPlaystyles
+          .equipped ||
+        {}
+      )
+
+    : mpPRClone(
+        snapshotPlaystyles ||
+        {}
+      );
+
+
+const snapshotRecommendations =
+  isPlayStyleBundleV2 &&
+  Array.isArray(
+    snapshotPlaystyles
+      .recommendations
+  )
+
+    ? mpPRClone(
+        snapshotPlaystyles
+          .recommendations
+      )
+
+    : [];
+
+
+/*
+  Questi due context vengono letti
+  dal generatore promo.
+
+  Quindi NON può accidentalmente usare
+  PlayStyle o consigli di oggi
+  per una carta uscita ieri.
+*/
+
+window
+  .MP_PROMO_FROZEN_EQUIPPED_PLAYSTYLES =
+  snapshotEquipped;
+
+
+window
+  .MP_PROMO_FROZEN_RECOMMENDATIONS =
+  snapshotRecommendations;
 
 
       const fakeProfile =
@@ -42264,6 +43473,45 @@ const statCap =
 
 
     } finally {
+
+      /*
+  Ripristina i context PlayStyle
+  immediatamente dopo aver costruito
+  la promo.
+*/
+
+if (
+  oldFrozenEquipped ===
+    undefined
+) {
+
+  delete window
+    .MP_PROMO_FROZEN_EQUIPPED_PLAYSTYLES;
+
+} else {
+
+  window
+    .MP_PROMO_FROZEN_EQUIPPED_PLAYSTYLES =
+    oldFrozenEquipped;
+
+}
+
+
+if (
+  oldFrozenRecommendations ===
+    undefined
+) {
+
+  delete window
+    .MP_PROMO_FROZEN_RECOMMENDATIONS;
+
+} else {
+
+  window
+    .MP_PROMO_FROZEN_RECOMMENDATIONS =
+    oldFrozenRecommendations;
+
+}
 
       /*
         Ripristina IMMEDIATAMENTE

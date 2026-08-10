@@ -20859,3 +20859,70 @@ button {
   }
 
 }
+
+/* =========================================================
+   MATCHPULSE
+   PROMO NO CLIPPING FIX V1
+   ========================================================= */
+
+
+/*
+  La carta deve poter mostrare:
+  - template ingranditi
+  - PS+ sul bordo
+  - decorazioni esterne del PNG
+*/
+
+.mp-promo-v3-card {
+  overflow: visible !important;
+}
+
+
+/*
+  Anche il contenitore della carta nella collezione
+  non deve ritagliare il V3.
+*/
+
+.mp-promo-collection-item {
+  overflow: visible !important;
+}
+
+
+/*
+  Anteprima cliccabile
+*/
+
+.mp-promo-v3-open-button {
+  overflow: visible !important;
+}
+
+
+/*
+  Dettaglio carta aperta
+*/
+
+.mp-promo-v3-detail-card {
+  overflow: visible !important;
+}
+
+
+/*
+  Club
+*/
+
+.mp-club-promo-v3,
+.mp-club-profile-card-promo-v3 {
+  overflow: visible !important;
+}
+
+
+/*
+  PS+ sul bordo:
+  assicuriamo che nessun livello
+  della colonna li tagli.
+*/
+
+.mp-promo-v3-plus,
+.mp-promo-v3-plus-slot {
+  overflow: visible !important;
+}
