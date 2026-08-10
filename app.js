@@ -44505,3 +44505,452 @@ const statCap =
     mpPRForceSnapshotNow;
 
 })();
+
+/* =========================================================
+   MATCHPULSE
+   FOUNDER RELEASE SAVE V2
+   SALVATAGGIO VERIFICATO DAL SERVER
+   ========================================================= */
+
+(function () {
+
+  if (
+    window.MP_FOUNDER_RELEASE_SAVE_V2_READY
+  ) {
+    return;
+  }
+
+
+  window.MP_FOUNDER_RELEASE_SAVE_V2_READY =
+    true;
+
+
+  const MP_FRS_SEASON =
+    "2026-27";
+
+
+  function mpFRSToLocalInput(
+    value
+  ) {
+
+    if (!value) {
+      return "";
+    }
+
+
+    const date =
+      new Date(
+        value
+      );
+
+
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
+      return "";
+    }
+
+
+    const local =
+      new Date(
+
+        date.getTime() -
+
+        date.getTimezoneOffset() *
+        60000
+
+      );
+
+
+    return local
+      .toISOString()
+      .slice(
+        0,
+        16
+      );
+
+  }
+
+
+  function mpFRSPretty(
+    value
+  ) {
+
+    const date =
+      new Date(
+        value
+      );
+
+
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
+      return "—";
+    }
+
+
+    return date
+      .toLocaleString(
+        "it-IT",
+        {
+
+          day:
+            "2-digit",
+
+          month:
+            "2-digit",
+
+          year:
+            "numeric",
+
+          hour:
+            "2-digit",
+
+          minute:
+            "2-digit"
+
+        }
+      );
+
+  }
+
+
+  function mpFRSToast(
+    text
+  ) {
+
+    if (
+      typeof mpClubToast ===
+        "function"
+    ) {
+
+      mpClubToast(
+        text
+      );
+
+      return;
+
+    }
+
+
+    if (
+      typeof toast ===
+        "function"
+    ) {
+
+      toast(
+        text
+      );
+
+    }
+
+  }
+
+
+  async function mpFRSSaveRelease(
+    promoId
+  ) {
+
+    const input =
+      document
+        .getElementById(
+          `mpPromoRelease-${promoId}`
+        );
+
+
+    const enabledInput =
+      document
+        .getElementById(
+          `mpPromoEnabled-${promoId}`
+        );
+
+
+    const button =
+      document
+        .getElementById(
+          `mpPromoSave-${promoId}`
+        );
+
+
+    if (
+      !input ||
+      !input.value
+    ) {
+
+      mpFRSToast(
+        "Inserisci data e ora"
+      );
+
+      return;
+
+    }
+
+
+    try {
+
+      const admin =
+        typeof window
+          .mpPromoSecureIsAdmin ===
+          "function"
+
+          ? await window
+              .mpPromoSecureIsAdmin(
+                true
+              )
+
+          : false;
+
+
+      if (!admin) {
+
+        throw new Error(
+          "Accesso founder richiesto"
+        );
+
+      }
+
+
+      const date =
+        new Date(
+          input.value
+        );
+
+
+      if (
+        Number.isNaN(
+          date.getTime()
+        )
+      ) {
+
+        throw new Error(
+          "Data non valida"
+        );
+
+      }
+
+
+      if (button) {
+
+        button.disabled =
+          true;
+
+
+        button.textContent =
+          "SALVATAGGIO...";
+
+      }
+
+
+      /* ===============================================
+         SALVA E RICEVE LA RIGA DAL SERVER
+         =============================================== */
+
+      const {
+        data,
+        error
+      } =
+        await matchpulseSupabase
+          .rpc(
+            "matchpulse_admin_set_promo_release_v2",
+            {
+
+              p_season:
+                MP_FRS_SEASON,
+
+              p_promo_id:
+                promoId,
+
+              p_release_at:
+                date.toISOString(),
+
+              p_enabled:
+                enabledInput
+                  ?.checked !==
+                  false
+
+            }
+          );
+
+
+      if (error) {
+        throw error;
+      }
+
+
+      /*
+        NON consideriamo il salvataggio
+        riuscito finché Supabase non
+        restituisce davvero release_at.
+      */
+
+      if (
+        !data ||
+        !data.release_at
+      ) {
+
+        throw new Error(
+          "Supabase non ha salvato release_at"
+        );
+
+      }
+
+
+      /* ===============================================
+         RIPORTA NELL'INPUT IL VALORE DEL DATABASE
+         =============================================== */
+
+      input.value =
+        mpFRSToLocalInput(
+          data.release_at
+        );
+
+
+      if (enabledInput) {
+
+        enabledInput.checked =
+          data.enabled !==
+          false;
+
+      }
+
+
+      /* ===============================================
+         AGGIORNA SUBITO LA RIGA VISIVA
+         =============================================== */
+
+      const row =
+        input.closest(
+          ".mp-promo-secure-row"
+        );
+
+
+      const alreadyReleased =
+        new Date(
+          data.release_at
+        ).getTime() <=
+        Date.now();
+
+
+      if (row) {
+
+        row.classList.toggle(
+          "is-released",
+          alreadyReleased
+        );
+
+
+        const status =
+          row.querySelector(
+            ".mp-promo-secure-name small"
+          );
+
+
+        if (status) {
+
+          status.textContent =
+            alreadyReleased
+              ? "RILASCIATA"
+              : "PROGRAMMATA";
+
+        }
+
+      }
+
+
+      if (button) {
+
+        button.textContent =
+          "SALVATA ✓";
+
+      }
+
+
+      mpFRSToast(
+        `Release salvata: ${
+          mpFRSPretty(
+            data.release_at
+          )
+        }`
+      );
+
+
+      /*
+        Aggiorna soltanto le release
+        visibili, SENZA distruggere
+        e ricreare il pannello.
+      */
+
+      if (
+        typeof window
+          .mpPromoSecureGetReleased ===
+          "function"
+      ) {
+
+        await window
+          .mpPromoSecureGetReleased();
+
+      }
+
+
+      setTimeout(
+        () => {
+
+          if (button) {
+
+            button.disabled =
+              false;
+
+            button.textContent =
+              "SALVA";
+
+          }
+
+        },
+        1300
+      );
+
+
+    } catch (
+      error
+    ) {
+
+      console.error(
+        "MATCHPULSE RELEASE SAVE V2:",
+        error
+      );
+
+
+      if (button) {
+
+        button.disabled =
+          false;
+
+        button.textContent =
+          "SALVA";
+
+      }
+
+
+      mpFRSToast(
+        error?.message ||
+        "Errore salvataggio release"
+      );
+
+    }
+
+  }
+
+
+  /*
+    Gli onclick del calendario
+    chiamano questo nome globale.
+  */
+
+  window.mpPromoSecureSaveRelease =
+    mpFRSSaveRelease;
+
+})();
