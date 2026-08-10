@@ -37756,3 +37756,2358 @@ const statCap =
   );
 
 })();
+
+/* =========================================================
+   MATCHPULSE
+   ACCOUNT + CLOUD SYNC COMPLETO V1
+   ========================================================= */
+
+(function () {
+
+  if (
+    window.MP_CLOUD_SYNC_V1_READY
+  ) {
+    return;
+  }
+
+
+  window.MP_CLOUD_SYNC_V1_READY =
+    true;
+
+
+  const MP_CLOUD_TABLE =
+    "matchpulse_cloud_state";
+
+
+  const MP_CLOUD_META_KEY =
+    "matchpulse_cloud_meta_v1";
+
+
+  const MP_CLOUD_LINKED_KEY =
+    "matchpulse_cloud_linked_v1";
+
+
+  const MP_CLOUD_EXCLUDED_KEYS =
+    new Set([
+      "matchpulse_promo_admin_v1",
+      "matchpulse_avatar_sync_v1",
+      MP_CLOUD_META_KEY,
+      MP_CLOUD_LINKED_KEY
+    ]);
+
+
+  let MP_CLOUD_APPLYING =
+    false;
+
+
+  let MP_CLOUD_ACTIVE_USER =
+    "";
+
+
+  let MP_CLOUD_PUSH_TIMER =
+    null;
+
+
+  let MP_CLOUD_CHECK_RUNNING =
+    false;
+
+
+  /* =======================================================
+     SUPPORTO
+     ======================================================= */
+
+  function mpCloudToast(
+    text
+  ) {
+
+    if (
+      typeof mpClubToast ===
+      "function"
+    ) {
+
+      mpClubToast(text);
+      return;
+
+    }
+
+
+    if (
+      typeof toast ===
+      "function"
+    ) {
+
+      toast(text);
+
+    }
+
+  }
+
+
+  function mpCloudEscape(
+    value
+  ) {
+
+    if (
+      typeof escapeHtml ===
+      "function"
+    ) {
+
+      return escapeHtml(
+        value
+      );
+
+    }
+
+
+    return String(
+      value ?? ""
+    )
+      .replaceAll(
+        "&",
+        "&amp;"
+      )
+      .replaceAll(
+        "<",
+        "&lt;"
+      )
+      .replaceAll(
+        ">",
+        "&gt;"
+      )
+      .replaceAll(
+        '"',
+        "&quot;"
+      )
+      .replaceAll(
+        "'",
+        "&#039;"
+      );
+  }
+
+
+  function mpCloudShouldSyncKey(
+    key
+  ) {
+
+    const value =
+      String(
+        key || ""
+      );
+
+
+    if (
+      !value.startsWith(
+        "matchpulse"
+      )
+    ) {
+      return false;
+    }
+
+
+    if (
+      value.startsWith(
+        "matchpulse_cloud_"
+      )
+    ) {
+      return false;
+    }
+
+
+    if (
+      MP_CLOUD_EXCLUDED_KEYS
+        .has(value)
+    ) {
+      return false;
+    }
+
+
+    return true;
+  }
+
+
+  function mpCloudReadMeta() {
+
+    try {
+
+      const data =
+        JSON.parse(
+          localStorage.getItem(
+            MP_CLOUD_META_KEY
+          ) || "{}"
+        );
+
+
+      return (
+        data &&
+        typeof data ===
+          "object"
+      )
+        ? data
+        : {};
+
+    } catch {
+
+      return {};
+
+    }
+
+  }
+
+
+  function mpCloudSaveMeta(
+    patch
+  ) {
+
+    const current =
+      mpCloudReadMeta();
+
+
+    localStorage.setItem(
+      MP_CLOUD_META_KEY,
+      JSON.stringify({
+        ...current,
+        ...patch
+      })
+    );
+
+  }
+
+
+  /* =======================================================
+     STATO COMPLETO MATCHPULSE
+
+     Salviamo tutti i dati MatchPulse,
+     ma NON token Supabase,
+     cache auth o vecchio admin locale.
+     ======================================================= */
+
+  function mpCloudSnapshot() {
+
+    const state = {};
+
+
+    for (
+      let index = 0;
+      index < localStorage.length;
+      index += 1
+    ) {
+
+      const key =
+        localStorage.key(
+          index
+        );
+
+
+      if (
+        !mpCloudShouldSyncKey(
+          key
+        )
+      ) {
+        continue;
+      }
+
+
+      state[key] =
+        localStorage.getItem(
+          key
+        );
+
+    }
+
+
+    return state;
+  }
+
+
+  function mpCloudApplyState(
+    state
+  ) {
+
+    const cloudState =
+      (
+        state &&
+        typeof state ===
+          "object" &&
+        !Array.isArray(state)
+      )
+        ? state
+        : {};
+
+
+    MP_CLOUD_APPLYING =
+      true;
+
+
+    try {
+
+      /*
+        Prima eliminiamo le chiavi
+        sincronizzabili che il Cloud
+        non contiene più.
+
+        Serve anche per sincronizzare
+        correttamente le eliminazioni.
+      */
+
+      const currentKeys =
+        [];
+
+
+      for (
+        let index = 0;
+        index < localStorage.length;
+        index += 1
+      ) {
+
+        const key =
+          localStorage.key(
+            index
+          );
+
+
+        if (
+          mpCloudShouldSyncKey(
+            key
+          )
+        ) {
+
+          currentKeys.push(
+            key
+          );
+
+        }
+
+      }
+
+
+      currentKeys
+        .forEach(
+          key => {
+
+            if (
+              !Object.prototype
+                .hasOwnProperty
+                .call(
+                  cloudState,
+                  key
+                )
+            ) {
+
+              localStorage.removeItem(
+                key
+              );
+
+            }
+
+          }
+        );
+
+
+      Object.entries(
+        cloudState
+      )
+        .forEach(
+          ([
+            key,
+            value
+          ]) => {
+
+            if (
+              !mpCloudShouldSyncKey(
+                key
+              )
+            ) {
+              return;
+            }
+
+
+            if (
+              value ===
+                null ||
+              value ===
+                undefined
+            ) {
+
+              localStorage.removeItem(
+                key
+              );
+
+              return;
+            }
+
+
+            localStorage.setItem(
+              key,
+              String(value)
+            );
+
+          }
+        );
+
+    } finally {
+
+      MP_CLOUD_APPLYING =
+        false;
+
+    }
+
+  }
+
+
+  /* =======================================================
+     UTENTE
+     ======================================================= */
+
+  async function mpCloudGetUser() {
+
+    if (
+      typeof matchpulseSupabase ===
+        "undefined" ||
+      !matchpulseSupabase
+    ) {
+
+      throw new Error(
+        "Supabase non configurato"
+      );
+
+    }
+
+
+    if (
+      typeof window
+        .mpEnsureClubAuth ===
+        "function"
+    ) {
+
+      await window
+        .mpEnsureClubAuth();
+
+    } else if (
+      typeof mpEnsureClubAuth ===
+        "function"
+    ) {
+
+      await mpEnsureClubAuth();
+
+    }
+
+
+    const {
+      data,
+      error
+    } =
+      await matchpulseSupabase
+        .auth
+        .getUser();
+
+
+    if (error) {
+      throw error;
+    }
+
+
+    if (!data?.user) {
+
+      throw new Error(
+        "Utente MatchPulse non trovato"
+      );
+
+    }
+
+
+    return data.user;
+  }
+
+
+  function mpCloudIsPermanent(
+    user
+  ) {
+
+    return Boolean(
+      user &&
+      user.is_anonymous !==
+        true &&
+      user.email
+    );
+
+  }
+
+
+  /* =======================================================
+     LEGGI CLOUD
+     ======================================================= */
+
+  async function mpCloudFetch() {
+
+    const user =
+      await mpCloudGetUser();
+
+
+    if (
+      !mpCloudIsPermanent(
+        user
+      )
+    ) {
+
+      return {
+        user,
+        cloud: null
+      };
+
+    }
+
+
+    const {
+      data,
+      error
+    } =
+      await matchpulseSupabase
+        .from(
+          MP_CLOUD_TABLE
+        )
+        .select(
+          `
+            state,
+            updated_at
+          `
+        )
+        .eq(
+          "user_id",
+          user.id
+        )
+        .maybeSingle();
+
+
+    if (error) {
+      throw error;
+    }
+
+
+    return {
+      user,
+      cloud:
+        data || null
+    };
+  }
+
+
+  /* =======================================================
+     CARICA QUESTO DISPOSITIVO
+     ======================================================= */
+
+  async function mpCloudPushNow(
+    options = {}
+  ) {
+
+    const silent =
+      options.silent ===
+      true;
+
+
+    const user =
+      await mpCloudGetUser();
+
+
+    if (
+      !mpCloudIsPermanent(
+        user
+      )
+    ) {
+
+      throw new Error(
+        "Prima collega un account MatchPulse"
+      );
+
+    }
+
+
+    const state =
+      mpCloudSnapshot();
+
+
+    const {
+      data,
+      error
+    } =
+      await matchpulseSupabase
+        .from(
+          MP_CLOUD_TABLE
+        )
+        .upsert(
+          {
+            user_id:
+              user.id,
+
+            state:
+              state
+          },
+          {
+            onConflict:
+              "user_id"
+          }
+        )
+        .select(
+          "updated_at"
+        )
+        .single();
+
+
+    if (error) {
+      throw error;
+    }
+
+
+    MP_CLOUD_ACTIVE_USER =
+      user.id;
+
+
+    localStorage.setItem(
+      MP_CLOUD_LINKED_KEY,
+      user.id
+    );
+
+
+    mpCloudSaveMeta({
+
+      user_id:
+        user.id,
+
+      last_server_at:
+        data?.updated_at ||
+        new Date()
+          .toISOString(),
+
+      dirty_at:
+        null,
+
+      last_action:
+        "push"
+
+    });
+
+
+    if (!silent) {
+
+      mpCloudToast(
+        "Dati MatchPulse salvati nel Cloud"
+      );
+
+    }
+
+
+    return data;
+  }
+
+
+  /* =======================================================
+     SCARICA CLOUD
+     ======================================================= */
+
+  async function mpCloudPullNow(
+    options = {}
+  ) {
+
+    const reload =
+      options.reload !==
+      false;
+
+
+    const silent =
+      options.silent ===
+      true;
+
+
+    const {
+      user,
+      cloud
+    } =
+      await mpCloudFetch();
+
+
+    if (
+      !mpCloudIsPermanent(
+        user
+      )
+    ) {
+
+      throw new Error(
+        "Accedi prima al tuo account MatchPulse"
+      );
+
+    }
+
+
+    if (
+      !cloud?.state
+    ) {
+
+      throw new Error(
+        "Non esistono ancora dati MatchPulse nel Cloud"
+      );
+
+    }
+
+
+    mpCloudApplyState(
+      cloud.state
+    );
+
+
+    MP_CLOUD_ACTIVE_USER =
+      user.id;
+
+
+    localStorage.setItem(
+      MP_CLOUD_LINKED_KEY,
+      user.id
+    );
+
+
+    mpCloudSaveMeta({
+
+      user_id:
+        user.id,
+
+      last_server_at:
+        cloud.updated_at,
+
+      dirty_at:
+        null,
+
+      last_action:
+        "pull"
+
+    });
+
+
+    if (!silent) {
+
+      mpCloudToast(
+        "Dati scaricati dal Cloud"
+      );
+
+    }
+
+
+    if (reload) {
+
+      setTimeout(
+        () => {
+
+          location.reload();
+
+        },
+        250
+      );
+
+    }
+
+
+    return cloud;
+  }
+
+
+  /* =======================================================
+     CONTROLLA SE IL CLOUD È PIÙ NUOVO
+     ======================================================= */
+
+  async function mpCloudCheckRemote() {
+
+    if (
+      MP_CLOUD_CHECK_RUNNING ||
+      !MP_CLOUD_ACTIVE_USER
+    ) {
+      return;
+    }
+
+
+    MP_CLOUD_CHECK_RUNNING =
+      true;
+
+
+    try {
+
+      const {
+        user,
+        cloud
+      } =
+        await mpCloudFetch();
+
+
+      if (
+        !cloud ||
+        user.id !==
+          MP_CLOUD_ACTIVE_USER
+      ) {
+        return;
+      }
+
+
+      const meta =
+        mpCloudReadMeta();
+
+
+      const remoteTime =
+        new Date(
+          cloud.updated_at
+        ).getTime();
+
+
+      const knownTime =
+        new Date(
+          meta.last_server_at ||
+          0
+        ).getTime();
+
+
+      if (
+        !Number.isFinite(
+          remoteTime
+        ) ||
+        remoteTime <=
+          knownTime
+      ) {
+        return;
+      }
+
+
+      const dirtyTime =
+        meta.dirty_at
+          ? new Date(
+              meta.dirty_at
+            ).getTime()
+          : 0;
+
+
+      /*
+        Caso rarissimo:
+        entrambi i dispositivi hanno
+        modifiche non ancora sincronizzate.
+
+        Se questa modifica locale è
+        successiva al Cloud, inviamo
+        questo dispositivo.
+
+        Altrimenti vince il Cloud.
+      */
+
+      if (
+        dirtyTime &&
+        dirtyTime >
+          remoteTime
+      ) {
+
+        await mpCloudPushNow({
+          silent: true
+        });
+
+        return;
+      }
+
+
+      await mpCloudPullNow({
+        silent: true,
+        reload: true
+      });
+
+
+    } catch (
+      error
+    ) {
+
+      console.warn(
+        "Controllo Cloud MatchPulse:",
+        error
+      );
+
+    } finally {
+
+      MP_CLOUD_CHECK_RUNNING =
+        false;
+
+    }
+
+  }
+
+
+  /* =======================================================
+     DEBOUNCE PUSH
+     ======================================================= */
+
+  function mpCloudSchedulePush() {
+
+    if (
+      MP_CLOUD_APPLYING ||
+      !MP_CLOUD_ACTIVE_USER
+    ) {
+      return;
+    }
+
+
+    mpCloudSaveMeta({
+      dirty_at:
+        new Date()
+          .toISOString()
+    });
+
+
+    clearTimeout(
+      MP_CLOUD_PUSH_TIMER
+    );
+
+
+    MP_CLOUD_PUSH_TIMER =
+      setTimeout(
+        async () => {
+
+          try {
+
+            await mpCloudPushNow({
+              silent: true
+            });
+
+          } catch (
+            error
+          ) {
+
+            console.warn(
+              "Auto Cloud MatchPulse:",
+              error
+            );
+
+          }
+
+        },
+        1200
+      );
+  }
+
+
+  /* =======================================================
+     OSSERVA TUTTI I SALVATAGGI MATCHPULSE
+     ======================================================= */
+
+  const mpCloudOriginalSetItem =
+    Storage.prototype
+      .setItem;
+
+
+  const mpCloudOriginalRemoveItem =
+    Storage.prototype
+      .removeItem;
+
+
+  Storage.prototype.setItem =
+    function (
+      key,
+      value
+    ) {
+
+      const result =
+        mpCloudOriginalSetItem
+          .call(
+            this,
+            key,
+            value
+          );
+
+
+      if (
+        this ===
+          localStorage &&
+        mpCloudShouldSyncKey(
+          key
+        ) &&
+        !MP_CLOUD_APPLYING
+      ) {
+
+        mpCloudSchedulePush();
+
+      }
+
+
+      return result;
+    };
+
+
+  Storage.prototype.removeItem =
+    function (
+      key
+    ) {
+
+      const result =
+        mpCloudOriginalRemoveItem
+          .call(
+            this,
+            key
+          );
+
+
+      if (
+        this ===
+          localStorage &&
+        mpCloudShouldSyncKey(
+          key
+        ) &&
+        !MP_CLOUD_APPLYING
+      ) {
+
+        mpCloudSchedulePush();
+
+      }
+
+
+      return result;
+    };
+
+
+  /* =======================================================
+     TRASFORMA IL PROFILO PC
+     DA ANONIMO A ACCOUNT VERO
+     ======================================================= */
+
+  async function mpCloudAttachEmail() {
+
+    const input =
+      document.getElementById(
+        "mpCloudNewEmail"
+      );
+
+
+    const email =
+      String(
+        input?.value || ""
+      )
+        .trim()
+        .toLowerCase();
+
+
+    if (
+      !email ||
+      !email.includes("@")
+    ) {
+
+      mpCloudToast(
+        "Inserisci un'email valida"
+      );
+
+      return;
+    }
+
+
+    try {
+
+      const user =
+        await mpCloudGetUser();
+
+
+      if (
+        mpCloudIsPermanent(
+          user
+        )
+      ) {
+
+        mpCloudToast(
+          "Questo dispositivo ha già un account"
+        );
+
+        await mpCloudRefreshPanel();
+
+        return;
+      }
+
+
+      const {
+        error
+      } =
+        await matchpulseSupabase
+          .auth
+          .updateUser({
+            email
+          });
+
+
+      if (error) {
+        throw error;
+      }
+
+
+      mpCloudToast(
+        "Email inviata. Confermala e poi torna in MatchPulse."
+      );
+
+
+      await mpCloudRefreshPanel();
+
+
+    } catch (
+      error
+    ) {
+
+      console.error(
+        "COLLEGA EMAIL MATCHPULSE:",
+        error
+      );
+
+
+      mpCloudToast(
+        error?.message ||
+        "Impossibile collegare l'email"
+      );
+
+    }
+
+  }
+
+
+  /* =======================================================
+     IMPOSTA PASSWORD DOPO LA VERIFICA EMAIL
+
+     SUBITO DOPO CARICA QUESTO PC NEL CLOUD.
+     ======================================================= */
+
+  async function mpCloudSetPassword() {
+
+    const input =
+      document.getElementById(
+        "mpCloudNewPassword"
+      );
+
+
+    const password =
+      String(
+        input?.value || ""
+      );
+
+
+    if (
+      password.length <
+      8
+    ) {
+
+      mpCloudToast(
+        "Usa una password di almeno 8 caratteri"
+      );
+
+      return;
+    }
+
+
+    try {
+
+      const {
+        error
+      } =
+        await matchpulseSupabase
+          .auth
+          .updateUser({
+            password
+          });
+
+
+      if (error) {
+        throw error;
+      }
+
+
+      /*
+        Il PC è la sorgente originale
+        dei dati, quindi appena
+        l'account è pronto lo
+        salviamo nel Cloud.
+      */
+
+      await mpCloudPushNow({
+        silent: true
+      });
+
+
+      mpCloudToast(
+        "Account MatchPulse creato e dati caricati nel Cloud"
+      );
+
+
+      await mpCloudRefreshPanel();
+
+
+    } catch (
+      error
+    ) {
+
+      console.error(
+        "PASSWORD MATCHPULSE:",
+        error
+      );
+
+
+      mpCloudToast(
+        error?.message ||
+        "Prima conferma l'email ricevuta"
+      );
+
+    }
+
+  }
+
+
+  /* =======================================================
+     TELEFONO / ALTRO PC:
+     ACCEDI ALLO STESSO ACCOUNT
+     ======================================================= */
+
+  async function mpCloudLoginExisting() {
+
+    const email =
+      String(
+        document.getElementById(
+          "mpCloudLoginEmail"
+        )?.value || ""
+      )
+        .trim()
+        .toLowerCase();
+
+
+    const password =
+      String(
+        document.getElementById(
+          "mpCloudLoginPassword"
+        )?.value || ""
+      );
+
+
+    if (
+      !email ||
+      !password
+    ) {
+
+      mpCloudToast(
+        "Inserisci email e password"
+      );
+
+      return;
+    }
+
+
+    try {
+
+      /*
+        Salviamo l'UUID anonimo
+        solo a scopo diagnostico.
+      */
+
+      const previousUser =
+        await mpCloudGetUser();
+
+
+      const {
+        data,
+        error
+      } =
+        await matchpulseSupabase
+          .auth
+          .signInWithPassword({
+            email,
+            password
+          });
+
+
+      if (error) {
+        throw error;
+      }
+
+
+      const user =
+        data?.user;
+
+
+      if (!user) {
+
+        throw new Error(
+          "Accesso MatchPulse non riuscito"
+        );
+
+      }
+
+
+      console.log(
+        "MATCHPULSE CLOUD LOGIN:",
+        {
+          previousUser:
+            previousUser?.id,
+
+          connectedUser:
+            user.id
+        }
+      );
+
+
+      /*
+        Adesso il telefono usa
+        ESATTAMENTE lo stesso UUID
+        del PC.
+
+        Scarichiamo i dati del PC.
+      */
+
+      const {
+        data: cloud,
+        error: cloudError
+      } =
+        await matchpulseSupabase
+          .from(
+            MP_CLOUD_TABLE
+          )
+          .select(
+            "state,updated_at"
+          )
+          .eq(
+            "user_id",
+            user.id
+          )
+          .maybeSingle();
+
+
+      if (cloudError) {
+        throw cloudError;
+      }
+
+
+      if (
+        !cloud?.state
+      ) {
+
+        MP_CLOUD_ACTIVE_USER =
+          user.id;
+
+
+        mpCloudToast(
+          "Account collegato, ma il Cloud è ancora vuoto"
+        );
+
+
+        await mpCloudRefreshPanel();
+
+        return;
+      }
+
+
+      const confirmed =
+        confirm(
+          "ACCOUNT MATCHPULSE TROVATO\n\n" +
+          "Vuoi scaricare su questo dispositivo " +
+          "profilo, partite, carta, PlayStyle, promo " +
+          "e tutte le impostazioni salvate sul Cloud?\n\n" +
+          "I dati locali di questo dispositivo verranno sostituiti."
+        );
+
+
+      if (!confirmed) {
+
+        await mpCloudRefreshPanel();
+
+        return;
+      }
+
+
+      mpCloudApplyState(
+        cloud.state
+      );
+
+
+      MP_CLOUD_ACTIVE_USER =
+        user.id;
+
+
+      localStorage.setItem(
+        MP_CLOUD_LINKED_KEY,
+        user.id
+      );
+
+
+      mpCloudSaveMeta({
+
+        user_id:
+          user.id,
+
+        last_server_at:
+          cloud.updated_at,
+
+        dirty_at:
+          null,
+
+        last_action:
+          "login-pull"
+
+      });
+
+
+      mpCloudToast(
+        "Telefono collegato allo stesso profilo MatchPulse"
+      );
+
+
+      setTimeout(
+        () => {
+
+          location.reload();
+
+        },
+        350
+      );
+
+
+    } catch (
+      error
+    ) {
+
+      console.error(
+        "LOGIN MATCHPULSE CLOUD:",
+        error
+      );
+
+
+      mpCloudToast(
+        error?.message ||
+        "Email o password non valide"
+      );
+
+    }
+
+  }
+
+
+  /* =======================================================
+     PULSANTI MANUALI
+     ======================================================= */
+
+  async function mpCloudManualPush() {
+
+    const confirmed =
+      confirm(
+        "Inviare i dati di QUESTO dispositivo nel Cloud?\n\n" +
+        "Questa versione diventerà quella sincronizzata sugli altri dispositivi."
+      );
+
+
+    if (!confirmed) {
+      return;
+    }
+
+
+    try {
+
+      await mpCloudPushNow();
+
+      await mpCloudRefreshPanel();
+
+    } catch (
+      error
+    ) {
+
+      console.error(
+        error
+      );
+
+
+      mpCloudToast(
+        error?.message ||
+        "Errore caricamento Cloud"
+      );
+
+    }
+
+  }
+
+
+  async function mpCloudManualPull() {
+
+    const confirmed =
+      confirm(
+        "Scaricare i dati dal Cloud?\n\n" +
+        "I dati MatchPulse presenti su questo dispositivo verranno sostituiti."
+      );
+
+
+    if (!confirmed) {
+      return;
+    }
+
+
+    try {
+
+      await mpCloudPullNow({
+        reload: true
+      });
+
+    } catch (
+      error
+    ) {
+
+      console.error(
+        error
+      );
+
+
+      mpCloudToast(
+        error?.message ||
+        "Errore download Cloud"
+      );
+
+    }
+
+  }
+
+
+  /* =======================================================
+     PANNELLO CLOUD
+     ======================================================= */
+
+  function mpCloudClosePanel() {
+
+    document.getElementById(
+      "mpCloudAccountOverlay"
+    )?.remove();
+
+
+    document.body.classList.remove(
+      "mp-cloud-panel-open"
+    );
+
+  }
+
+
+  async function mpCloudRefreshPanel() {
+
+    const status =
+      document.getElementById(
+        "mpCloudAccountStatus"
+      );
+
+
+    const anonymousArea =
+      document.getElementById(
+        "mpCloudAnonymousArea"
+      );
+
+
+    const syncArea =
+      document.getElementById(
+        "mpCloudSyncArea"
+      );
+
+
+    if (!status) {
+      return;
+    }
+
+
+    status.innerHTML =
+      "Controllo account...";
+
+
+    try {
+
+      const user =
+        await mpCloudGetUser();
+
+
+      const permanent =
+        mpCloudIsPermanent(
+          user
+        );
+
+
+      if (!permanent) {
+
+        status.innerHTML = `
+          <span>ACCOUNT ATTUALE</span>
+
+          <strong>
+            PROFILO LOCALE
+          </strong>
+
+          <p>
+            Questo dispositivo usa ancora
+            un'identità anonima Supabase.
+          </p>
+        `;
+
+
+        if (
+          anonymousArea
+        ) {
+
+          anonymousArea.hidden =
+            false;
+
+        }
+
+
+        if (syncArea) {
+
+          syncArea.hidden =
+            true;
+
+        }
+
+
+        return;
+      }
+
+
+      if (
+        anonymousArea
+      ) {
+
+        anonymousArea.hidden =
+          true;
+
+      }
+
+
+      const {
+        cloud
+      } =
+        await mpCloudFetch();
+
+
+      const linked =
+        localStorage.getItem(
+          MP_CLOUD_LINKED_KEY
+        ) === user.id;
+
+
+      status.innerHTML = `
+        <span>
+          ACCOUNT MATCHPULSE
+        </span>
+
+        <strong>
+          ${mpCloudEscape(
+            user.email
+          )}
+        </strong>
+
+        <p>
+          UUID:
+          ${mpCloudEscape(
+            user.id
+          )}
+        </p>
+
+        <div class="
+          mp-cloud-state-badges
+        ">
+
+          <b>
+            ${
+              cloud
+                ? "CLOUD PRESENTE"
+                : "CLOUD VUOTO"
+            }
+          </b>
+
+          <b>
+            ${
+              linked
+                ? "SYNC ATTIVA"
+                : "DISPOSITIVO NON INIZIALIZZATO"
+            }
+          </b>
+
+        </div>
+      `;
+
+
+      if (syncArea) {
+
+        syncArea.hidden =
+          false;
+
+      }
+
+
+      const cloudInfo =
+        document.getElementById(
+          "mpCloudServerInfo"
+        );
+
+
+      if (cloudInfo) {
+
+        cloudInfo.textContent =
+          cloud?.updated_at
+            ? `Ultima sincronizzazione Cloud: ${
+                new Date(
+                  cloud.updated_at
+                ).toLocaleString(
+                  "it-IT"
+                )
+              }`
+            : "Nessun salvataggio Cloud ancora presente.";
+
+      }
+
+
+    } catch (
+      error
+    ) {
+
+      status.innerHTML = `
+        <strong>
+          ERRORE CLOUD
+        </strong>
+
+        <p>
+          ${mpCloudEscape(
+            error?.message ||
+            "Errore sconosciuto"
+          )}
+        </p>
+      `;
+
+    }
+
+  }
+
+
+  function mpCloudOpenPanel() {
+
+    document.getElementById(
+      "mpCloudAccountOverlay"
+    )?.remove();
+
+
+    document.body
+      .insertAdjacentHTML(
+        "beforeend",
+        `
+          <div
+            id="mpCloudAccountOverlay"
+            class="mp-cloud-overlay"
+          >
+
+            <section
+              class="mp-cloud-panel"
+            >
+
+              <header
+                class="mp-cloud-head"
+              >
+
+                <div>
+                  <span>
+                    MATCHPULSE CLOUD
+                  </span>
+
+                  <h2>
+                    Un solo profilo
+                  </h2>
+
+                  <p>
+                    PC, telefono e PWA
+                    usano lo stesso account
+                    e gli stessi dati.
+                  </p>
+                </div>
+
+
+                <button
+                  type="button"
+                  onclick="
+                    mpCloudClosePanel()
+                  "
+                >
+                  ×
+                </button>
+
+              </header>
+
+
+              <div
+                id="mpCloudAccountStatus"
+                class="mp-cloud-account-status"
+              >
+                Controllo account...
+              </div>
+
+
+              <section
+                id="mpCloudAnonymousArea"
+                class="mp-cloud-auth-area"
+              >
+
+                <div
+                  class="mp-cloud-auth-box"
+                >
+
+                  <span>
+                    QUESTO È IL PC PRINCIPALE?
+                  </span>
+
+                  <h3>
+                    Trasforma il profilo
+                    attuale in un account
+                  </h3>
+
+                  <p>
+                    Fallo sul dispositivo
+                    che possiede già i dati
+                    corretti di MatchPulse.
+                  </p>
+
+
+                  <input
+                    id="mpCloudNewEmail"
+                    type="email"
+                    autocomplete="email"
+                    placeholder="La tua email"
+                  >
+
+
+                  <button
+                    type="button"
+                    class="primary-btn"
+                    onclick="
+                      mpCloudAttachEmail()
+                    "
+                  >
+                    1. COLLEGA EMAIL
+                  </button>
+
+
+                  <div
+                    class="mp-cloud-divider"
+                  >
+                    DOPO AVER CONFERMATO L'EMAIL
+                  </div>
+
+
+                  <input
+                    id="mpCloudNewPassword"
+                    type="password"
+                    autocomplete="new-password"
+                    placeholder="Password · minimo 8 caratteri"
+                  >
+
+
+                  <button
+                    type="button"
+                    class="secondary-btn"
+                    onclick="
+                      mpCloudSetPassword()
+                    "
+                  >
+                    2. IMPOSTA PASSWORD E CARICA CLOUD
+                  </button>
+
+                </div>
+
+
+                <div
+                  class="mp-cloud-auth-box"
+                >
+
+                  <span>
+                    TELEFONO / ALTRO DISPOSITIVO
+                  </span>
+
+                  <h3>
+                    Ho già un account
+                  </h3>
+
+                  <p>
+                    Usa la stessa email
+                    e password create
+                    sul PC principale.
+                  </p>
+
+
+                  <input
+                    id="mpCloudLoginEmail"
+                    type="email"
+                    autocomplete="email"
+                    placeholder="Email MatchPulse"
+                  >
+
+
+                  <input
+                    id="mpCloudLoginPassword"
+                    type="password"
+                    autocomplete="current-password"
+                    placeholder="Password"
+                  >
+
+
+                  <button
+                    type="button"
+                    class="primary-btn"
+                    onclick="
+                      mpCloudLoginExisting()
+                    "
+                  >
+                    ACCEDI E SCARICA IL PROFILO
+                  </button>
+
+                </div>
+
+              </section>
+
+
+              <section
+                id="mpCloudSyncArea"
+                class="mp-cloud-sync-area"
+                hidden
+              >
+
+                <span>
+                  SINCRONIZZAZIONE
+                </span>
+
+                <h3>
+                  Dati MatchPulse
+                </h3>
+
+
+                <p
+                  id="mpCloudServerInfo"
+                ></p>
+
+
+                <div
+                  class="mp-cloud-sync-actions"
+                >
+
+                  <button
+                    type="button"
+                    class="primary-btn"
+                    onclick="
+                      mpCloudManualPush()
+                    "
+                  >
+                    ↑
+                    INVIA QUESTO DISPOSITIVO
+                  </button>
+
+
+                  <button
+                    type="button"
+                    class="secondary-btn"
+                    onclick="
+                      mpCloudManualPull()
+                    "
+                  >
+                    ↓
+                    SCARICA DAL CLOUD
+                  </button>
+
+                </div>
+
+
+                <div
+                  class="mp-cloud-sync-copy"
+                >
+
+                  <strong>
+                    Sincronizzazione automatica
+                  </strong>
+
+                  <p>
+                    Dopo la prima inizializzazione,
+                    MatchPulse sincronizza
+                    automaticamente le modifiche
+                    e controlla il Cloud quando
+                    torni nell'app.
+                  </p>
+
+                </div>
+
+              </section>
+
+            </section>
+
+          </div>
+        `
+      );
+
+
+    document.body.classList.add(
+      "mp-cloud-panel-open"
+    );
+
+
+    mpCloudRefreshPanel();
+
+  }
+
+
+  /* =======================================================
+     AGGIUNGE CLOUD AL PROFILO
+     ======================================================= */
+
+  function mpCloudInjectProfileHub() {
+
+    const panel =
+      document.querySelector(
+        ".profile-hub-panel"
+      );
+
+
+    if (
+      !panel ||
+      panel.querySelector(
+        "#mpCloudHubCard"
+      )
+    ) {
+      return;
+    }
+
+
+    panel.insertAdjacentHTML(
+      "beforeend",
+      `
+        <section
+          id="mpCloudHubCard"
+          class="mp-cloud-hub-card"
+        >
+
+          <div>
+            <span>
+              ☁ MATCHPULSE CLOUD
+            </span>
+
+            <strong>
+              PC + TELEFONO
+            </strong>
+
+            <small>
+              Profilo, storico, carta,
+              PlayStyle, promo e preferenze
+              sincronizzati.
+            </small>
+          </div>
+
+
+          <button
+            type="button"
+            class="primary-btn"
+            onclick="
+              mpCloudOpenPanel()
+            "
+          >
+            GESTISCI CLOUD
+          </button>
+
+        </section>
+      `
+    );
+
+  }
+
+
+  const mpCloudPreviousProfileHub =
+    typeof window.openProfileHub ===
+      "function"
+      ? window.openProfileHub
+      : null;
+
+
+  if (
+    mpCloudPreviousProfileHub
+  ) {
+
+    function mpCloudOpenProfileHub(
+      ...args
+    ) {
+
+      const result =
+        mpCloudPreviousProfileHub
+          .apply(
+            this,
+            args
+          );
+
+
+      setTimeout(
+        mpCloudInjectProfileHub,
+        20
+      );
+
+
+      return result;
+    }
+
+
+    try {
+
+      openProfileHub =
+        mpCloudOpenProfileHub;
+
+    } catch {}
+
+
+    window.openProfileHub =
+      mpCloudOpenProfileHub;
+
+  }
+
+
+  /* =======================================================
+     VECCHIO COLLEGA TELEFONO FOUNDER
+
+     NON USA PIÙ IL LINK.
+
+     Se esiste ancora il vecchio pulsante,
+     apre semplicemente MatchPulse Cloud.
+     ======================================================= */
+
+  window.mpFounderCreatePhoneLink =
+    mpCloudOpenPanel;
+
+
+  function mpCloudRepairFounderButton() {
+
+    const tools =
+      document.getElementById(
+        "mpFounderTools"
+      );
+
+
+    if (!tools) {
+      return;
+    }
+
+
+    const buttons =
+      [
+        ...tools.querySelectorAll(
+          "button"
+        )
+      ];
+
+
+    const phoneButton =
+      buttons.find(
+        button =>
+          button.textContent
+            .toUpperCase()
+            .includes(
+              "COLLEGA TELEFONO"
+            )
+      );
+
+
+    if (phoneButton) {
+
+      phoneButton.textContent =
+        "CLOUD / TELEFONO";
+
+
+      phoneButton.onclick =
+        mpCloudOpenPanel;
+
+    }
+
+
+    document.getElementById(
+      "mpFounderPairOutput"
+    )?.remove();
+
+  }
+
+
+  const mpCloudObserver =
+    new MutationObserver(
+      () => {
+
+        mpCloudInjectProfileHub();
+
+        mpCloudRepairFounderButton();
+
+      }
+    );
+
+
+  mpCloudObserver.observe(
+    document.body,
+    {
+      childList: true,
+      subtree: true
+    }
+  );
+
+
+  /* =======================================================
+     AVVIO AUTO SYNC
+     ======================================================= */
+
+  async function mpCloudBoot() {
+
+    try {
+
+      const user =
+        await mpCloudGetUser();
+
+
+      if (
+        !mpCloudIsPermanent(
+          user
+        )
+      ) {
+        return;
+      }
+
+
+      const linkedId =
+        localStorage.getItem(
+          MP_CLOUD_LINKED_KEY
+        );
+
+
+      /*
+        Un dispositivo nuovo NON può
+        sovrascrivere automaticamente
+        il Cloud.
+
+        Prima deve fare login e scaricare.
+      */
+
+      if (
+        linkedId !==
+        user.id
+      ) {
+        return;
+      }
+
+
+      MP_CLOUD_ACTIVE_USER =
+        user.id;
+
+
+      await mpCloudCheckRemote();
+
+
+    } catch (
+      error
+    ) {
+
+      console.warn(
+        "Avvio MatchPulse Cloud:",
+        error
+      );
+
+    }
+
+  }
+
+
+  document.addEventListener(
+    "visibilitychange",
+    () => {
+
+      if (
+        document.visibilityState ===
+          "visible"
+      ) {
+
+        setTimeout(
+          mpCloudCheckRemote,
+          400
+        );
+
+      }
+
+    }
+  );
+
+
+  window.addEventListener(
+    "focus",
+    () => {
+
+      setTimeout(
+        mpCloudCheckRemote,
+        400
+      );
+
+    }
+  );
+
+
+  window.addEventListener(
+    "online",
+    () => {
+
+      setTimeout(
+        async () => {
+
+          await mpCloudCheckRemote();
+
+          mpCloudSchedulePush();
+
+        },
+        300
+      );
+
+    }
+  );
+
+
+  setInterval(
+    () => {
+
+      if (
+        document.visibilityState ===
+          "visible"
+      ) {
+
+        mpCloudCheckRemote();
+
+      }
+
+    },
+    60000
+  );
+
+
+  /* =======================================================
+     GLOBALI
+     ======================================================= */
+
+  window.mpCloudOpenPanel =
+    mpCloudOpenPanel;
+
+  window.mpCloudClosePanel =
+    mpCloudClosePanel;
+
+  window.mpCloudAttachEmail =
+    mpCloudAttachEmail;
+
+  window.mpCloudSetPassword =
+    mpCloudSetPassword;
+
+  window.mpCloudLoginExisting =
+    mpCloudLoginExisting;
+
+  window.mpCloudManualPush =
+    mpCloudManualPush;
+
+  window.mpCloudManualPull =
+    mpCloudManualPull;
+
+  window.mpCloudPushNow =
+    mpCloudPushNow;
+
+  window.mpCloudPullNow =
+    mpCloudPullNow;
+
+  window.mpCloudCheckRemote =
+    mpCloudCheckRemote;
+
+
+  setTimeout(
+    mpCloudBoot,
+    1200
+  );
+
+})();

@@ -19784,3 +19784,512 @@ body.mp-founder-panel-open {
   }
 
 }
+
+/* =========================================================
+   MATCHPULSE
+   CLOUD SYNC COMPLETO V1
+   ========================================================= */
+
+body.mp-cloud-panel-open {
+  overflow: hidden !important;
+}
+
+
+/* PROFILO */
+
+.mp-cloud-hub-card {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0,1fr)
+    auto;
+
+  align-items: center;
+
+  gap: 14px;
+
+  margin-top: 14px;
+
+  padding: 16px;
+
+  border:
+    1px solid
+    rgba(0,245,160,.20);
+
+  border-radius: 20px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(0,245,160,.08),
+      rgba(255,255,255,.035)
+    );
+}
+
+
+.mp-cloud-hub-card
+span {
+  display: block;
+
+  color: var(--green);
+
+  font-size: 8px;
+
+  font-weight: 1000;
+
+  letter-spacing: .12em;
+}
+
+
+.mp-cloud-hub-card
+strong {
+  display: block;
+
+  margin-top: 5px;
+
+  color: #fff;
+
+  font-size: 17px;
+}
+
+
+.mp-cloud-hub-card
+small {
+  display: block;
+
+  margin-top: 5px;
+
+  color: var(--muted);
+
+  font-size: 10px;
+
+  line-height: 1.45;
+}
+
+
+.mp-cloud-hub-card
+button {
+  min-height: 44px;
+
+  font-size: 9px;
+}
+
+
+/* OVERLAY */
+
+.mp-cloud-overlay {
+  position: fixed;
+
+  inset: 0;
+
+  z-index: 120000;
+
+  overflow-y: auto;
+
+  padding:
+    max(18px, env(safe-area-inset-top))
+    14px
+    max(26px, env(safe-area-inset-bottom));
+
+  background:
+    rgba(2,7,5,.97);
+
+  backdrop-filter:
+    blur(22px);
+}
+
+
+.mp-cloud-panel {
+  width:
+    min(
+      100%,
+      720px
+    );
+
+  margin: 0 auto;
+
+  padding-bottom: 30px;
+}
+
+
+/* HEAD */
+
+.mp-cloud-head {
+  display: flex;
+
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap: 18px;
+
+  padding: 18px;
+
+  border:
+    1px solid
+    rgba(0,245,160,.18);
+
+  border-radius: 24px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(0,245,160,.09),
+      rgba(255,255,255,.035)
+    );
+}
+
+
+.mp-cloud-head
+span {
+  color: var(--green);
+
+  font-size: 9px;
+
+  font-weight: 1000;
+
+  letter-spacing: .14em;
+}
+
+
+.mp-cloud-head h2 {
+  margin: 5px 0 0;
+
+  color: #fff;
+
+  font-size: 31px;
+
+  text-transform: uppercase;
+}
+
+
+.mp-cloud-head p {
+  margin: 8px 0 0;
+
+  color: var(--muted);
+
+  font-size: 11px;
+
+  line-height: 1.5;
+}
+
+
+.mp-cloud-head
+> button {
+  flex: 0 0 auto;
+
+  width: 43px;
+  height: 43px;
+
+  display: grid;
+
+  place-items: center;
+
+  border:
+    1px solid
+    rgba(255,255,255,.12);
+
+  border-radius: 999px;
+
+  color: #fff;
+
+  background:
+    rgba(255,255,255,.06);
+
+  font-size: 25px;
+}
+
+
+/* ACCOUNT */
+
+.mp-cloud-account-status {
+  margin-top: 12px;
+
+  padding: 17px;
+
+  border:
+    1px solid
+    rgba(255,255,255,.09);
+
+  border-radius: 20px;
+
+  background:
+    rgba(255,255,255,.04);
+}
+
+
+.mp-cloud-account-status
+> span {
+  color: var(--green);
+
+  font-size: 8px;
+
+  font-weight: 1000;
+}
+
+
+.mp-cloud-account-status
+> strong {
+  display: block;
+
+  margin-top: 5px;
+
+  overflow-wrap: anywhere;
+
+  color: #fff;
+
+  font-size: 17px;
+}
+
+
+.mp-cloud-account-status
+p {
+  margin: 6px 0 0;
+
+  overflow-wrap: anywhere;
+
+  color: var(--muted);
+
+  font-size: 9px;
+}
+
+
+.mp-cloud-state-badges {
+  display: flex;
+
+  flex-wrap: wrap;
+
+  gap: 7px;
+
+  margin-top: 12px;
+}
+
+
+.mp-cloud-state-badges
+b {
+  padding:
+    7px 9px;
+
+  border-radius: 999px;
+
+  color: var(--green);
+
+  background:
+    rgba(0,245,160,.08);
+
+  font-size: 7px;
+}
+
+
+/* AUTH */
+
+.mp-cloud-auth-area {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(0,1fr)
+    );
+
+  gap: 12px;
+
+  margin-top: 12px;
+}
+
+
+.mp-cloud-auth-box {
+  padding: 17px;
+
+  border:
+    1px solid
+    rgba(255,255,255,.09);
+
+  border-radius: 22px;
+
+  background:
+    rgba(255,255,255,.035);
+}
+
+
+.mp-cloud-auth-box
+> span,
+.mp-cloud-sync-area
+> span {
+  color: var(--green);
+
+  font-size: 8px;
+
+  font-weight: 1000;
+
+  letter-spacing: .11em;
+}
+
+
+.mp-cloud-auth-box h3,
+.mp-cloud-sync-area h3 {
+  margin: 5px 0 0;
+
+  color: #fff;
+
+  font-size: 20px;
+}
+
+
+.mp-cloud-auth-box p {
+  margin: 7px 0 14px;
+
+  color: var(--muted);
+
+  font-size: 10px;
+
+  line-height: 1.5;
+}
+
+
+.mp-cloud-auth-box
+input {
+  margin-top: 8px;
+}
+
+
+.mp-cloud-auth-box
+button {
+  width: 100%;
+
+  margin-top: 8px;
+
+  font-size: 9px;
+}
+
+
+.mp-cloud-divider {
+  margin: 18px 0 5px;
+
+  padding-top: 14px;
+
+  border-top:
+    1px solid
+    rgba(255,255,255,.08);
+
+  color:
+    rgba(255,255,255,.38);
+
+  font-size: 7px;
+
+  font-weight: 1000;
+
+  text-align: center;
+}
+
+
+/* SYNC */
+
+.mp-cloud-sync-area {
+  margin-top: 12px;
+
+  padding: 18px;
+
+  border:
+    1px solid
+    rgba(0,245,160,.19);
+
+  border-radius: 22px;
+
+  background:
+    rgba(0,245,160,.045);
+}
+
+
+.mp-cloud-sync-area
+> p {
+  margin: 8px 0 15px;
+
+  color: var(--muted);
+
+  font-size: 10px;
+}
+
+
+.mp-cloud-sync-actions {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(0,1fr)
+    );
+
+  gap: 8px;
+}
+
+
+.mp-cloud-sync-actions
+button {
+  font-size: 9px;
+}
+
+
+.mp-cloud-sync-copy {
+  margin-top: 14px;
+
+  padding: 13px;
+
+  border-radius: 15px;
+
+  background:
+    rgba(0,0,0,.18);
+}
+
+
+.mp-cloud-sync-copy
+strong {
+  color: #fff;
+
+  font-size: 11px;
+}
+
+
+.mp-cloud-sync-copy p {
+  margin: 6px 0 0;
+
+  color: var(--muted);
+
+  font-size: 9px;
+
+  line-height: 1.5;
+}
+
+
+/* MOBILE */
+
+@media (max-width: 650px) {
+
+  .mp-cloud-hub-card {
+    grid-template-columns:
+      1fr;
+  }
+
+
+  .mp-cloud-hub-card
+  button {
+    width: 100%;
+  }
+
+
+  .mp-cloud-auth-area {
+    grid-template-columns:
+      1fr;
+  }
+
+
+  .mp-cloud-sync-actions {
+    grid-template-columns:
+      1fr;
+  }
+
+
+  .mp-cloud-head h2 {
+    font-size: 27px;
+  }
+
+}
