@@ -40111,3 +40111,4197 @@ const statCap =
   );
 
 })();
+
+/* =========================================================
+   MATCHPULSE
+   FOUNDER SCHEDULE FIX + TEST LAB V4
+   ========================================================= */
+
+(function () {
+
+  if (
+    window.MP_FOUNDER_SCHEDULE_FIX_V4_READY
+  ) {
+    return;
+  }
+
+  window.MP_FOUNDER_SCHEDULE_FIX_V4_READY =
+    true;
+
+
+  const MP_FSF_SEASON =
+    "2026-27";
+
+
+  /* =======================================================
+     TOAST
+     ======================================================= */
+
+  function mpFSFToast(text) {
+
+    if (
+      typeof mpClubToast ===
+      "function"
+    ) {
+      mpClubToast(text);
+      return;
+    }
+
+    if (
+      typeof toast ===
+      "function"
+    ) {
+      toast(text);
+    }
+
+  }
+
+
+  /* =======================================================
+     DATA UTC -> DATETIME LOCAL
+     ======================================================= */
+
+  function mpFSFLocalValue(value) {
+
+    if (!value) {
+      return "";
+    }
+
+
+    const date =
+      new Date(value);
+
+
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
+      return "";
+    }
+
+
+    const local =
+      new Date(
+        date.getTime() -
+        date.getTimezoneOffset() *
+        60000
+      );
+
+
+    return local
+      .toISOString()
+      .slice(0, 16);
+  }
+
+
+  function mpFSFPrettyDate(value) {
+
+    if (!value) {
+      return "NESSUNA DATA";
+    }
+
+
+    const date =
+      new Date(value);
+
+
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
+      return "DATA NON VALIDA";
+    }
+
+
+    return date
+      .toLocaleString(
+        "it-IT",
+        {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit"
+        }
+      );
+  }
+
+
+  /* =======================================================
+     LEGGE DIRETTAMENTE IL CALENDARIO FOUNDER
+     ======================================================= */
+
+  async function mpFSFGetSchedule() {
+
+    const {
+      data,
+      error
+    } =
+      await matchpulseSupabase
+        .rpc(
+          "matchpulse_get_promo_schedule_admin",
+          {
+            p_season:
+              MP_FSF_SEASON
+          }
+        );
+
+
+    if (error) {
+      throw error;
+    }
+
+
+    return Array.isArray(data)
+      ? data
+      : [];
+  }
+
+
+  /* =======================================================
+     NUOVO SALVATAGGIO
+
+     NON DISTRUGGE PIÙ IL PANNELLO
+     SUBITO DOPO AVER PREMUTO SALVA.
+     ======================================================= */
+
+  async function mpFSFSaveRelease(
+    promoId
+  ) {
+
+    const input =
+      document.getElementById(
+        `mpPromoRelease-${promoId}`
+      );
+
+
+    const enabledInput =
+      document.getElementById(
+        `mpPromoEnabled-${promoId}`
+      );
+
+
+    const button =
+      document.getElementById(
+        `mpPromoSave-${promoId}`
+      );
+
+
+    if (
+      !input ||
+      !input.value
+    ) {
+
+      mpFSFToast(
+        "Inserisci data e ora"
+      );
+
+      return;
+    }
+
+
+    try {
+
+      const admin =
+        typeof window
+          .mpPromoSecureIsAdmin ===
+          "function"
+
+          ? await window
+              .mpPromoSecureIsAdmin(
+                true
+              )
+
+          : false;
+
+
+      if (!admin) {
+
+        throw new Error(
+          "Accesso founder richiesto"
+        );
+
+      }
+
+
+      const releaseDate =
+        new Date(
+          input.value
+        );
+
+
+      if (
+        Number.isNaN(
+          releaseDate.getTime()
+        )
+      ) {
+
+        throw new Error(
+          "Data non valida"
+        );
+
+      }
+
+
+      if (button) {
+
+        button.disabled =
+          true;
+
+        button.textContent =
+          "SALVATAGGIO...";
+
+      }
+
+
+      /*
+        1. SALVA SU SUPABASE
+      */
+
+      const {
+        error
+      } =
+        await matchpulseSupabase
+          .rpc(
+            "matchpulse_admin_set_promo_release",
+            {
+
+              p_season:
+                MP_FSF_SEASON,
+
+              p_promo_id:
+                promoId,
+
+              p_release_at:
+                releaseDate
+                  .toISOString(),
+
+              p_enabled:
+                enabledInput
+                  ?.checked !==
+                  false
+
+            }
+          );
+
+
+      if (error) {
+        throw error;
+      }
+
+
+      /*
+        2. RILEGGE IMMEDIATAMENTE
+        IL DATABASE.
+
+        Quindi non ci fidiamo solo
+        del fatto che la RPC non abbia
+        dato errore.
+      */
+
+      const schedule =
+        await mpFSFGetSchedule();
+
+
+      const savedPromo =
+        schedule.find(
+          promo =>
+            promo.promo_id ===
+            promoId
+        );
+
+
+      if (
+        !savedPromo ||
+        !savedPromo.release_at
+      ) {
+
+        throw new Error(
+          "Supabase non ha restituito la data appena salvata"
+        );
+
+      }
+
+
+      /*
+        3. RIMETTE NELL'INPUT
+        ESATTAMENTE LA DATA ARRIVATA
+        DAL SERVER.
+      */
+
+      input.value =
+        mpFSFLocalValue(
+          savedPromo.release_at
+        );
+
+
+      if (enabledInput) {
+
+        enabledInput.checked =
+          savedPromo.enabled !==
+          false;
+
+      }
+
+
+      /*
+        4. STATO VISIVO
+      */
+
+      const row =
+        input.closest(
+          ".mp-promo-secure-row"
+        );
+
+
+      if (row) {
+
+        row.classList.toggle(
+          "is-released",
+          new Date(
+            savedPromo.release_at
+          ).getTime() <=
+          Date.now()
+        );
+
+
+        let confirmation =
+          row.querySelector(
+            ".mp-founder-save-confirmation"
+          );
+
+
+        if (!confirmation) {
+
+          confirmation =
+            document.createElement(
+              "div"
+            );
+
+          confirmation.className =
+            "mp-founder-save-confirmation";
+
+
+          row.appendChild(
+            confirmation
+          );
+
+        }
+
+
+        confirmation.innerHTML = `
+          <span>
+            SALVATA SU SUPABASE
+          </span>
+
+          <strong>
+            ${mpFSFPrettyDate(
+              savedPromo.release_at
+            )}
+          </strong>
+        `;
+
+      }
+
+
+      if (button) {
+
+        button.textContent =
+          "SALVATA ✓";
+
+      }
+
+
+      /*
+        Aggiorna anche la cache delle
+        promo già effettivamente uscite.
+      */
+
+      if (
+        typeof window
+          .mpPromoSecureGetReleased ===
+          "function"
+      ) {
+
+        await window
+          .mpPromoSecureGetReleased();
+
+      }
+
+
+      mpFSFToast(
+        `Data salvata: ${
+          mpFSFPrettyDate(
+            savedPromo.release_at
+          )
+        }`
+      );
+
+
+      setTimeout(
+        () => {
+
+          if (button) {
+
+            button.disabled =
+              false;
+
+            button.textContent =
+              "SALVA";
+
+          }
+
+        },
+        1200
+      );
+
+
+    } catch (error) {
+
+      console.error(
+        "SALVATAGGIO CALENDARIO FOUNDER:",
+        error
+      );
+
+
+      if (button) {
+
+        button.disabled =
+          false;
+
+        button.textContent =
+          "SALVA";
+
+      }
+
+
+      mpFSFToast(
+        error?.message ||
+        "Errore salvataggio calendario"
+      );
+
+    }
+
+  }
+
+
+  /*
+    Sostituisce la funzione usata
+    dagli onclick del calendario.
+  */
+
+  window.mpPromoSecureSaveRelease =
+    mpFSFSaveRelease;
+
+
+
+  /* =======================================================
+     RIPRISTINA LE DATE OGNI VOLTA
+     CHE IL PANNELLO VIENE RICREATO
+     ======================================================= */
+
+  async function mpFSFRestoreInputs() {
+
+    const panel =
+      document.getElementById(
+        "mpPromoSecureAdmin"
+      );
+
+
+    if (!panel) {
+      return;
+    }
+
+
+    try {
+
+      const schedule =
+        await mpFSFGetSchedule();
+
+
+      schedule.forEach(
+        promo => {
+
+          const input =
+            document.getElementById(
+              `mpPromoRelease-${promo.promo_id}`
+            );
+
+
+          const enabled =
+            document.getElementById(
+              `mpPromoEnabled-${promo.promo_id}`
+            );
+
+
+          if (
+            input &&
+            promo.release_at
+          ) {
+
+            input.value =
+              mpFSFLocalValue(
+                promo.release_at
+              );
+
+          }
+
+
+          if (enabled) {
+
+            enabled.checked =
+              promo.enabled !==
+              false;
+
+          }
+
+        }
+      );
+
+
+    } catch (error) {
+
+      console.warn(
+        "Ripristino calendario founder:",
+        error
+      );
+
+    }
+
+  }
+
+
+
+  /* =======================================================
+     LABORATORIO TEST SICURO
+     ======================================================= */
+
+  const MP_FSF_TEST_PROMOS = [
+
+    [
+      "otw",
+      "01",
+      "ONES TO WATCH"
+    ],
+
+    [
+      "ultimateScream",
+      "02",
+      "ULTIMATE SCREAM"
+    ],
+
+    [
+      "thunderstruck",
+      "03",
+      "THUNDERSTRUCK"
+    ],
+
+    [
+      "futmas",
+      "04",
+      "FUTMAS"
+    ],
+
+    [
+      "toty",
+      "05",
+      "TOTY"
+    ],
+
+    [
+      "futureStars",
+      "06",
+      "FUTURE STARS"
+    ],
+
+    [
+      "futBirthday",
+      "07",
+      "FUT BIRTHDAY"
+    ],
+
+    [
+      "timeWarp",
+      "08",
+      "TIME WARP"
+    ],
+
+    [
+      "tots",
+      "09",
+      "TOTS"
+    ],
+
+    [
+      "summerHeat",
+      "10",
+      "SUMMER HEAT"
+    ],
+
+    [
+      "futties",
+      "11",
+      "FUTTIES"
+    ]
+
+  ];
+
+
+  async function mpFSFGenerateTest(
+    promoId
+  ) {
+
+    try {
+
+      const admin =
+        await window
+          .mpPromoSecureIsAdmin(
+            true
+          );
+
+
+      if (!admin) {
+
+        throw new Error(
+          "Accesso founder richiesto"
+        );
+
+      }
+
+
+      if (
+        typeof window
+          .mpPromoGenerateCard !==
+          "function"
+      ) {
+
+        throw new Error(
+          "Generatore promo non disponibile"
+        );
+
+      }
+
+
+      window
+        .mpPromoGenerateCard(
+          promoId,
+          true,
+          false
+        );
+
+
+      mpFSFToast(
+        "Carta di test generata"
+      );
+
+
+    } catch (error) {
+
+      mpFSFToast(
+        error?.message ||
+        "Errore generazione test"
+      );
+
+    }
+
+  }
+
+
+  async function mpFSFGenerateAllTests() {
+
+    try {
+
+      const admin =
+        await window
+          .mpPromoSecureIsAdmin(
+            true
+          );
+
+
+      if (!admin) {
+
+        throw new Error(
+          "Accesso founder richiesto"
+        );
+
+      }
+
+
+      if (
+        typeof window
+          .mpPromoGenerateAllCards !==
+          "function"
+      ) {
+
+        throw new Error(
+          "Generatore promo non disponibile"
+        );
+
+      }
+
+
+      window
+        .mpPromoGenerateAllCards();
+
+
+    } catch (error) {
+
+      mpFSFToast(
+        error?.message ||
+        "Errore generazione carte"
+      );
+
+    }
+
+  }
+
+
+  async function mpFSFDeleteTests() {
+
+    try {
+
+      const admin =
+        await window
+          .mpPromoSecureIsAdmin(
+            true
+          );
+
+
+      if (!admin) {
+
+        throw new Error(
+          "Accesso founder richiesto"
+        );
+
+      }
+
+
+      if (
+        typeof window
+          .mpPromoDeleteAllCards ===
+          "function"
+      ) {
+
+        window
+          .mpPromoDeleteAllCards();
+
+      }
+
+    } catch (error) {
+
+      mpFSFToast(
+        error?.message ||
+        "Errore eliminazione test"
+      );
+
+    }
+
+  }
+
+
+  function mpFSFMountTestLab() {
+
+    const panel =
+      document.getElementById(
+        "mpPromoSecureAdmin"
+      );
+
+
+    if (
+      !panel ||
+      panel.querySelector(
+        "#mpFounderTestLab"
+      )
+    ) {
+      return;
+    }
+
+
+    const grid =
+      panel.querySelector(
+        ".mp-promo-secure-grid"
+      );
+
+
+    if (!grid) {
+      return;
+    }
+
+
+    const testSection =
+      document.createElement(
+        "section"
+      );
+
+
+    testSection.id =
+      "mpFounderTestLab";
+
+    testSection.className =
+      "mp-founder-test-lab";
+
+
+    testSection.innerHTML = `
+
+      <header>
+
+        <div>
+
+          <span>
+            SOLO FOUNDER
+          </span>
+
+          <h3>
+            Laboratorio carte
+          </h3>
+
+          <p>
+            Queste carte servono soltanto
+            per provare grafica, statistiche,
+            foto e PlayStyle.
+
+            Non modificano il calendario
+            delle release.
+          </p>
+
+        </div>
+
+
+        <div
+          class="mp-founder-test-global"
+        >
+
+          <button
+            type="button"
+            class="secondary-btn"
+            onclick="
+              mpFSFGenerateAllTests()
+            "
+          >
+            GENERA TUTTE
+          </button>
+
+
+          <button
+            type="button"
+            class="danger-btn"
+            onclick="
+              mpFSFDeleteTests()
+            "
+          >
+            ELIMINA TEST
+          </button>
+
+        </div>
+
+      </header>
+
+
+      <div
+        class="mp-founder-test-grid"
+      >
+
+        ${MP_FSF_TEST_PROMOS
+          .map(
+            ([
+              id,
+              number,
+              name
+            ]) => `
+
+              <button
+                type="button"
+
+                onclick="
+                  mpFSFGenerateTest(
+                    '${id}'
+                  )
+                "
+              >
+
+                <span>
+                  ${number}
+                </span>
+
+                <strong>
+                  ${name}
+                </strong>
+
+                <small>
+                  GENERA TEST
+                </small>
+
+              </button>
+
+            `
+          )
+          .join("")}
+
+      </div>
+
+    `;
+
+
+    /*
+      Prima del calendario.
+    */
+
+    grid.insertAdjacentElement(
+      "beforebegin",
+      testSection
+    );
+
+  }
+
+
+  /* =======================================================
+     OSSERVA QUANDO IL PANNELLO
+     VIENE RICREATO
+     ======================================================= */
+
+  let restoreTimer = null;
+
+
+  const observer =
+    new MutationObserver(
+      () => {
+
+        clearTimeout(
+          restoreTimer
+        );
+
+
+        restoreTimer =
+          setTimeout(
+            () => {
+
+              mpFSFMountTestLab();
+
+              mpFSFRestoreInputs();
+
+            },
+            80
+          );
+
+      }
+    );
+
+
+  observer.observe(
+    document.body,
+    {
+      childList: true,
+      subtree: true
+    }
+  );
+
+
+  /* =======================================================
+     GLOBALI
+     ======================================================= */
+
+  window.mpFSFGenerateTest =
+    mpFSFGenerateTest;
+
+  window.mpFSFGenerateAllTests =
+    mpFSFGenerateAllTests;
+
+  window.mpFSFDeleteTests =
+    mpFSFDeleteTests;
+
+  window.mpFSFRestoreInputs =
+    mpFSFRestoreInputs;
+
+
+  setTimeout(
+    () => {
+
+      mpFSFMountTestLab();
+
+      mpFSFRestoreInputs();
+
+    },
+    500
+  );
+
+})();
+
+/* =========================================================
+   MATCHPULSE
+   PROMO REAL RELEASE ENGINE V1
+   SNAPSHOT + RELEASE + FREEZE + ONLINE SYNC
+   ========================================================= */
+
+(function () {
+
+  if (
+    window.MP_PROMO_REAL_RELEASE_V1_READY
+  ) {
+    return;
+  }
+
+
+  window.MP_PROMO_REAL_RELEASE_V1_READY =
+    true;
+
+
+  const MP_PR_SEASON =
+    "2026-27";
+
+
+  const MP_PR_SNAPSHOT_TABLE =
+    "matchpulse_base_snapshots";
+
+
+  const MP_PR_CARD_TABLE =
+    "matchpulse_promo_cards";
+
+
+  const MP_PR_AVATAR_BUCKET =
+    "matchpulse-avatars";
+
+
+  const MP_PR_LOCAL_CARDS =
+    "matchpulse_promo_cards_v1";
+
+
+  const MP_PR_LOCAL_PHOTOS =
+    "matchpulse_promo_photos_v1";
+
+
+  const MP_PR_RELEVANT_KEYS =
+    new Set([
+
+      "matchpulse.matches.v1",
+
+      "matchpulse_player_profile",
+
+      "matchpulse_card_stats",
+
+      "matchpulse_playstyles_v1"
+
+    ]);
+
+
+  let MP_PR_SNAPSHOT_TIMER =
+    null;
+
+
+  let MP_PR_RELEASE_RUNNING =
+    false;
+
+
+  let MP_PR_SNAPSHOT_RUNNING =
+    false;
+
+
+
+  /* =======================================================
+     SUPPORTO
+     ======================================================= */
+
+  function mpPRToast(text) {
+
+    if (
+      typeof mpClubToast ===
+      "function"
+    ) {
+
+      mpClubToast(text);
+
+      return;
+
+    }
+
+
+    if (
+      typeof toast ===
+      "function"
+    ) {
+
+      toast(text);
+
+    }
+
+  }
+
+
+  function mpPRClone(value) {
+
+    try {
+
+      return JSON.parse(
+        JSON.stringify(
+          value ?? {}
+        )
+      );
+
+    } catch {
+
+      return {};
+
+    }
+
+  }
+
+
+  function mpPRHash(value) {
+
+    const text =
+      String(
+        value ?? ""
+      );
+
+
+    let hash =
+      2166136261;
+
+
+    for (
+      let i = 0;
+      i < text.length;
+      i += 1
+    ) {
+
+      hash ^=
+        text.charCodeAt(i);
+
+
+      hash =
+        Math.imul(
+          hash,
+          16777619
+        );
+
+    }
+
+
+    return (
+      hash >>> 0
+    )
+      .toString(16)
+      .padStart(
+        8,
+        "0"
+      );
+
+  }
+
+
+  function mpPRJson(
+    key,
+    fallback
+  ) {
+
+    try {
+
+      const parsed =
+        JSON.parse(
+          localStorage.getItem(
+            key
+          ) ||
+          JSON.stringify(
+            fallback
+          )
+        );
+
+
+      return parsed;
+
+    } catch {
+
+      return fallback;
+
+    }
+
+  }
+
+
+  async function mpPRUser() {
+
+    if (
+      typeof window.mpEnsureClubAuth ===
+        "function"
+    ) {
+
+      return await window
+        .mpEnsureClubAuth();
+
+    }
+
+
+    if (
+      typeof mpEnsureClubAuth ===
+        "function"
+    ) {
+
+      return await
+        mpEnsureClubAuth();
+
+    }
+
+
+    throw new Error(
+      "Autenticazione MatchPulse non disponibile"
+    );
+
+  }
+
+
+
+  /* =======================================================
+     PLAYSTYLE BASE
+     ======================================================= */
+
+  function mpPRBasePlayStyles() {
+
+    try {
+
+      if (
+        typeof window.mpGetPsData ===
+          "function"
+      ) {
+
+        return mpPRClone(
+          window.mpGetPsData()
+        );
+
+      }
+
+
+      if (
+        typeof mpGetPsData ===
+          "function"
+      ) {
+
+        return mpPRClone(
+          mpGetPsData()
+        );
+
+      }
+
+    } catch {}
+
+
+    return mpPRJson(
+      "matchpulse_playstyles_v1",
+      {}
+    );
+
+  }
+
+
+
+  /* =======================================================
+     FOTO
+     ======================================================= */
+
+  function mpPRIsRealPhoto(
+    source
+  ) {
+
+    const value =
+      String(
+        source || ""
+      ).trim();
+
+
+    return Boolean(
+
+      value &&
+
+      value !==
+        "profile.jpg" &&
+
+      !value.endsWith(
+        "/profile.jpg"
+      )
+
+    );
+
+  }
+
+
+  async function mpPRPhotoBlob(
+    source
+  ) {
+
+    const response =
+      await fetch(
+        source
+      );
+
+
+    if (!response.ok) {
+
+      throw new Error(
+        `Foto non leggibile: ${
+          response.status
+        }`
+      );
+
+    }
+
+
+    const blob =
+      await response.blob();
+
+
+    if (
+      !String(
+        blob.type || ""
+      ).startsWith(
+        "image/"
+      )
+    ) {
+
+      throw new Error(
+        "La foto profilo non è un'immagine valida"
+      );
+
+    }
+
+
+    return blob;
+
+  }
+
+
+  function mpPRPhotoExtension(
+    type
+  ) {
+
+    const mime =
+      String(
+        type || ""
+      ).toLowerCase();
+
+
+    if (
+      mime.includes(
+        "png"
+      )
+    ) {
+
+      return "png";
+
+    }
+
+
+    if (
+      mime.includes(
+        "webp"
+      )
+    ) {
+
+      return "webp";
+
+    }
+
+
+    return "jpg";
+
+  }
+
+
+  function mpPRAlreadyExists(
+    error
+  ) {
+
+    const text =
+      String(
+        error?.message ||
+        error?.error ||
+        ""
+      ).toLowerCase();
+
+
+    return (
+
+      Number(
+        error?.statusCode ||
+        error?.status ||
+        0
+      ) === 409 ||
+
+      text.includes(
+        "already exists"
+      ) ||
+
+      text.includes(
+        "resource already exists"
+      ) ||
+
+      text.includes(
+        "duplicate"
+      )
+
+    );
+
+  }
+
+
+  async function mpPRFreezePhoto(
+    user,
+    source
+  ) {
+
+    if (
+      !mpPRIsRealPhoto(
+        source
+      )
+    ) {
+
+      return {
+        path: "",
+        url: "profile.jpg"
+      };
+
+    }
+
+
+    const blob =
+      await mpPRPhotoBlob(
+        source
+      );
+
+
+    const hash =
+      mpPRHash(
+        source
+      );
+
+
+    const extension =
+      mpPRPhotoExtension(
+        blob.type
+      );
+
+
+    /*
+      Percorso IMMUTABILE.
+
+      Se la foto cambia in futuro
+      viene creato un hash differente.
+    */
+
+    const path =
+      `${user.id}/promo-freeze-${hash}.${extension}`;
+
+
+    const {
+      error
+    } =
+      await matchpulseSupabase
+        .storage
+        .from(
+          MP_PR_AVATAR_BUCKET
+        )
+        .upload(
+          path,
+          blob,
+          {
+
+            contentType:
+              blob.type,
+
+            cacheControl:
+              "31536000",
+
+            upsert:
+              false
+
+          }
+        );
+
+
+    if (
+      error &&
+      !mpPRAlreadyExists(
+        error
+      )
+    ) {
+
+      throw error;
+
+    }
+
+
+    const result =
+      matchpulseSupabase
+        .storage
+        .from(
+          MP_PR_AVATAR_BUCKET
+        )
+        .getPublicUrl(
+          path
+        );
+
+
+    const url =
+      result?.data?.publicUrl ||
+      "";
+
+
+    if (!url) {
+
+      throw new Error(
+        "URL foto congelata non disponibile"
+      );
+
+    }
+
+
+    return {
+      path,
+      url
+    };
+
+  }
+
+
+
+  /* =======================================================
+     DATI DELLA CARTA BASE
+     ======================================================= */
+
+  function mpPRCurrentData() {
+
+    const profile =
+      typeof getPlayerProfile ===
+        "function"
+
+        ? mpPRClone(
+            getPlayerProfile()
+          )
+
+        : {};
+
+
+    const cardStats =
+      typeof getCardStats ===
+        "function"
+
+        ? mpPRClone(
+            getCardStats()
+          )
+
+        : {};
+
+
+    const playstyles =
+      mpPRBasePlayStyles();
+
+
+    return {
+      profile,
+      cardStats,
+      playstyles
+    };
+
+  }
+
+
+
+  /* =======================================================
+     FIRMA SNAPSHOT
+     ======================================================= */
+
+  function mpPRSnapshotSignature(
+    data
+  ) {
+
+    const profile =
+      mpPRClone(
+        data.profile
+      );
+
+
+    const photo =
+      String(
+        profile.photo ||
+        ""
+      );
+
+
+    /*
+      Non mettiamo l'intero base64
+      nella stringa della firma.
+    */
+
+    profile.photo =
+      `PHOTO:${mpPRHash(
+        photo
+      )}`;
+
+
+    return mpPRHash(
+      JSON.stringify({
+
+        profile,
+
+        cardStats:
+          data.cardStats,
+
+        playstyles:
+          data.playstyles
+
+      })
+    );
+
+  }
+
+
+
+  /* =======================================================
+     CREA SNAPSHOT
+     ======================================================= */
+
+  async function mpPRCaptureSnapshot(
+    options = {}
+  ) {
+
+    if (
+      MP_PR_SNAPSHOT_RUNNING
+    ) {
+      return null;
+    }
+
+
+    MP_PR_SNAPSHOT_RUNNING =
+      true;
+
+
+    try {
+
+      const user =
+        await mpPRUser();
+
+
+      const data =
+        mpPRCurrentData();
+
+
+      const signature =
+        mpPRSnapshotSignature(
+          data
+        );
+
+
+      /*
+        Se questo identico stato
+        è già stato salvato,
+        non duplichiamo niente.
+      */
+
+      const {
+        data: existing,
+        error: existingError
+      } =
+        await matchpulseSupabase
+          .from(
+            MP_PR_SNAPSHOT_TABLE
+          )
+          .select(
+            "id,captured_at"
+          )
+          .eq(
+            "user_id",
+            user.id
+          )
+          .eq(
+            "signature",
+            signature
+          )
+          .maybeSingle();
+
+
+      if (existingError) {
+        throw existingError;
+      }
+
+
+      if (existing?.id) {
+
+        return existing;
+
+      }
+
+
+      const frozen =
+        await mpPRFreezePhoto(
+          user,
+          data.profile?.photo
+        );
+
+
+      const frozenProfile = {
+
+        ...data.profile,
+
+        /*
+          DA ORA LO SNAPSHOT
+          NON PUNTA PIÙ ALLA FOTO
+          MODIFICABILE DEL PROFILO.
+        */
+
+        photo:
+          frozen.url
+
+      };
+
+
+      const {
+        data: inserted,
+        error
+      } =
+        await matchpulseSupabase
+          .from(
+            MP_PR_SNAPSHOT_TABLE
+          )
+          .insert({
+
+            user_id:
+              user.id,
+
+            signature,
+
+            profile:
+              frozenProfile,
+
+            card_stats:
+              data.cardStats,
+
+            playstyles:
+              data.playstyles,
+
+            photo_path:
+              frozen.path ||
+              null
+
+          })
+          .select(
+            "id,captured_at"
+          )
+          .single();
+
+
+      if (error) {
+        throw error;
+      }
+
+
+      if (
+        options.silent !==
+        true
+      ) {
+
+        mpPRToast(
+          "Snapshot carta base salvato"
+        );
+
+      }
+
+
+      return inserted;
+
+
+    } finally {
+
+      MP_PR_SNAPSHOT_RUNNING =
+        false;
+
+    }
+
+  }
+
+
+
+  /* =======================================================
+     PROGRAMMA SNAPSHOT
+     ======================================================= */
+
+  function mpPRScheduleSnapshot() {
+
+    clearTimeout(
+      MP_PR_SNAPSHOT_TIMER
+    );
+
+
+    /*
+      Aspettiamo che V7 finisca
+      eventuali ricalcoli successivi
+      al salvataggio partita.
+    */
+
+    MP_PR_SNAPSHOT_TIMER =
+      setTimeout(
+        () => {
+
+          mpPRCaptureSnapshot({
+            silent: true
+          })
+          .catch(
+            error => {
+
+              console.warn(
+                "Snapshot MatchPulse:",
+                error
+              );
+
+            }
+          );
+
+        },
+        500
+      );
+
+  }
+
+
+
+  /* =======================================================
+     OSSERVA LE MODIFICHE IMPORTANTI
+     ======================================================= */
+
+  const mpPROldSetItem =
+    Storage.prototype
+      .setItem;
+
+
+  const mpPROldRemoveItem =
+    Storage.prototype
+      .removeItem;
+
+
+  Storage.prototype.setItem =
+    function (
+      key,
+      value
+    ) {
+
+      const result =
+        mpPROldSetItem
+          .call(
+            this,
+            key,
+            value
+          );
+
+
+      if (
+        this ===
+          localStorage &&
+
+        MP_PR_RELEVANT_KEYS
+          .has(
+            String(key)
+          )
+      ) {
+
+        mpPRScheduleSnapshot();
+
+      }
+
+
+      return result;
+    };
+
+
+  Storage.prototype.removeItem =
+    function (
+      key
+    ) {
+
+      const result =
+        mpPROldRemoveItem
+          .call(
+            this,
+            key
+          );
+
+
+      if (
+        this ===
+          localStorage &&
+
+        MP_PR_RELEVANT_KEYS
+          .has(
+            String(key)
+          )
+      ) {
+
+        mpPRScheduleSnapshot();
+
+      }
+
+
+      return result;
+    };
+
+
+
+  /* =======================================================
+     TROVA SNAPSHOT PRIMA DELLA RELEASE
+     ======================================================= */
+
+  async function mpPRSnapshotForRelease(
+    userId,
+    releaseAt
+  ) {
+
+    const {
+      data,
+      error
+    } =
+      await matchpulseSupabase
+        .from(
+          MP_PR_SNAPSHOT_TABLE
+        )
+        .select(
+          `
+            id,
+            captured_at,
+            profile,
+            card_stats,
+            playstyles,
+            photo_path
+          `
+        )
+        .eq(
+          "user_id",
+          userId
+        )
+        .lte(
+          "captured_at",
+          releaseAt
+        )
+        .order(
+          "captured_at",
+          {
+            ascending:
+              false
+          }
+        )
+        .limit(1)
+        .maybeSingle();
+
+
+    if (error) {
+      throw error;
+    }
+
+
+    return data || null;
+
+  }
+
+
+
+  /* =======================================================
+     RIPRISTINA STRINGA STORAGE
+     ======================================================= */
+
+  function mpPRRestoreRaw(
+    key,
+    value
+  ) {
+
+    if (
+      value ===
+        null ||
+      value ===
+        undefined
+    ) {
+
+      localStorage.removeItem(
+        key
+      );
+
+      return;
+    }
+
+
+    localStorage.setItem(
+      key,
+      value
+    );
+
+  }
+
+
+
+  /* =======================================================
+     GENERA USANDO LO SNAPSHOT
+
+     QUI NON CAMBIAMO IL TUO
+     GENERATORE PROMO.
+
+     Gli facciamo semplicemente
+     credere che lo snapshot sia
+     la carta base attuale.
+     ======================================================= */
+
+  function mpPRGenerateFromSnapshot(
+    promo,
+    snapshot
+  ) {
+
+    if (
+      typeof window
+        .mpPromoGenerateCard !==
+      "function"
+    ) {
+
+      throw new Error(
+        "Generatore promo non disponibile"
+      );
+
+    }
+
+
+    const oldProfileFunction =
+      typeof getPlayerProfile ===
+        "function"
+        ? getPlayerProfile
+        : null;
+
+
+    const oldStatsFunction =
+      typeof getCardStats ===
+        "function"
+        ? getCardStats
+        : null;
+
+
+    const rawCardsBefore =
+      localStorage.getItem(
+        MP_PR_LOCAL_CARDS
+      );
+
+
+    const rawPhotosBefore =
+      localStorage.getItem(
+        MP_PR_LOCAL_PHOTOS
+      );
+
+
+    let candidate =
+      null;
+
+
+    try {
+
+      const snapshotProfile =
+        mpPRClone(
+          snapshot.profile
+        );
+
+
+      const snapshotStats =
+        mpPRClone(
+          snapshot.card_stats
+        );
+
+
+      const fakeProfile =
+        function () {
+
+          return mpPRClone(
+            snapshotProfile
+          );
+
+        };
+
+
+      const fakeStats =
+        function () {
+
+          return mpPRClone(
+            snapshotStats
+          );
+
+        };
+
+
+      try {
+
+        getPlayerProfile =
+          fakeProfile;
+
+      } catch {}
+
+
+      try {
+
+        getCardStats =
+          fakeStats;
+
+      } catch {}
+
+
+      window.getPlayerProfile =
+        fakeProfile;
+
+
+      window.getCardStats =
+        fakeStats;
+
+
+      candidate =
+        window
+          .mpPromoGenerateCard(
+
+            promo.promo_id,
+
+            true,
+
+            true
+
+          );
+
+
+    } finally {
+
+      /*
+        Ripristina IMMEDIATAMENTE
+        le funzioni vere.
+      */
+
+      if (
+        oldProfileFunction
+      ) {
+
+        try {
+
+          getPlayerProfile =
+            oldProfileFunction;
+
+        } catch {}
+
+
+        window.getPlayerProfile =
+          oldProfileFunction;
+
+      }
+
+
+      if (
+        oldStatsFunction
+      ) {
+
+        try {
+
+          getCardStats =
+            oldStatsFunction;
+
+        } catch {}
+
+
+        window.getCardStats =
+          oldStatsFunction;
+
+      }
+
+
+      /*
+        Il generatore scrive
+        temporaneamente nel localStorage.
+
+        Lo annulliamo finché Supabase
+        non conferma la carta reale.
+      */
+
+      mpPRRestoreRaw(
+        MP_PR_LOCAL_CARDS,
+        rawCardsBefore
+      );
+
+
+      mpPRRestoreRaw(
+        MP_PR_LOCAL_PHOTOS,
+        rawPhotosBefore
+      );
+
+    }
+
+
+    if (
+      !candidate?.id
+    ) {
+
+      throw new Error(
+        "La carta promo non è stata generata"
+      );
+
+    }
+
+
+    return {
+
+      ...candidate,
+
+      /*
+        La data ufficiale non è
+        quando l'utente riapre l'app.
+      */
+
+      createdAt:
+        promo.release_at,
+
+      releasedAt:
+        promo.release_at,
+
+      snapshotId:
+        snapshot.id,
+
+      snapshotCapturedAt:
+        snapshot.captured_at,
+
+      realPromo:
+        true,
+
+      frozen:
+        true,
+
+      /*
+        Serve per ricostruire la
+        foto anche sull'altro dispositivo.
+      */
+
+      frozenPhotoUrl:
+        snapshot.profile?.photo ||
+        "profile.jpg",
+
+      frozenPhotoPath:
+        snapshot.photo_path ||
+        ""
+
+    };
+
+  }
+
+
+
+  /* =======================================================
+     IMPORTA CARTE ONLINE NEL LOCALSTORAGE
+     ======================================================= */
+
+  function mpPRMergeRemoteRows(
+    rows
+  ) {
+
+    if (
+      !Array.isArray(rows) ||
+      !rows.length
+    ) {
+      return;
+    }
+
+
+    let localCards =
+      mpPRJson(
+        MP_PR_LOCAL_CARDS,
+        []
+      );
+
+
+    if (
+      !Array.isArray(
+        localCards
+      )
+    ) {
+
+      localCards = [];
+
+    }
+
+
+    let photoLibrary =
+      mpPRJson(
+        MP_PR_LOCAL_PHOTOS,
+        {}
+      );
+
+
+    if (
+      !photoLibrary ||
+      typeof photoLibrary !==
+        "object" ||
+      Array.isArray(
+        photoLibrary
+      )
+    ) {
+
+      photoLibrary = {};
+
+    }
+
+
+    rows.forEach(
+      row => {
+
+        if (
+          !row?.card
+        ) {
+          return;
+        }
+
+
+        const card = {
+
+          ...row.card,
+
+          releasedAt:
+            row.release_at ||
+            row.card.releasedAt,
+
+          snapshotId:
+            row.snapshot_id ||
+            row.card.snapshotId,
+
+          frozenPhotoPath:
+            row.photo_path ||
+            row.card.frozenPhotoPath ||
+            "",
+
+          realPromo:
+            true,
+
+          frozen:
+            true
+
+        };
+
+
+        const index =
+          localCards.findIndex(
+            item =>
+
+              item?.season ===
+                card.season &&
+
+              item?.promoId ===
+                card.promoId
+          );
+
+
+        if (
+          index >= 0
+        ) {
+
+          localCards[index] =
+            card;
+
+        } else {
+
+          localCards.push(
+            card
+          );
+
+        }
+
+
+        /*
+          Ricostruisce la libreria foto
+          sul telefono / altro PC.
+        */
+
+        if (
+          card.photoRef &&
+          card.frozenPhotoUrl
+        ) {
+
+          photoLibrary[
+            card.photoRef
+          ] =
+            card.frozenPhotoUrl;
+
+        }
+
+      }
+    );
+
+
+    localCards.sort(
+      (a, b) =>
+        Number(
+          a?.order || 99
+        ) -
+        Number(
+          b?.order || 99
+        )
+    );
+
+
+    localStorage.setItem(
+      MP_PR_LOCAL_CARDS,
+      JSON.stringify(
+        localCards
+      )
+    );
+
+
+    localStorage.setItem(
+      MP_PR_LOCAL_PHOTOS,
+      JSON.stringify(
+        photoLibrary
+      )
+    );
+
+
+    if (
+      typeof route !==
+        "undefined" &&
+      route ===
+        "promos" &&
+      typeof window
+        .renderPromos ===
+        "function"
+    ) {
+
+      window.renderPromos();
+
+    }
+
+  }
+
+
+
+  /* =======================================================
+     SCARICA PROMO REALI ESISTENTI
+     ======================================================= */
+
+  async function mpPRSyncRealCards() {
+
+    const user =
+      await mpPRUser();
+
+
+    const {
+      data,
+      error
+    } =
+      await matchpulseSupabase
+        .from(
+          MP_PR_CARD_TABLE
+        )
+        .select(
+          `
+            season,
+            promo_id,
+            release_at,
+            snapshot_id,
+            card,
+            photo_path
+          `
+        )
+        .eq(
+          "user_id",
+          user.id
+        )
+        .eq(
+          "season",
+          MP_PR_SEASON
+        )
+        .order(
+          "release_at",
+          {
+            ascending:
+              true
+          }
+        );
+
+
+    if (error) {
+      throw error;
+    }
+
+
+    mpPRMergeRemoteRows(
+      data || []
+    );
+
+
+    return (
+      data || []
+    );
+
+  }
+
+
+
+  /* =======================================================
+     PROCESSA LE PROMO USCITE
+     ======================================================= */
+
+  async function mpPRProcessReleased(
+    options = {}
+  ) {
+
+    if (
+      MP_PR_RELEASE_RUNNING
+    ) {
+      return [];
+    }
+
+
+    MP_PR_RELEASE_RUNNING =
+      true;
+
+
+    const obtained =
+      [];
+
+
+    try {
+
+      const user =
+        await mpPRUser();
+
+
+      /*
+        Prima sincronizza eventuali
+        carte create sull'altro dispositivo.
+      */
+
+      await mpPRSyncRealCards();
+
+
+      const {
+        data: duePromos,
+        error: dueError
+      } =
+        await matchpulseSupabase
+          .rpc(
+            "matchpulse_get_due_promos",
+            {
+              p_season:
+                MP_PR_SEASON
+            }
+          );
+
+
+      if (dueError) {
+        throw dueError;
+      }
+
+
+      for (
+        const promo of
+          duePromos || []
+      ) {
+
+        /*
+          Cerca L'ULTIMA carta base
+          salvata PRIMA dell'orario
+          ufficiale.
+        */
+
+        const snapshot =
+          await mpPRSnapshotForRelease(
+
+            user.id,
+
+            promo.release_at
+
+          );
+
+
+        /*
+          Se non esiste uno snapshot
+          precedente, il giocatore
+          NON era ancora eleggibile.
+        */
+
+        if (!snapshot) {
+
+          console.log(
+            `Promo ${promo.promo_id}: nessuno snapshot precedente alla release`
+          );
+
+          continue;
+
+        }
+
+
+        const candidate =
+          mpPRGenerateFromSnapshot(
+            promo,
+            snapshot
+          );
+
+
+        /*
+          Supabase controlla nuovamente:
+          - promo davvero uscita
+          - snapshot dell'utente
+          - snapshot precedente alla release
+          - promo non già ottenuta
+        */
+
+        const {
+          data: claimData,
+          error: claimError
+        } =
+          await matchpulseSupabase
+            .rpc(
+              "matchpulse_claim_promo_card",
+              {
+
+                p_season:
+                  MP_PR_SEASON,
+
+                p_promo_id:
+                  promo.promo_id,
+
+                p_snapshot_id:
+                  snapshot.id,
+
+                p_card:
+                  candidate,
+
+                p_photo_path:
+                  snapshot.photo_path ||
+                  null
+
+              }
+            );
+
+
+        if (claimError) {
+          throw claimError;
+        }
+
+
+        const row =
+          Array.isArray(
+            claimData
+          )
+            ? claimData[0]
+            : claimData;
+
+
+        if (
+          !row?.promo_card
+        ) {
+          continue;
+        }
+
+
+        const canonicalRow = {
+
+          season:
+            MP_PR_SEASON,
+
+          promo_id:
+            promo.promo_id,
+
+          release_at:
+            row.official_release_at,
+
+          snapshot_id:
+            row.used_snapshot_id,
+
+          card:
+            row.promo_card,
+
+          photo_path:
+            row.frozen_photo_path
+
+        };
+
+
+        /*
+          IMPORTANTE:
+          usiamo sempre la versione
+          restituita dal server.
+
+          Se PC e telefono hanno provato
+          nello stesso momento,
+          entrambi ricevono la stessa carta.
+        */
+
+        mpPRMergeRemoteRows([
+          canonicalRow
+        ]);
+
+
+        obtained.push(
+          row.promo_card
+        );
+
+      }
+
+
+      if (
+        obtained.length &&
+        options.silent !==
+          true
+      ) {
+
+        mpPRToast(
+          obtained.length === 1
+
+            ? `${obtained[0].promoName} disponibile!`
+
+            : `${obtained.length} nuove carte promo disponibili!`
+        );
+
+      }
+
+
+      await mpPRRefreshFounderStatus();
+
+
+      return obtained;
+
+
+    } finally {
+
+      MP_PR_RELEASE_RUNNING =
+        false;
+
+    }
+
+  }
+
+
+
+  /* =======================================================
+     FOUNDER - STATUS MOTORE
+     ======================================================= */
+
+  function mpPRInstallFounderStatus() {
+
+    const panel =
+      document.getElementById(
+        "mpPromoSecureAdmin"
+      );
+
+
+    if (
+      !panel ||
+      panel.querySelector(
+        "#mpPromoRealEngine"
+      )
+    ) {
+      return;
+    }
+
+
+    const tools =
+      panel.querySelector(
+        "#mpFounderTools"
+      );
+
+
+    const target =
+      tools ||
+      panel.querySelector(
+        ".mp-promo-secure-head"
+      );
+
+
+    if (!target) {
+      return;
+    }
+
+
+    target.insertAdjacentHTML(
+      "afterend",
+      `
+        <section
+          id="mpPromoRealEngine"
+          class="mp-promo-real-engine"
+        >
+
+          <div>
+
+            <span>
+              MOTORE RELEASE
+            </span>
+
+            <strong>
+              Snapshot + carte congelate
+            </strong>
+
+            <small
+              id="mpPromoRealEngineInfo"
+            >
+              Controllo in corso...
+            </small>
+
+          </div>
+
+
+          <div
+            class="mp-promo-real-engine-actions"
+          >
+
+            <button
+              type="button"
+              class="secondary-btn"
+
+              onclick="
+                mpPRFounderSnapshotNow()
+              "
+            >
+              SNAPSHOT ORA
+            </button>
+
+
+            <button
+              type="button"
+              class="primary-btn"
+
+              onclick="
+                mpPRFounderCheckNow()
+              "
+            >
+              CONTROLLA RELEASE
+            </button>
+
+          </div>
+
+        </section>
+      `
+    );
+
+
+    mpPRRefreshFounderStatus();
+
+  }
+
+
+
+  async function mpPRRefreshFounderStatus() {
+
+    const info =
+      document.getElementById(
+        "mpPromoRealEngineInfo"
+      );
+
+
+    if (!info) {
+      return;
+    }
+
+
+    try {
+
+      const user =
+        await mpPRUser();
+
+
+      const {
+        data: snapshot
+      } =
+        await matchpulseSupabase
+          .from(
+            MP_PR_SNAPSHOT_TABLE
+          )
+          .select(
+            "captured_at"
+          )
+          .eq(
+            "user_id",
+            user.id
+          )
+          .order(
+            "captured_at",
+            {
+              ascending:
+                false
+            }
+          )
+          .limit(1)
+          .maybeSingle();
+
+
+      const {
+        count
+      } =
+        await matchpulseSupabase
+          .from(
+            MP_PR_CARD_TABLE
+          )
+          .select(
+            "promo_id",
+            {
+              count:
+                "exact",
+
+              head:
+                true
+            }
+          )
+          .eq(
+            "user_id",
+            user.id
+          )
+          .eq(
+            "season",
+            MP_PR_SEASON
+          );
+
+
+      const snapshotText =
+        snapshot?.captured_at
+
+          ? new Date(
+              snapshot.captured_at
+            ).toLocaleString(
+              "it-IT"
+            )
+
+          : "nessuno";
+
+
+      info.textContent =
+        `Ultimo snapshot: ${snapshotText} · ` +
+        `Promo reali online: ${count || 0}`;
+
+    } catch (
+      error
+    ) {
+
+      info.textContent =
+        `Errore motore: ${
+          error?.message ||
+          "sconosciuto"
+        }`;
+
+    }
+
+  }
+
+
+
+  async function mpPRFounderSnapshotNow() {
+
+    try {
+
+      await mpPRCaptureSnapshot({
+        silent: false
+      });
+
+
+      await mpPRRefreshFounderStatus();
+
+
+    } catch (
+      error
+    ) {
+
+      console.error(
+        error
+      );
+
+
+      mpPRToast(
+        error?.message ||
+        "Errore snapshot"
+      );
+
+    }
+
+  }
+
+
+
+  async function mpPRFounderCheckNow() {
+
+    try {
+
+      const cards =
+        await mpPRProcessReleased({
+          silent: false
+        });
+
+
+      if (
+        !cards.length
+      ) {
+
+        mpPRToast(
+          "Nessuna nuova promo da rilasciare"
+        );
+
+      }
+
+
+    } catch (
+      error
+    ) {
+
+      console.error(
+        error
+      );
+
+
+      mpPRToast(
+        error?.message ||
+        "Errore controllo release"
+      );
+
+    }
+
+  }
+
+
+
+  /* =======================================================
+     OSSERVATORE PANNELLO FOUNDER
+     ======================================================= */
+
+  const mpPROserver =
+    new MutationObserver(
+      () => {
+
+        mpPRInstallFounderStatus();
+
+      }
+    );
+
+
+  mpPROserver.observe(
+    document.body,
+    {
+      childList: true,
+      subtree: true
+    }
+  );
+
+
+
+  /* =======================================================
+     QUANDO TORNI NELL'APP
+     ======================================================= */
+
+  document.addEventListener(
+    "visibilitychange",
+    () => {
+
+      if (
+        document.visibilityState ===
+          "visible"
+      ) {
+
+        setTimeout(
+          () => {
+
+            mpPRSyncRealCards()
+              .then(
+                () =>
+                  mpPRProcessReleased({
+                    silent: false
+                  })
+              )
+              .catch(
+                error =>
+                  console.warn(
+                    "Promo visibility:",
+                    error
+                  )
+              );
+
+          },
+          500
+        );
+
+      }
+
+    }
+  );
+
+
+  window.addEventListener(
+    "focus",
+    () => {
+
+      setTimeout(
+        () => {
+
+          mpPRProcessReleased({
+            silent: false
+          })
+          .catch(
+            error =>
+              console.warn(
+                "Promo focus:",
+                error
+              )
+          );
+
+        },
+        500
+      );
+
+    }
+  );
+
+
+
+  /* =======================================================
+     CONTROLLO PERIODICO
+
+     Se MatchPulse è aperta,
+     una release viene rilevata
+     entro circa 30 secondi.
+     ======================================================= */
+
+  setInterval(
+    () => {
+
+      if (
+        document.visibilityState !==
+          "visible"
+      ) {
+        return;
+      }
+
+
+      mpPRProcessReleased({
+        silent: false
+      })
+      .catch(
+        error =>
+          console.warn(
+            "Promo interval:",
+            error
+          )
+      );
+
+    },
+    30000
+  );
+
+
+
+  /* =======================================================
+     GLOBALI
+     ======================================================= */
+
+  window.mpPRCaptureSnapshot =
+    mpPRCaptureSnapshot;
+
+
+  window.mpPRProcessReleased =
+    mpPRProcessReleased;
+
+
+  window.mpPRSyncRealCards =
+    mpPRSyncRealCards;
+
+
+  window.mpPRFounderSnapshotNow =
+    mpPRFounderSnapshotNow;
+
+
+  window.mpPRFounderCheckNow =
+    mpPRFounderCheckNow;
+
+
+  window.mpPRRefreshFounderStatus =
+    mpPRRefreshFounderStatus;
+
+
+
+  /* =======================================================
+     BOOT
+     ======================================================= */
+
+  setTimeout(
+    async () => {
+
+      try {
+
+        /*
+          1. importa eventuali promo
+          ottenute sull'altro dispositivo
+        */
+
+        await mpPRSyncRealCards();
+
+
+        /*
+          2. garantisce che esista
+          almeno uno snapshot attuale
+        */
+
+        await mpPRCaptureSnapshot({
+          silent: true
+        });
+
+
+        /*
+          3. controlla il calendario
+        */
+
+        await mpPRProcessReleased({
+          silent: false
+        });
+
+
+        mpPRInstallFounderStatus();
+
+
+      } catch (
+        error
+      ) {
+
+        console.warn(
+          "Avvio Promo Real Engine:",
+          error
+        );
+
+      }
+
+    },
+    1800
+  );
+
+})();
+
+/* =========================================================
+   MATCHPULSE
+   WEB PUSH CLIENT V1
+   ========================================================= */
+
+(function () {
+
+  if (
+    window.MP_WEB_PUSH_V1_READY
+  ) {
+    return;
+  }
+
+
+  window.MP_WEB_PUSH_V1_READY =
+    true;
+
+
+  /* =======================================================
+     SUPPORTO
+     ======================================================= */
+
+  function mpPushToast(
+    text
+  ) {
+
+    if (
+      typeof mpClubToast ===
+        "function"
+    ) {
+
+      mpClubToast(text);
+
+      return;
+
+    }
+
+
+    if (
+      typeof toast ===
+        "function"
+    ) {
+
+      toast(text);
+
+    }
+
+  }
+
+
+  function mpPushSupported() {
+
+    return (
+
+      "serviceWorker" in
+        navigator &&
+
+      "PushManager" in
+        window &&
+
+      "Notification" in
+        window
+
+    );
+
+  }
+
+
+
+  /* =======================================================
+     VAPID BASE64URL -> UINT8ARRAY
+     ======================================================= */
+
+  function mpPushUrlBase64ToUint8Array(
+    base64String
+  ) {
+
+    const padding =
+      "=".repeat(
+        (
+          4 -
+          base64String.length %
+          4
+        ) %
+        4
+      );
+
+
+    const base64 =
+      (
+        base64String +
+        padding
+      )
+        .replace(
+          /-/g,
+          "+"
+        )
+        .replace(
+          /_/g,
+          "/"
+        );
+
+
+    const raw =
+      window.atob(
+        base64
+      );
+
+
+    return Uint8Array.from(
+      [...raw]
+        .map(
+          character =>
+            character.charCodeAt(
+              0
+            )
+        )
+    );
+
+  }
+
+
+
+  /* =======================================================
+     SERVICE WORKER
+     ======================================================= */
+
+  async function mpPushRegisterWorker() {
+
+    if (
+      !("serviceWorker" in navigator)
+    ) {
+
+      throw new Error(
+        "Service Worker non supportato"
+      );
+
+    }
+
+
+    const registration =
+      await navigator
+        .serviceWorker
+        .register(
+          "/sw.js",
+          {
+
+            scope:
+              "/",
+
+            updateViaCache:
+              "none"
+
+          }
+        );
+
+
+    try {
+
+      await registration
+        .update();
+
+    } catch {}
+
+
+    return registration;
+
+  }
+
+
+
+  /* =======================================================
+     CHIAVE PUBBLICA
+     ======================================================= */
+
+  async function mpPushGetPublicKey() {
+
+    const {
+      data,
+      error
+    } =
+      await matchpulseSupabase
+        .rpc(
+          "matchpulse_get_vapid_public_key"
+        );
+
+
+    if (error) {
+      throw error;
+    }
+
+
+    if (!data) {
+
+      throw new Error(
+        "VAPID Public Key non configurata"
+      );
+
+    }
+
+
+    return String(data);
+
+  }
+
+
+
+  /* =======================================================
+     STATO
+     ======================================================= */
+
+  async function mpPushGetStatus() {
+
+    if (
+      !mpPushSupported()
+    ) {
+
+      return {
+        supported:
+          false,
+
+        permission:
+          "unsupported",
+
+        subscribed:
+          false
+      };
+
+    }
+
+
+    const registration =
+      await mpPushRegisterWorker();
+
+
+    const subscription =
+      await registration
+        .pushManager
+        .getSubscription();
+
+
+    return {
+
+      supported:
+        true,
+
+      permission:
+        Notification.permission,
+
+      subscribed:
+        Boolean(
+          subscription
+        ),
+
+      subscription
+
+    };
+
+  }
+
+
+
+  /* =======================================================
+     ATTIVA
+     ======================================================= */
+
+  async function mpPushEnable() {
+
+    try {
+
+      if (
+        !mpPushSupported()
+      ) {
+
+        throw new Error(
+          "Le notifiche push non sono disponibili su questo dispositivo/browser"
+        );
+
+      }
+
+
+      /*
+        IMPORTANTE:
+        questa funzione viene chiamata
+        direttamente dal click dell'utente.
+      */
+
+      const permission =
+        await Notification
+          .requestPermission();
+
+
+      if (
+        permission !==
+          "granted"
+      ) {
+
+        if (
+          permission ===
+            "denied"
+        ) {
+
+          throw new Error(
+            "Permesso notifiche negato nelle impostazioni del dispositivo"
+          );
+
+        }
+
+
+        throw new Error(
+          "Permesso notifiche non concesso"
+        );
+
+      }
+
+
+      if (
+        typeof window
+          .mpEnsureClubAuth ===
+          "function"
+      ) {
+
+        await window
+          .mpEnsureClubAuth();
+
+      }
+
+
+      const registration =
+        await mpPushRegisterWorker();
+
+
+      let subscription =
+        await registration
+          .pushManager
+          .getSubscription();
+
+
+      if (!subscription) {
+
+        const publicKey =
+          await mpPushGetPublicKey();
+
+
+        subscription =
+          await registration
+            .pushManager
+            .subscribe({
+
+              userVisibleOnly:
+                true,
+
+              applicationServerKey:
+                mpPushUrlBase64ToUint8Array(
+                  publicKey
+                )
+
+            });
+
+      }
+
+
+      const json =
+        subscription.toJSON();
+
+
+      const endpoint =
+        json.endpoint;
+
+
+      const p256dh =
+        json.keys?.p256dh;
+
+
+      const authKey =
+        json.keys?.auth;
+
+
+      if (
+        !endpoint ||
+        !p256dh ||
+        !authKey
+      ) {
+
+        throw new Error(
+          "Dati della sottoscrizione push incompleti"
+        );
+
+      }
+
+
+      const deviceLabel =
+        navigator.userAgent
+          .includes(
+            "Mobile"
+          )
+
+          ? "Telefono"
+
+          : "Computer";
+
+
+      const {
+        error
+      } =
+        await matchpulseSupabase
+          .rpc(
+            "matchpulse_save_push_subscription",
+            {
+
+              p_endpoint:
+                endpoint,
+
+              p_p256dh:
+                p256dh,
+
+              p_auth_key:
+                authKey,
+
+              p_user_agent:
+                navigator.userAgent,
+
+              p_device_label:
+                deviceLabel
+
+            }
+          );
+
+
+      if (error) {
+        throw error;
+      }
+
+
+      mpPushToast(
+        "Notifiche MatchPulse attivate"
+      );
+
+
+      await mpPushRefreshUi();
+
+
+    } catch (
+      error
+    ) {
+
+      console.error(
+        "MATCHPULSE PUSH:",
+        error
+      );
+
+
+      mpPushToast(
+        error?.message ||
+        "Errore attivazione notifiche"
+      );
+
+    }
+
+  }
+
+
+
+  /* =======================================================
+     DISATTIVA
+     ======================================================= */
+
+  async function mpPushDisable() {
+
+    try {
+
+      const registration =
+        await mpPushRegisterWorker();
+
+
+      const subscription =
+        await registration
+          .pushManager
+          .getSubscription();
+
+
+      if (!subscription) {
+
+        mpPushToast(
+          "Le notifiche sono già disattivate"
+        );
+
+
+        await mpPushRefreshUi();
+
+        return;
+
+      }
+
+
+      const endpoint =
+        subscription.endpoint;
+
+
+      const {
+        error
+      } =
+        await matchpulseSupabase
+          .rpc(
+            "matchpulse_remove_push_subscription",
+            {
+              p_endpoint:
+                endpoint
+            }
+          );
+
+
+      if (error) {
+        throw error;
+      }
+
+
+      await subscription
+        .unsubscribe();
+
+
+      mpPushToast(
+        "Notifiche MatchPulse disattivate"
+      );
+
+
+      await mpPushRefreshUi();
+
+
+    } catch (
+      error
+    ) {
+
+      console.error(
+        "DISATTIVA PUSH:",
+        error
+      );
+
+
+      mpPushToast(
+        error?.message ||
+        "Errore disattivazione notifiche"
+      );
+
+    }
+
+  }
+
+
+
+  /* =======================================================
+     UI
+     ======================================================= */
+
+  async function mpPushRefreshUi() {
+
+    const card =
+      document.getElementById(
+        "mpPushSettingsCard"
+      );
+
+
+    if (!card) {
+      return;
+    }
+
+
+    const status =
+      card.querySelector(
+        ".mp-push-status"
+      );
+
+
+    const enable =
+      card.querySelector(
+        ".mp-push-enable"
+      );
+
+
+    const disable =
+      card.querySelector(
+        ".mp-push-disable"
+      );
+
+
+    try {
+
+      const state =
+        await mpPushGetStatus();
+
+
+      if (
+        !state.supported
+      ) {
+
+        status.textContent =
+          "NON SUPPORTATE";
+
+
+        enable.hidden =
+          true;
+
+
+        disable.hidden =
+          true;
+
+
+        return;
+
+      }
+
+
+      if (
+        state.permission ===
+          "denied"
+      ) {
+
+        status.textContent =
+          "BLOCCATE DAL DISPOSITIVO";
+
+
+        enable.hidden =
+          false;
+
+
+        enable.disabled =
+          true;
+
+
+        disable.hidden =
+          true;
+
+
+        return;
+
+      }
+
+
+      if (
+        state.subscribed
+      ) {
+
+        status.textContent =
+          "ATTIVE";
+
+
+        status.classList.add(
+          "is-active"
+        );
+
+
+        enable.hidden =
+          true;
+
+
+        disable.hidden =
+          false;
+
+
+        return;
+
+      }
+
+
+      status.textContent =
+        "DISATTIVATE";
+
+
+      status.classList.remove(
+        "is-active"
+      );
+
+
+      enable.hidden =
+        false;
+
+
+      enable.disabled =
+        false;
+
+
+      disable.hidden =
+        true;
+
+
+    } catch (
+      error
+    ) {
+
+      status.textContent =
+        "ERRORE CONTROLLO";
+
+    }
+
+  }
+
+
+
+  function mpPushInjectSettings() {
+
+    const panel =
+      document.querySelector(
+        ".profile-hub-panel"
+      );
+
+
+    if (
+      !panel ||
+      panel.querySelector(
+        "#mpPushSettingsCard"
+      )
+    ) {
+      return;
+    }
+
+
+    panel.insertAdjacentHTML(
+      "beforeend",
+      `
+        <section
+          id="mpPushSettingsCard"
+          class="mp-push-settings-card"
+        >
+
+          <div
+            class="mp-push-settings-copy"
+          >
+
+            <span>
+              🔔 NOTIFICHE
+            </span>
+
+            <strong>
+              Release Promo
+            </strong>
+
+            <small>
+              Ricevi una notifica quando
+              una nuova carta promo viene
+              ufficialmente rilasciata.
+            </small>
+
+          </div>
+
+
+          <div
+            class="mp-push-settings-actions"
+          >
+
+            <b
+              class="mp-push-status"
+            >
+              CONTROLLO...
+            </b>
+
+
+            <button
+              type="button"
+              class="
+                primary-btn
+                mp-push-enable
+              "
+
+              onclick="
+                mpPushEnable()
+              "
+            >
+              ATTIVA NOTIFICHE
+            </button>
+
+
+            <button
+              type="button"
+              class="
+                secondary-btn
+                mp-push-disable
+              "
+
+              onclick="
+                mpPushDisable()
+              "
+
+              hidden
+            >
+              DISATTIVA
+            </button>
+
+          </div>
+
+        </section>
+      `
+    );
+
+
+    mpPushRefreshUi();
+
+  }
+
+
+
+  /* =======================================================
+     CLICK NOTIFICA -> PAGINA PROMO
+     ======================================================= */
+
+  function mpPushOpenPromos() {
+
+    if (
+      typeof setRoute ===
+        "function"
+    ) {
+
+      setRoute(
+        "promos"
+      );
+
+    }
+
+  }
+
+
+  navigator
+    .serviceWorker
+    ?.addEventListener(
+      "message",
+      event => {
+
+        if (
+          event.data?.type ===
+            "MATCHPULSE_OPEN_PROMOS"
+        ) {
+
+          mpPushOpenPromos();
+
+        }
+
+      }
+    );
+
+
+  const startupUrl =
+    new URL(
+      location.href
+    );
+
+
+  if (
+    startupUrl
+      .searchParams
+      .get(
+        "mpOpen"
+      ) ===
+        "promos"
+  ) {
+
+    setTimeout(
+      mpPushOpenPromos,
+      700
+    );
+
+
+    startupUrl
+      .searchParams
+      .delete(
+        "mpOpen"
+      );
+
+
+    history.replaceState(
+      {},
+      document.title,
+      startupUrl.pathname +
+      startupUrl.search +
+      startupUrl.hash
+    );
+
+  }
+
+
+
+  /* =======================================================
+     OSSERVA HUB PROFILO
+     ======================================================= */
+
+  const observer =
+    new MutationObserver(
+      () => {
+
+        mpPushInjectSettings();
+
+      }
+    );
+
+
+  observer.observe(
+    document.body,
+    {
+      childList:
+        true,
+
+      subtree:
+        true
+    }
+  );
+
+
+
+  /* =======================================================
+     BOOT
+     ======================================================= */
+
+  mpPushRegisterWorker()
+    .catch(
+      error => {
+
+        console.warn(
+          "Service Worker MatchPulse:",
+          error
+        );
+
+      }
+    );
+
+
+  window.mpPushEnable =
+    mpPushEnable;
+
+
+  window.mpPushDisable =
+    mpPushDisable;
+
+
+  window.mpPushGetStatus =
+    mpPushGetStatus;
+
+
+  window.mpPushRefreshUi =
+    mpPushRefreshUi;
+
+})();
