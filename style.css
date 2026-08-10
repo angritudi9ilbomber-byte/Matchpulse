@@ -20926,3 +20926,78 @@ button {
 .mp-promo-v3-plus-slot {
   overflow: visible !important;
 }
+
+/* =========================================================
+   MATCHPULSE
+   PROMO COLLECTION NO CLIPPING FIX V2
+   ========================================================= */
+
+
+/*
+  MatchPulse usa una shell larga massimo 460px.
+
+  Quindi la collezione NON deve dipendere
+  dalla larghezza dell'intero browser.
+
+  Una sola carta per riga:
+  niente più seconda colonna tagliata.
+*/
+
+.mp-promo-collection-grid {
+  grid-template-columns:
+    minmax(0, 1fr) !important;
+
+  width: 100% !important;
+  max-width: 100% !important;
+
+  overflow: visible !important;
+}
+
+
+/*
+  Tutti i livelli della collezione
+  lasciano respirare template e PS+.
+*/
+
+.mp-promos-page,
+.mp-promo-collection-item,
+.mp-promo-v3-open-button,
+.mp-promo-v3-preview,
+.mp-promo-v3-card {
+  overflow: visible !important;
+}
+
+
+/*
+  SU PC la shell MatchPulse normalmente
+  usa overflow:hidden per il bordo arrotondato.
+
+  Soltanto quando è aperta la pagina Promo
+  lo disattiviamo, così i PNG ingranditi
+  non vengono tranciati ai lati.
+*/
+
+@media (min-width: 700px) {
+
+  .app-shell:has(.mp-promos-page) {
+    overflow: visible !important;
+  }
+
+}
+
+
+/*
+  Manteniamo la carta centrata.
+*/
+
+.mp-promo-collection-item
+.mp-promo-v3-open-button {
+
+  display: block !important;
+
+  margin-left:
+    auto !important;
+
+  margin-right:
+    auto !important;
+}

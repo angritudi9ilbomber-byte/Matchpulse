@@ -42130,18 +42130,19 @@ const statCap =
 
 
   const MP_PR_RELEVANT_KEYS =
-    new Set([
+  new Set([
 
-      "matchpulse.matches.v1",
+    "matchpulse.matches.v1",
 
-      "matchpulse_player_profile",
+    "matchpulse_player_profile",
 
-      "matchpulse_card_stats",
+    "matchpulse_card_stats",
 
-      "matchpulse_playstyles_v1"
-      
+    "matchpulse_playstyles_v1",
 
-    ]);
+    "matchpulse_ps_recommendations_ignored_v1"
+
+  ]);
 
 
   let MP_PR_SNAPSHOT_TIMER =
@@ -42896,10 +42897,20 @@ function mpPRCurrentRecommendations() {
         mpPRCurrentData();
 
 
-      const signature =
-        mpPRSnapshotSignature(
-          data
-        );
+      const baseSignature =
+  mpPRSnapshotSignature(
+    data
+  );
+
+
+const signature =
+  options.force === true
+
+    ? `${baseSignature}:manual:${Date.now()}:${Math.random()
+        .toString(36)
+        .slice(2)}`
+
+    : baseSignature;
 
 
       /*
@@ -44333,8 +44344,9 @@ if (
     try {
 
       await mpPRCaptureSnapshot({
-        silent: false
-      });
+  silent: false,
+  force: true
+});
 
 
       await mpPRRefreshFounderStatus();
@@ -45551,206 +45563,6 @@ if (
 
   window.mpPushRefreshUi =
     mpPushRefreshUi;
-
-})();
-
-/* =========================================================
-   MATCHPULSE
-   SNAPSHOT ORA = SNAPSHOT REALE V2
-   ========================================================= */
-
-(function () {
-
-  if (window.MP_FORCE_SNAPSHOT_V2_READY) {
-    return;
-  }
-
-  window.MP_FORCE_SNAPSHOT_V2_READY = true;
-
-
-  async function mpPRForceSnapshotNow() {
-
-    try {
-
-      const user =
-        typeof window.mpEnsureClubAuth === "function"
-          ? await window.mpEnsureClubAuth()
-          : await mpEnsureClubAuth();
-
-
-      const profile =
-        typeof getPlayerProfile === "function"
-          ? JSON.parse(
-              JSON.stringify(
-                getPlayerProfile() || {}
-              )
-            )
-          : {};
-
-
-      const cardStats =
-        typeof getCardStats === "function"
-          ? JSON.parse(
-              JSON.stringify(
-                getCardStats() || {}
-              )
-            )
-          : {};
-
-
-      let playstyles = {};
-
-      try {
-
-        if (
-          typeof window.mpGetPsData ===
-          "function"
-        ) {
-
-          playstyles =
-            JSON.parse(
-              JSON.stringify(
-                window.mpGetPsData() || {}
-              )
-            );
-
-        } else {
-
-          playstyles =
-            JSON.parse(
-              localStorage.getItem(
-                "matchpulse_playstyles_v1"
-              ) || "{}"
-            );
-
-        }
-
-      } catch {}
-
-
-      /*
-        Firma volutamente unica:
-        SNAPSHOT ORA deve creare
-        un nuovo record anche se
-        la carta non è cambiata.
-      */
-
-      const signature =
-        "manual-" +
-        Date.now() +
-        "-" +
-        Math.random()
-          .toString(36)
-          .slice(2);
-
-
-      const {
-        data,
-        error
-      } =
-        await matchpulseSupabase
-          .from(
-            "matchpulse_base_snapshots"
-          )
-          .insert({
-
-            user_id:
-              user.id,
-
-            signature:
-
-              signature,
-
-            profile:
-
-              profile,
-
-            card_stats:
-
-              cardStats,
-
-            playstyles:
-
-              playstyles,
-
-            photo_path:
-              null
-
-          })
-          .select(
-            "id,captured_at"
-          )
-          .single();
-
-
-      if (error) {
-        throw error;
-      }
-
-
-      if (
-        typeof mpClubToast ===
-        "function"
-      ) {
-
-        mpClubToast(
-          "Nuovo snapshot creato"
-        );
-
-      } else if (
-        typeof toast ===
-        "function"
-      ) {
-
-        toast(
-          "Nuovo snapshot creato"
-        );
-
-      }
-
-
-      if (
-        typeof window
-          .mpPRRefreshFounderStatus ===
-          "function"
-      ) {
-
-        await window
-          .mpPRRefreshFounderStatus();
-
-      }
-
-
-      return data;
-
-
-    } catch (error) {
-
-      console.error(
-        "SNAPSHOT ORA:",
-        error
-      );
-
-
-      if (
-        typeof mpClubToast ===
-        "function"
-      ) {
-
-        mpClubToast(
-          error?.message ||
-          "Errore snapshot"
-        );
-
-      }
-
-    }
-
-  }
-
-
-  window.mpPRFounderSnapshotNow =
-    mpPRForceSnapshotNow;
 
 })();
 
