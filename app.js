@@ -6774,30 +6774,76 @@ setTimeout(() => {
    L'OVR sale solo quando la media arriva davvero al punto pieno
    ========================================================= */
 
+/* =========================================================
+   MATCHPULSE
+   OVR UNIFICATO DEFINITIVO
+
+   L'OVR viene calcolato sulle STESSE statistiche intere
+   che il giocatore vede sulla carta.
+
+   Quindi:
+   HOME = CLUB = PLAYSTYLE = RARITÀ
+   ========================================================= */
+
 function calculateOVR(stats) {
-  const pac = Number(stats.pac) || 60;
-  const sho = Number(stats.sho) || 60;
-  const pas = Number(stats.pas) || 60;
-  const dri = Number(stats.dri) || 60;
-  const def = Number(stats.def) || 60;
-  const phy = Number(stats.phy) || 60;
 
-  const average = (pac + sho + pas + dri + def + phy) / 6;
+  const pac =
+    Math.round(
+      Number(stats?.pac) || 60
+    );
 
-  return Math.floor(average);
+  const sho =
+    Math.round(
+      Number(stats?.sho) || 60
+    );
+
+  const pas =
+    Math.round(
+      Number(stats?.pas) || 60
+    );
+
+  const dri =
+    Math.round(
+      Number(stats?.dri) || 60
+    );
+
+  const def =
+    Math.round(
+      Number(stats?.def) || 60
+    );
+
+  const phy =
+    Math.round(
+      Number(stats?.phy) || 60
+    );
+
+
+  const average =
+    (
+      pac +
+      sho +
+      pas +
+      dri +
+      def +
+      phy
+    ) / 6;
+
+
+  /*
+    Conservativo:
+    64.99 = 64
+    65.00 = 65
+  */
+
+  return Math.floor(
+    average
+  );
+
 }
 
-window.calculateOVR = calculateOVR;
 
-setTimeout(() => {
-  rebuildCardStatsFromHistory();
-  renderPlayerCardStats();
-
-  if (route === "home") {
-    render();
-    renderPlayerCardStats();
-  }
-}, 0);
+window.calculateOVR =
+  calculateOVR;
 
 /* =========================================================
    MATCHPULSE - SISTEMA GENERALE PLAYSTYLES
