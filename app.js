@@ -7207,12 +7207,358 @@ if (saved.powerHeader && !saved.precisionHeader) {
   return data;
 }
 
+/* =========================================================
+   MATCHPULSE
+   PLAYSTYLE SAVE + CLUB DIRECT SYNC V2
+   ========================================================= */
+
 function mpSavePsData(data) {
+
+  /* =========================
+     1. SALVATAGGIO LOCALE
+     ========================= */
+
   localStorage.setItem(
     MP_PS_STORAGE_KEY,
     JSON.stringify(data)
   );
+
+
+  /* =========================
+     2. SYNC CLUB DIRETTO
+     ========================= */
+
+  setTimeout(
+    () => {
+
+      mpSyncPlayStylesDirectToClub(
+        data
+      );
+
+    },
+    20
+  );
+
 }
+
+/* =========================================================
+   MATCHPULSE
+   CLUB PLAYSTYLE DIRECT SYNC V2
+
+   Aggiorna ESCLUSIVAMENTE i PlayStyle
+   del membro nel Club.
+
+   Supporta:
+   - tutti i PS normali
+   - tutti i PS+
+   - rimozioni
+   - trasformazioni normale -> Plus
+   ========================================================= */
+
+async function mpSyncPlayStylesDirectToClub(
+  sourceData = null
+) {
+
+  try {
+
+    if (
+      typeof matchpulseSupabase ===
+        "undefined" ||
+      !matchpulseSupabase
+    ) {
+      return null;
+    }
+
+
+    /* =====================================================
+       UTENTE
+       ===================================================== */
+
+    let user =
+      null;
+
+
+    if (
+      typeof mpEnsureClubAuth ===
+        "function"
+    ) {
+
+      user =
+        await mpEnsureClubAuth();
+
+    } else {
+
+      const {
+        data
+      } =
+        await matchpulseSupabase
+          .auth
+          .getUser();
+
+
+      user =
+        data?.user ||
+        null;
+
+    }
+
+
+    if (
+      !user?.id
+    ) {
+      return null;
+    }
+
+
+    /* =====================================================
+       CLUB ATTUALE
+       ===================================================== */
+
+    let club =
+      null;
+
+
+    if (
+      typeof MP_CLUB_CURRENT !==
+        "undefined" &&
+      MP_CLUB_CURRENT?.club_id
+    ) {
+
+      club =
+        MP_CLUB_CURRENT;
+
+    }
+
+
+    if (
+      !club &&
+      typeof mpGetMyClub ===
+        "function"
+    ) {
+
+      club =
+        await mpGetMyClub();
+
+    }
+
+
+    if (
+      !club?.club_id
+    ) {
+
+      /*
+        Non è dentro un Club:
+        il PS resta comunque salvato
+        normalmente in locale/cloud.
+      */
+
+      return null;
+
+    }
+
+
+    /* =====================================================
+       DATI PLAYSTYLE
+
+       Usiamo DIRETTAMENTE quelli appena
+       salvati. Non mpClubGetPlayStylesData(),
+       perché quella funzione può essere
+       modificata dal sistema Promo.
+       ===================================================== */
+
+    const raw =
+      sourceData &&
+      typeof sourceData ===
+        "object"
+
+        ? sourceData
+
+        : typeof mpGetPsData ===
+            "function"
+
+          ? mpGetPsData()
+
+          : {};
+
+
+    const playstyles =
+      {};
+
+
+    /*
+      Ricostruiamo solamente stati validi.
+
+      Questo evita qualsiasi dato sporco.
+    */
+
+    if (
+      typeof MP_PLAYSTYLES !==
+        "undefined" &&
+      Array.isArray(
+        MP_PLAYSTYLES
+      )
+    ) {
+
+      MP_PLAYSTYLES.forEach(
+        playStyle => {
+
+          const state =
+            raw[
+              playStyle.id
+            ];
+
+
+          playstyles[
+            playStyle.id
+          ] =
+
+            state === "normal" ||
+            state === "plus"
+
+              ? state
+
+              : "none";
+
+        }
+      );
+
+    }
+
+
+    /* =====================================================
+       UPDATE DIRETTO SUPABASE
+       ===================================================== */
+
+    const {
+      data:
+        updatedRows,
+      error
+    } =
+      await matchpulseSupabase
+        .from(
+          "matchpulse_club_members"
+        )
+        .update({
+
+          playstyles,
+
+          last_seen_at:
+            new Date()
+              .toISOString()
+
+        })
+        .eq(
+          "club_id",
+          club.club_id
+        )
+        .eq(
+          "user_id",
+          user.id
+        )
+        .select(
+          `
+            user_id,
+            playstyles,
+            updated_at,
+            last_seen_at
+          `
+        );
+
+
+    if (
+      error
+    ) {
+      throw error;
+    }
+
+
+    const updated =
+      Array.isArray(
+        updatedRows
+      )
+        ? updatedRows[0]
+        : updatedRows;
+
+
+    /* =====================================================
+       DEBUG
+
+       Qui vedremo chiaramente quanti
+       normali e Plus sono arrivati
+       DAVVERO sul server.
+       ===================================================== */
+
+    const normalCount =
+      Object
+        .values(
+          updated?.playstyles ||
+          {}
+        )
+        .filter(
+          state =>
+            state === "normal"
+        )
+        .length;
+
+
+    const plusCount =
+      Object
+        .values(
+          updated?.playstyles ||
+          {}
+        )
+        .filter(
+          state =>
+            state === "plus"
+        )
+        .length;
+
+
+    console.log(
+      "CLUB PLAYSTYLE SERVER SYNC",
+      {
+        clubId:
+          club.club_id,
+
+        userId:
+          user.id,
+
+        normal:
+          normalCount,
+
+        plus:
+          plusCount,
+
+        playstyles:
+          updated
+            ?.playstyles ||
+          {}
+      }
+    );
+
+
+    return updated;
+
+
+  } catch (
+    error
+  ) {
+
+    console.error(
+      "CLUB PLAYSTYLE DIRECT SYNC ERROR:",
+      error
+    );
+
+
+    return null;
+
+  }
+
+}
+
+
+window.mpSyncPlayStylesDirectToClub =
+  mpSyncPlayStylesDirectToClub;
 
 
 /* =========================================================
@@ -46061,368 +46407,3 @@ if (
 
 })();
 
-/* =========================================================
-   MATCHPULSE
-   CLUB PLAYSTYLE LIVE SYNC V1
-
-   - ogni modifica PS viene sincronizzata subito nel Club
-   - normali + PS+
-   - aggiorna automaticamente il Club degli altri membri
-   ========================================================= */
-
-(function () {
-
-  if (
-    window.MP_CLUB_PLAYSTYLE_LIVE_SYNC_V1
-  ) {
-    return;
-  }
-
-
-  window.MP_CLUB_PLAYSTYLE_LIVE_SYNC_V1 =
-    true;
-
-
-  /* =======================================================
-     SINCRONIZZA IL MIO PROFILO CLUB
-     ======================================================= */
-
-  async function mpClubSyncPlayStylesNow() {
-
-    try {
-
-      let club =
-        (
-          typeof MP_CLUB_CURRENT !==
-            "undefined" &&
-          MP_CLUB_CURRENT?.club_id
-        )
-          ? MP_CLUB_CURRENT
-          : null;
-
-
-      if (
-        !club &&
-        typeof mpGetMyClub ===
-          "function"
-      ) {
-
-        club =
-          await mpGetMyClub();
-
-      }
-
-
-      if (
-        !club?.club_id
-      ) {
-        return;
-      }
-
-
-      if (
-        typeof window
-          .mpSyncMyClubProfile !==
-        "function"
-      ) {
-        return;
-      }
-
-
-      /*
-        mpSyncMyClubProfile salva già:
-        - OVR
-        - stats
-        - profilo
-        - foto
-        - PlayStyle normali
-        - PlayStyle+
-      */
-
-      await window
-        .mpSyncMyClubProfile(
-          club.club_id
-        );
-
-
-      console.log(
-        "CLUB PLAYSTYLE SYNC OK"
-      );
-
-
-    } catch (error) {
-
-      console.warn(
-        "Club PlayStyle sync:",
-        error
-      );
-
-    }
-
-  }
-
-
-  /* =======================================================
-     AGGANCIA LA MODIFICA PLAYSTYLE
-     ======================================================= */
-
-  const previousSetPlayStyle =
-    typeof window.mpSetPlayStyle ===
-      "function"
-      ? window.mpSetPlayStyle
-      : null;
-
-
-  if (
-    previousSetPlayStyle
-  ) {
-
-    const syncedSetPlayStyle =
-      function (
-        playStyleId,
-        nextState
-      ) {
-
-        let before =
-          "none";
-
-
-        try {
-
-          before =
-            mpGetPsData()?.[
-              playStyleId
-            ] ||
-            "none";
-
-        } catch {}
-
-
-        const result =
-          previousSetPlayStyle
-            .apply(
-              this,
-              arguments
-            );
-
-
-        let after =
-          before;
-
-
-        try {
-
-          after =
-            mpGetPsData()?.[
-              playStyleId
-            ] ||
-            "none";
-
-        } catch {}
-
-
-        /*
-          Sincronizziamo solamente
-          se la modifica è stata
-          realmente accettata.
-
-          Quindi niente sync se:
-          - slot bloccato
-          - OVR insufficiente
-          - stato già selezionato
-        */
-
-        if (
-          before !== after
-        ) {
-
-          setTimeout(
-            () => {
-
-              mpClubSyncPlayStylesNow();
-
-            },
-            50
-          );
-
-        }
-
-
-        return result;
-
-      };
-
-
-    window.mpSetPlayStyle =
-      syncedSetPlayStyle;
-
-
-    try {
-
-      mpSetPlayStyle =
-        syncedSetPlayStyle;
-
-    } catch {}
-
-  }
-
-
-  /* =======================================================
-     AGGIORNAMENTO AUTOMATICO DEL CLUB
-
-     Se un altro membro cambia PS,
-     non vogliamo dover premere
-     manualmente AGGIORNA.
-     ======================================================= */
-
-  let refreshRunning =
-    false;
-
-
-  async function mpClubRefreshMembersLive() {
-
-    if (
-      refreshRunning
-    ) {
-      return;
-    }
-
-
-    if (
-      typeof route ===
-        "undefined" ||
-      route !==
-        "locker"
-    ) {
-      return;
-    }
-
-
-    if (
-      document.visibilityState !==
-        "visible"
-    ) {
-      return;
-    }
-
-
-    /*
-      Se stai guardando il profilo
-      aperto di un membro non lo
-      facciamo sparire sotto le dita.
-    */
-
-    if (
-      document.getElementById(
-        "mpClubMemberModal"
-      )
-    ) {
-      return;
-    }
-
-
-    const club =
-      (
-        typeof MP_CLUB_CURRENT !==
-          "undefined"
-      )
-        ? MP_CLUB_CURRENT
-        : null;
-
-
-    if (
-      !club?.club_id
-    ) {
-      return;
-    }
-
-
-    if (
-      typeof window
-        .mpFetchClubMembers !==
-          "function" ||
-      typeof window
-        .mpRenderClub !==
-          "function"
-    ) {
-      return;
-    }
-
-
-    refreshRunning =
-      true;
-
-
-    try {
-
-      const members =
-        await window
-          .mpFetchClubMembers(
-            club.club_id
-          );
-
-
-      /*
-        Aggiorniamo anche la cache
-        usata quando apriamo un profilo.
-      */
-
-      if (
-        typeof MP_CLUB_MEMBERS_CACHE !==
-          "undefined"
-      ) {
-
-        MP_CLUB_MEMBERS_CACHE =
-          members;
-
-      }
-
-
-      /*
-        Ridisegna il Club usando
-        i dati appena presi da Supabase.
-      */
-
-      window
-        .mpRenderClub(
-          club,
-          members
-        );
-
-
-    } catch (error) {
-
-      console.warn(
-        "Club live refresh:",
-        error
-      );
-
-    } finally {
-
-      refreshRunning =
-        false;
-
-    }
-
-  }
-
-
-  /*
-    Ogni 8 secondi è sufficiente.
-
-    Non fa nulla quando:
-    - sei fuori dal Club
-    - l'app è in background
-    - hai aperto il profilo di un membro
-  */
-
-  setInterval(
-    mpClubRefreshMembersLive,
-    8000
-  );
-
-
-  window.mpClubSyncPlayStylesNow =
-    mpClubSyncPlayStylesNow;
-
-})();
