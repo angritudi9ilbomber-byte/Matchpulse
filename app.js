@@ -46060,3 +46060,369 @@ if (
     mpFRSSaveRelease;
 
 })();
+
+/* =========================================================
+   MATCHPULSE
+   CLUB PLAYSTYLE LIVE SYNC V1
+
+   - ogni modifica PS viene sincronizzata subito nel Club
+   - normali + PS+
+   - aggiorna automaticamente il Club degli altri membri
+   ========================================================= */
+
+(function () {
+
+  if (
+    window.MP_CLUB_PLAYSTYLE_LIVE_SYNC_V1
+  ) {
+    return;
+  }
+
+
+  window.MP_CLUB_PLAYSTYLE_LIVE_SYNC_V1 =
+    true;
+
+
+  /* =======================================================
+     SINCRONIZZA IL MIO PROFILO CLUB
+     ======================================================= */
+
+  async function mpClubSyncPlayStylesNow() {
+
+    try {
+
+      let club =
+        (
+          typeof MP_CLUB_CURRENT !==
+            "undefined" &&
+          MP_CLUB_CURRENT?.club_id
+        )
+          ? MP_CLUB_CURRENT
+          : null;
+
+
+      if (
+        !club &&
+        typeof mpGetMyClub ===
+          "function"
+      ) {
+
+        club =
+          await mpGetMyClub();
+
+      }
+
+
+      if (
+        !club?.club_id
+      ) {
+        return;
+      }
+
+
+      if (
+        typeof window
+          .mpSyncMyClubProfile !==
+        "function"
+      ) {
+        return;
+      }
+
+
+      /*
+        mpSyncMyClubProfile salva già:
+        - OVR
+        - stats
+        - profilo
+        - foto
+        - PlayStyle normali
+        - PlayStyle+
+      */
+
+      await window
+        .mpSyncMyClubProfile(
+          club.club_id
+        );
+
+
+      console.log(
+        "CLUB PLAYSTYLE SYNC OK"
+      );
+
+
+    } catch (error) {
+
+      console.warn(
+        "Club PlayStyle sync:",
+        error
+      );
+
+    }
+
+  }
+
+
+  /* =======================================================
+     AGGANCIA LA MODIFICA PLAYSTYLE
+     ======================================================= */
+
+  const previousSetPlayStyle =
+    typeof window.mpSetPlayStyle ===
+      "function"
+      ? window.mpSetPlayStyle
+      : null;
+
+
+  if (
+    previousSetPlayStyle
+  ) {
+
+    const syncedSetPlayStyle =
+      function (
+        playStyleId,
+        nextState
+      ) {
+
+        let before =
+          "none";
+
+
+        try {
+
+          before =
+            mpGetPsData()?.[
+              playStyleId
+            ] ||
+            "none";
+
+        } catch {}
+
+
+        const result =
+          previousSetPlayStyle
+            .apply(
+              this,
+              arguments
+            );
+
+
+        let after =
+          before;
+
+
+        try {
+
+          after =
+            mpGetPsData()?.[
+              playStyleId
+            ] ||
+            "none";
+
+        } catch {}
+
+
+        /*
+          Sincronizziamo solamente
+          se la modifica è stata
+          realmente accettata.
+
+          Quindi niente sync se:
+          - slot bloccato
+          - OVR insufficiente
+          - stato già selezionato
+        */
+
+        if (
+          before !== after
+        ) {
+
+          setTimeout(
+            () => {
+
+              mpClubSyncPlayStylesNow();
+
+            },
+            50
+          );
+
+        }
+
+
+        return result;
+
+      };
+
+
+    window.mpSetPlayStyle =
+      syncedSetPlayStyle;
+
+
+    try {
+
+      mpSetPlayStyle =
+        syncedSetPlayStyle;
+
+    } catch {}
+
+  }
+
+
+  /* =======================================================
+     AGGIORNAMENTO AUTOMATICO DEL CLUB
+
+     Se un altro membro cambia PS,
+     non vogliamo dover premere
+     manualmente AGGIORNA.
+     ======================================================= */
+
+  let refreshRunning =
+    false;
+
+
+  async function mpClubRefreshMembersLive() {
+
+    if (
+      refreshRunning
+    ) {
+      return;
+    }
+
+
+    if (
+      typeof route ===
+        "undefined" ||
+      route !==
+        "locker"
+    ) {
+      return;
+    }
+
+
+    if (
+      document.visibilityState !==
+        "visible"
+    ) {
+      return;
+    }
+
+
+    /*
+      Se stai guardando il profilo
+      aperto di un membro non lo
+      facciamo sparire sotto le dita.
+    */
+
+    if (
+      document.getElementById(
+        "mpClubMemberModal"
+      )
+    ) {
+      return;
+    }
+
+
+    const club =
+      (
+        typeof MP_CLUB_CURRENT !==
+          "undefined"
+      )
+        ? MP_CLUB_CURRENT
+        : null;
+
+
+    if (
+      !club?.club_id
+    ) {
+      return;
+    }
+
+
+    if (
+      typeof window
+        .mpFetchClubMembers !==
+          "function" ||
+      typeof window
+        .mpRenderClub !==
+          "function"
+    ) {
+      return;
+    }
+
+
+    refreshRunning =
+      true;
+
+
+    try {
+
+      const members =
+        await window
+          .mpFetchClubMembers(
+            club.club_id
+          );
+
+
+      /*
+        Aggiorniamo anche la cache
+        usata quando apriamo un profilo.
+      */
+
+      if (
+        typeof MP_CLUB_MEMBERS_CACHE !==
+          "undefined"
+      ) {
+
+        MP_CLUB_MEMBERS_CACHE =
+          members;
+
+      }
+
+
+      /*
+        Ridisegna il Club usando
+        i dati appena presi da Supabase.
+      */
+
+      window
+        .mpRenderClub(
+          club,
+          members
+        );
+
+
+    } catch (error) {
+
+      console.warn(
+        "Club live refresh:",
+        error
+      );
+
+    } finally {
+
+      refreshRunning =
+        false;
+
+    }
+
+  }
+
+
+  /*
+    Ogni 8 secondi è sufficiente.
+
+    Non fa nulla quando:
+    - sei fuori dal Club
+    - l'app è in background
+    - hai aperto il profilo di un membro
+  */
+
+  setInterval(
+    mpClubRefreshMembersLive,
+    8000
+  );
+
+
+  window.mpClubSyncPlayStylesNow =
+    mpClubSyncPlayStylesNow;
+
+})();
