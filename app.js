@@ -7367,18 +7367,28 @@ async function mpSyncPlayStylesDirectToClub(
        ===================================================== */
 
     const raw =
-      sourceData &&
-      typeof sourceData ===
-        "object"
 
-        ? sourceData
+  typeof window
+    .mpClubGetPlayStylesData ===
+    "function"
 
-        : typeof mpGetPsData ===
-            "function"
+    ? window
+        .mpClubGetPlayStylesData()
 
-          ? mpGetPsData()
+    : (
+        sourceData &&
+        typeof sourceData ===
+          "object"
 
-          : {};
+          ? sourceData
+
+          : typeof mpGetPsData ===
+              "function"
+
+            ? mpGetPsData()
+
+            : {}
+      );
 
 
     const playstyles =
@@ -35023,6 +35033,105 @@ const statCap =
     };
   }
 
+  /* =========================================================
+   MATCHPULSE
+   CLUB STATE AUTO SYNC
+
+   Dopo ogni modifica dello storico aggiorna:
+   - OVR
+   - statistiche carta
+   - statistiche carriera
+   - PlayStyle normali
+   - PlayStyle+
+   - profilo Club
+   ========================================================= */
+
+async function mpCSMSyncCurrentClubState() {
+
+  try {
+
+    let club =
+      (
+        typeof MP_CLUB_CURRENT !==
+          "undefined" &&
+        MP_CLUB_CURRENT?.club_id
+      )
+        ? MP_CLUB_CURRENT
+        : null;
+
+
+    if (
+      !club?.club_id &&
+      typeof mpGetMyClub ===
+        "function"
+    ) {
+
+      club =
+        await mpGetMyClub();
+
+    }
+
+
+    if (
+      !club?.club_id
+    ) {
+      return;
+    }
+
+
+    /*
+      Usa SEMPRE l'ultima versione
+      della sincronizzazione Club.
+    */
+
+    if (
+      typeof window
+        .mpSyncMyClubProfile ===
+        "function"
+    ) {
+
+      await window
+        .mpSyncMyClubProfile(
+          club.club_id
+        );
+
+    }
+
+
+    /*
+      Se è installato anche il sync
+      diretto dei PlayStyle,
+      lo eseguiamo per sicurezza.
+    */
+
+    if (
+      typeof window
+        .mpSyncPlayStylesDirectToClub ===
+        "function"
+    ) {
+
+      await window
+        .mpSyncPlayStylesDirectToClub();
+
+    }
+
+
+    console.log(
+      "MATCHPULSE CLUB STATE SYNC OK"
+    );
+
+
+  } catch (error) {
+
+    console.warn(
+      "MATCHPULSE CLUB STATE SYNC:",
+      error
+    );
+
+  }
+
+}
+
 
   /* =======================================================
      DATI DELLA PARTITA DA INVIARE A SUPABASE
@@ -35279,6 +35388,8 @@ const statCap =
         match.clubShareNotes ===
           true
       );
+
+    await mpCSMSyncCurrentClubState();
 
 
       mpCSMToast(
@@ -35873,6 +35984,19 @@ const statCap =
         }
       }
 
+      /*
+  La nuova partita modifica anche:
+  - statistiche carriera
+  - carta
+  - OVR
+
+  Deve quindi aggiornare immediatamente
+  il profilo Club, anche se la partita
+  NON è stata condivisa.
+*/
+
+await mpCSMSyncCurrentClubState();
+
 
       if (
         typeof route !==
@@ -36139,6 +36263,13 @@ const statCap =
       ) {
         rebuildCardStatsFromHistory();
       }
+
+      /*
+  Anche eliminare una partita
+  modifica carriera, carta e OVR.
+*/
+
+await mpCSMSyncCurrentClubState();
 
 
       toast(
