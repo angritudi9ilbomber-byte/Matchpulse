@@ -20897,8 +20897,12 @@ return (
           event
         );
 
-      setTimeout(() => {
-        mpRebuildCardStatsFromHistoryV6();
+      
+setTimeout(() => {
+  if (window.MP_CARD_EVOLUTION_V8_READY) return;
+
+  mpRebuildCardStatsFromHistoryV6();
+
 
         if (
           typeof render === "function"
@@ -22108,8 +22112,12 @@ return (
       const result =
         mpV7PreviousSaveProfile(event);
 
-      setTimeout(() => {
-        mpV7RebuildFromHistory();
+      
+setTimeout(() => {
+  if (window.MP_CARD_EVOLUTION_V8_READY) return;
+
+  mpV7RebuildFromHistory();
+
 
         if (
           typeof render === "function"
@@ -47004,6 +47012,61 @@ if (
     saveState(state);
   }
 
+  
+/* =====================================================
+   V8 - SNAPSHOT DELLE PARTITE ALLA MIGRAZIONE
+
+   Conserva i voti originari utilizzati
+   come riferimento dell'OVR.
+
+   Cambiare ruolo non modifica retroattivamente
+   il valore già conquistato.
+   ===================================================== */
+
+if (!Array.isArray(state.anchorMatches)) {
+  state.anchorMatches = initialMatches
+    .slice(
+      0,
+      Math.max(
+        0,
+        Math.floor(
+          n(state.migratedMatchCount, 0)
+        )
+      )
+    )
+    .map(match => {
+      const general = read(
+        match,
+        [
+          "rating",
+          "voto",
+          "valutazione",
+          "matchRating"
+        ],
+        6
+      );
+
+      const frozen = {
+        rating: general
+      };
+
+      for (const stat of STATS) {
+        const key =
+          "self" +
+          stat[0].toUpperCase() +
+          stat.slice(1);
+
+        frozen[key] =
+          specific(match, stat, general);
+      }
+
+      return frozen;
+    });
+
+  saveState(state);
+}
+
+
   let currentOVR =
     Math.round(state.anchorOvr);
 
@@ -47026,31 +47089,45 @@ if (
      per continuare a salire.
      ======================================================= */
 
-  const computeOVR = list => {
-    const adjustment =
-      points(list, role(profile().role)) -
-      state.anchorPoints;
+  
+const computeOVR = list => {
+  const currentRole = role(
+    profile().role
+  );
 
-    const slowdown =
-      1 +
-      Math.max(0, state.anchorOvr - 60) / 16;
+  const frozenPoints = points(
+    state.anchorMatches,
+    currentRole
+  );
 
-    const delta = adjustment >= 0
-      ? adjustment /
-        (slowdown + adjustment / 24)
+  const adjustment =
+    points(list, currentRole) -
+    frozenPoints;
 
-      : adjustment * 1.05;
+  const slowdown =
+    1 +
+    Math.max(
+      0,
+      state.anchorOvr - 60
+    ) / 16;
 
-    return clamp(
-      Math.floor(
-        state.anchorOvr +
-        delta +
-        0.00001
-      ),
-      60,
-      99
-    );
-  };
+  const delta = adjustment >= 0
+    ? adjustment /
+      (slowdown + adjustment / 24)
+
+    : adjustment * 1.05;
+
+  return clamp(
+    Math.floor(
+      state.anchorOvr +
+      delta +
+      0.00001
+    ),
+    60,
+    99
+  );
+};
+
 
   /* =======================================================
      SALVA LE SEI STATISTICHE
@@ -47536,42 +47613,53 @@ if (
      AGGIORNA ANCHE I RIEPILOGHI OVR
      ======================================================= */
 
-  if (previousPlayerRatings) {
-    playerRatings = function (...args) {
-      const output =
-        previousPlayerRatings(...args);
+  
+if (previousPlayerRatings) {
+  playerRatings = function (...args) {
+    const output =
+      previousPlayerRatings(...args);
 
-      const ovr =
-        currentOVR;
+    const ovr = currentOVR;
 
-      return {
-        ...output,
+    const currentStats =
+      getCurrentStats();
 
-        ovr,
+    return {
+      ...output,
 
-        tier:
-          ovr < 65
-            ? "Bronzo"
-            : ovr < 75
-              ? "Argento"
-              : ovr < 90
-                ? "Oro"
-                : "Icona",
+      pac: Math.round(currentStats.pac),
+      sho: Math.round(currentStats.sho),
+      pas: Math.round(currentStats.pas),
+      dri: Math.round(currentStats.dri),
+      def: Math.round(currentStats.def),
+      phy: Math.round(currentStats.phy),
 
-        tierClass:
-          ovr < 65
-            ? "tier-bronze"
-            : ovr < 75
-              ? "tier-silver"
-              : ovr < 90
-                ? "tier-gold"
-                : "tier-icon"
-      };
+      ovr,
+
+      tier:
+        ovr < 65
+          ? "Bronzo"
+          : ovr < 75
+            ? "Argento"
+            : ovr < 90
+              ? "Oro"
+              : "Icona",
+
+      tierClass:
+        ovr < 65
+          ? "tier-bronze"
+          : ovr < 75
+            ? "tier-silver"
+            : ovr < 90
+              ? "tier-gold"
+              : "tier-icon"
     };
+  };
 
-    window.playerRatings =
-      playerRatings;
-  }
+  window.playerRatings =
+    playerRatings;
+}
+
 
   /* =======================================================
      CLUB
