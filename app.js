@@ -19688,6 +19688,8 @@ return (
      ======================================================= */
 
   setTimeout(() => {
+    if (window.MP_CARD_EVOLUTION_V8_READY) return;
+
     try {
       mpRebuildCardGrowthV5();
     } catch (error) {
@@ -20930,9 +20932,11 @@ return (
      ======================================================= */
 
   setTimeout(() => {
-    try {
-      const correctedStats =
-        mpRebuildCardStatsFromHistoryV6();
+  if (window.MP_CARD_EVOLUTION_V8_READY) return;
+
+  try {
+    const correctedStats =
+      mpRebuildCardStatsFromHistoryV6();
 
       console.log(
         "CARTA MATCHPULSE RIPARATA:",
@@ -22184,9 +22188,11 @@ return (
      ======================================================= */
 
   setTimeout(() => {
-    try {
-      const base =
-        mpV7BaseStats();
+  if (window.MP_CARD_EVOLUTION_V8_READY) return;
+
+  try {
+    const base =
+      mpV7BaseStats();
 
       const finalStats =
         mpV7RebuildFromHistory();
@@ -47812,27 +47818,30 @@ if (
      definitivamente la nuova carta.
      ======================================================= */
 
-  setTimeout(
-    () => {
-      rebuildV8();
+  
+  /* =======================================================
+     MATCHPULSE V8 - AVVIO IMMEDIATO
 
-      if (
-        typeof render === "function"
-      ) {
-        render();
-      }
+     Ricostruisce subito la carta prima
+     del primo aggiornamento visibile.
 
-      if (
-        typeof renderPlayerCardStats ===
-        "function"
-      ) {
-        renderPlayerCardStats();
-      }
+     Nessuna attesa di 900ms.
+     ======================================================= */
 
-      scheduleSync();
-    },
-    900
-  );
+  rebuildV8();
+
+  if (typeof render === "function") {
+    render();
+  }
+
+  if (
+    typeof renderPlayerCardStats === "function"
+  ) {
+    renderPlayerCardStats();
+  }
+
+  scheduleSync();
+
 
   /* =======================================================
      FUNZIONI DI CONTROLLO
