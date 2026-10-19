@@ -46538,3 +46538,1335 @@ if (
 
 })();
 
+
+/* =========================================================
+   MATCHPULSE - CARD EVOLUTION V8.1
+
+   - Migrazione OVR esistente
+   - OVR da prestazioni pesate per ruolo
+   - Crescita moderata delle statistiche
+   - Bonus gol/assist diversi per ruolo
+   - Downgrade più incisivi
+   - Ricalcolo storico senza cancellare partite
+   - Compatibilità Club / PlayStyle / Promo
+
+   INCOLLARE ALLA FINE DI app.js
+   ========================================================= */
+
+(function () {
+  "use strict";
+
+  if (window.MP_CARD_EVOLUTION_V8_READY) {
+    return;
+  }
+
+  const KEY = "matchpulse_card_evolution_v8_1";
+  const CARD_KEY = "matchpulse_card_stats";
+
+  const STATS = [
+    "pac", "sho", "pas", "dri", "def", "phy"
+  ];
+
+  /* =======================================================
+     PESI PER RUOLO
+
+     Ordine:
+     PAC, SHO, PAS, DRI, DEF, PHY
+
+     I pesi si applicano alle autovalutazioni
+     per calcolare la progressione dell'OVR.
+     ======================================================= */
+
+  const ROLE_WEIGHTS = {
+    ATT: [
+      0.16, 0.33, 0.10,
+      0.23, 0.03, 0.15
+    ],
+
+    ALA: [
+      0.25, 0.19, 0.14,
+      0.25, 0.04, 0.13
+    ],
+
+    COC: [
+      0.10, 0.15, 0.32,
+      0.27, 0.04, 0.12
+    ],
+
+    CC: [
+      0.13, 0.10, 0.30,
+      0.18, 0.15, 0.14
+    ],
+
+    CDC: [
+      0.10, 0.05, 0.24,
+      0.12, 0.30, 0.19
+    ],
+
+    DC: [
+      0.11, 0.04, 0.14,
+      0.07, 0.42, 0.22
+    ],
+
+    TERZINO: [
+      0.22, 0.05, 0.19,
+      0.16, 0.24, 0.14
+    ]
+  };
+
+  /* =======================================================
+     BONUS GOL PER RUOLO
+
+     [moltiplicatore, limite bonus]
+
+     Il gol di un difensore ha più peso
+     del gol di un attaccante.
+     ======================================================= */
+
+  const GOAL_BONUS = {
+    ATT: [0.12, 0.30],
+    ALA: [0.16, 0.38],
+    COC: [0.20, 0.46],
+    CC: [0.25, 0.52],
+    CDC: [0.34, 0.62],
+    DC: [0.43, 0.75],
+    TERZINO: [0.33, 0.62]
+  };
+
+  /* =======================================================
+     BONUS ASSIST PER RUOLO
+     ======================================================= */
+
+  const ASSIST_BONUS = {
+    ATT: [0.18, 0.42],
+    ALA: [0.13, 0.36],
+    COC: [0.12, 0.34],
+    CC: [0.13, 0.36],
+    CDC: [0.25, 0.54],
+    DC: [0.38, 0.68],
+    TERZINO: [0.27, 0.56]
+  };
+
+  /* =======================================================
+     CURVA VALUTAZIONI
+
+     Upgrade moderati.
+     Downgrade più pesanti.
+
+     I voti intermedi sono interpolati:
+     9.5 non viene arrotondato a 10.
+     ======================================================= */
+
+  const GROWTH_CURVE = {
+    1: -3.40,
+    2: -2.70,
+    3: -2.05,
+    4: -1.45,
+    5: -0.85,
+    6: 0,
+    7: 0.23,
+    8: 0.56,
+    9: 0.89,
+    10: 1.18
+  };
+
+  /* =======================================================
+     STATISTICHE PRINCIPALI DEI RUOLI
+     ======================================================= */
+
+  const ROLE_FOCUS = {
+    ATT: ["sho", "dri"],
+    ALA: ["pac", "dri"],
+    COC: ["pas", "dri"],
+    CC: ["pas", "dri"],
+    CDC: ["def", "pas"],
+    DC: ["def", "phy"],
+    TERZINO: ["pac", "def"]
+  };
+
+  const STYLE_FOCUS = {
+    Finalizzatore: "sho",
+    Regista: "pas",
+    Dribblatore: "dri",
+    Difensore: "def",
+    Motore: "phy",
+    Velocista: "pac",
+    Boa: "phy"
+  };
+
+  /* =======================================================
+     FUNZIONI DI SUPPORTO
+     ======================================================= */
+
+  const n = (value, fallback = 0) => {
+    if (
+      value === null ||
+      value === undefined ||
+      value === ""
+    ) {
+      return fallback;
+    }
+
+    const number = Number(
+      String(value).replace(",", ".")
+    );
+
+    return Number.isFinite(number)
+      ? number
+      : fallback;
+  };
+
+  const clamp = (value, min, max) =>
+    Math.min(max, Math.max(min, value));
+
+  const round3 = value =>
+    Math.round(value * 1000) / 1000;
+
+  const role = value => {
+    const normalized =
+      String(value || "").toUpperCase();
+
+    return ROLE_WEIGHTS[normalized]
+      ? normalized
+      : "CC";
+  };
+
+  const profile = () =>
+    typeof getPlayerProfile === "function"
+      ? getPlayerProfile()
+      : {
+          role: "CC",
+          playStyle: "Equilibrato"
+        };
+
+  const matches = () => {
+    if (typeof getMatches !== "function") {
+      return [];
+    }
+
+    const result = getMatches();
+
+    return Array.isArray(result)
+      ? result
+      : [];
+  };
+
+  const ordered = list =>
+    [...list].sort((a, b) => {
+      return (
+        String(a.date || "")
+          .localeCompare(String(b.date || "")) ||
+
+        String(a.createdAt || a.id || "")
+          .localeCompare(
+            String(b.createdAt || b.id || "")
+          )
+      );
+    });
+
+  const read = (match, keys, fallback) => {
+    for (const key of keys) {
+      const value = match?.[key];
+
+      if (
+        value !== null &&
+        value !== undefined &&
+        value !== ""
+      ) {
+        return n(value, fallback);
+      }
+    }
+
+    return fallback;
+  };
+
+  const base = () =>
+    typeof window.mpV7BaseStats === "function"
+      ? window.mpV7BaseStats()
+      : {
+          pac: 60,
+          sho: 60,
+          pas: 60,
+          dri: 60,
+          def: 60,
+          phy: 60
+        };
+
+  const specific = (match, stat, fallback) => {
+    const keys = {
+      pac: ["selfPac", "pacRating", "ratingPac"],
+      sho: ["selfSho", "shoRating", "ratingSho"],
+      pas: ["selfPas", "pasRating", "ratingPas"],
+      dri: ["selfDri", "driRating", "ratingDri"],
+      def: ["selfDef", "defRating", "ratingDef"],
+      phy: ["selfPhy", "phyRating", "ratingPhy"]
+    };
+
+    return read(match, keys[stat], fallback);
+  };
+
+  const interpolate = score => {
+    const value = clamp(score, 1, 10);
+
+    const lower = Math.floor(value);
+    const upper = Math.ceil(value);
+
+    return (
+      GROWTH_CURVE[lower] +
+      (
+        GROWTH_CURVE[upper] -
+        GROWTH_CURVE[lower]
+      ) * (value - lower)
+    );
+  };
+
+  /* =======================================================
+     VALUTAZIONE COMPLESSIVA PESATA
+
+     72% voto generale
+     28% autovalutazioni pesate per ruolo
+
+     L'OVR NON è più la media semplice
+     delle sei statistiche della carta.
+     ======================================================= */
+
+  const weightedRating = (match, playerRole) => {
+    const general = clamp(
+      read(
+        match,
+        [
+          "rating",
+          "voto",
+          "valutazione",
+          "matchRating"
+        ],
+        6
+      ),
+      1,
+      10
+    );
+
+    const weights = ROLE_WEIGHTS[playerRole];
+
+    const weightedSelf = STATS.reduce(
+      (total, stat, index) => {
+        const vote = clamp(
+          specific(match, stat, general),
+          1,
+          10
+        );
+
+        return total + weights[index] * vote;
+      },
+      0
+    );
+
+    return (
+      general * 0.72 +
+      weightedSelf * 0.28
+    );
+  };
+
+  /* =======================================================
+     PUNTI EVOLUZIONE OVR
+
+     Prestazioni negative penalizzate
+     più di quanto premi una prestazione
+     positiva equivalente.
+     ======================================================= */
+
+  const matchPoints = (match, playerRole) => {
+    const score = weightedRating(
+      match,
+      playerRole
+    );
+
+    return score >= 6
+      ? 0.47 * (score - 6)
+      : 0.77 * (score - 6);
+  };
+
+  const points = (list, playerRole) =>
+    list.reduce(
+      (total, match) =>
+        total + matchPoints(match, playerRole),
+      0
+    );
+
+  /* =======================================================
+     STATO V8 PERSISTENTE
+     ======================================================= */
+
+  const readState = () => {
+    try {
+      const result = JSON.parse(
+        localStorage.getItem(KEY) || "null"
+      );
+
+      return (
+        result?.version === 8 &&
+        Number.isFinite(result.anchorOvr)
+      )
+        ? result
+        : null;
+
+    } catch {
+      return null;
+    }
+  };
+
+  const saveState = value => {
+    localStorage.setItem(
+      KEY,
+      JSON.stringify(value)
+    );
+  };
+
+  /* =======================================================
+     MIGRAZIONE DAL V7
+
+     IMPORTANTE:
+     Il file originale esegue anche
+     un vecchio rebuild V6 all'avvio.
+
+     Per catturare l'OVR corretto,
+     ricostruiamo prima il V7 definitivo.
+     ======================================================= */
+
+  const previousCalculateOVR =
+    calculateOVR;
+
+  const previousPlayerRatings =
+    typeof playerRatings === "function"
+      ? playerRatings
+      : null;
+
+  const existingMigration = readState();
+
+  if (
+    !existingMigration &&
+    typeof window.mpV7RebuildFromHistory ===
+      "function"
+  ) {
+    window.mpV7RebuildFromHistory();
+  }
+
+  const originalStats =
+    typeof getCardStats === "function"
+      ? getCardStats()
+      : base();
+
+  const originalOVR = clamp(
+    n(previousCalculateOVR(originalStats), 60),
+    60,
+    99
+  );
+
+  const initialMatches = ordered(matches());
+
+  const initialRole = role(
+    profile().role
+  );
+
+  let state = existingMigration;
+
+  if (!state) {
+    state = {
+      version: 8,
+
+      anchorOvr: originalOVR,
+
+      anchorPoints: points(
+        initialMatches,
+        initialRole
+      ),
+
+      migratedMatchCount:
+        initialMatches.length,
+
+      migratedAt:
+        new Date().toISOString(),
+
+      oldStats: Object.fromEntries(
+        STATS.map(stat => [
+          stat,
+          n(originalStats?.[stat], 60)
+        ])
+      )
+    };
+
+    saveState(state);
+  }
+
+  let currentOVR =
+    Math.round(state.anchorOvr);
+
+  let rebuilding = false;
+
+  let syncTimer = null;
+
+  /* =======================================================
+     NUOVO OVR
+
+     L'OVR precedente è il riferimento.
+
+     Le partite vecchie non vengono
+     conteggiate due volte.
+
+     I risultati futuri possono aumentare
+     o diminuire l'OVR.
+
+     Più è alto l'OVR, più serve costanza
+     per continuare a salire.
+     ======================================================= */
+
+  const computeOVR = list => {
+    const adjustment =
+      points(list, role(profile().role)) -
+      state.anchorPoints;
+
+    const slowdown =
+      1 +
+      Math.max(0, state.anchorOvr - 60) / 16;
+
+    const delta = adjustment >= 0
+      ? adjustment /
+        (slowdown + adjustment / 24)
+
+      : adjustment * 1.05;
+
+    return clamp(
+      Math.floor(
+        state.anchorOvr +
+        delta +
+        0.00001
+      ),
+      60,
+      99
+    );
+  };
+
+  /* =======================================================
+     SALVA LE SEI STATISTICHE
+     ======================================================= */
+
+  const writeStats = result => {
+    const clean = {};
+
+    for (const stat of STATS) {
+      clean[stat] = round3(
+        clamp(
+          n(result[stat], base()[stat]),
+          20,
+          99
+        )
+      );
+    }
+
+    localStorage.setItem(
+      CARD_KEY,
+      JSON.stringify(clean)
+    );
+
+    return clean;
+  };
+
+  const getCurrentStats = () => {
+    try {
+      const saved = JSON.parse(
+        localStorage.getItem(CARD_KEY) ||
+        "null"
+      );
+
+      if (
+        saved &&
+        STATS.every(
+          stat =>
+            Number.isFinite(
+              Number(saved[stat])
+            )
+        )
+      ) {
+        return Object.fromEntries(
+          STATS.map(stat => [
+            stat,
+            n(saved[stat])
+          ])
+        );
+      }
+
+    } catch {}
+
+    return base();
+  };
+
+  /* =======================================================
+     RICOSTRUISCE LE STATISTICHE DALLO STORICO
+
+     Nessuna partita viene modificata.
+     Nessuna statistica viene generata
+     casualmente.
+
+     Lo stesso storico produce
+     sempre lo stesso risultato.
+     ======================================================= */
+
+  function rebuildV8() {
+    if (rebuilding) {
+      return getCurrentStats();
+    }
+
+    rebuilding = true;
+
+    try {
+      const history = ordered(matches());
+
+      const player = profile();
+
+      const permanentRole =
+        role(player.role);
+
+      const initial = base();
+
+      const data = {
+        ...initial
+      };
+
+      const recent = Object.fromEntries(
+        STATS.map(stat => [
+          stat,
+          []
+        ])
+      );
+
+      const finalOvr =
+        computeOVR(history);
+
+      const migrationLength = Math.max(
+        1,
+        state.migratedMatchCount || 1
+      );
+
+      history.forEach((match, index) => {
+        const playingRole = role(
+          match.role ||
+          match.matchRole ||
+          permanentRole
+        );
+
+        const general = clamp(
+          read(
+            match,
+            [
+              "rating",
+              "voto",
+              "valutazione",
+              "matchRating"
+            ],
+            6
+          ),
+          1,
+          10
+        );
+
+        const goals = Math.max(
+          0,
+          read(
+            match,
+            ["goals", "goal", "gol"],
+            0
+          )
+        );
+
+        const assists = Math.max(
+          0,
+          read(
+            match,
+            ["assists", "assist"],
+            0
+          )
+        );
+
+        /* OVR indicativo durante il replay */
+
+        const contextOvr =
+          index < migrationLength
+
+            ? 60 +
+              (state.anchorOvr - 60) *
+              (index + 1) /
+              migrationLength
+
+            : finalOvr;
+
+        for (const stat of STATS) {
+          const vote = clamp(
+            specific(
+              match,
+              stat,
+              general
+            ),
+            1,
+            10
+          );
+
+          const before =
+            data[stat];
+
+          let change =
+            interpolate(vote);
+
+          const previous =
+            recent[stat];
+
+          /* =============================================
+             DOWNGRADE DA CALO DI FORMA
+
+             Se nelle ultime partite il voto
+             era alto e ora scende a 6 o meno,
+             aggiungiamo una penalità.
+             ============================================= */
+
+          if (
+            vote <= 6 &&
+            previous.length >= 2
+          ) {
+            const average =
+              previous.reduce(
+                (a, b) => a + b,
+                0
+              ) / previous.length;
+
+            if (average >= 8) {
+              change -= Math.min(
+                0.60,
+                (average - vote) * 0.15
+              );
+            }
+          }
+
+          /* =============================================
+             UPGRADE POSITIVI
+             ============================================= */
+
+          if (change > 0) {
+            const roleFactor =
+              ROLE_FOCUS[playingRole]
+                .includes(stat)
+                ? 1.07
+                : 1;
+
+            const styleFactor =
+              STYLE_FOCUS[player.playStyle] ===
+                stat
+                ? 1.06
+                : 1;
+
+            const generalFactor = clamp(
+              0.95 +
+              (general - 7) * 0.035,
+              0.82,
+              1.06
+            );
+
+            change *= (
+              roleFactor *
+              styleFactor *
+              generalFactor
+            );
+
+            /* ===========================================
+               BONUS GOL AL TIRO
+
+               Un gol del DC pesa più
+               di un gol dell'ATT.
+
+               Non annulla un voto SHO
+               pari a 6 o inferiore.
+               =========================================== */
+
+            if (
+              stat === "sho" &&
+              vote > 6
+            ) {
+              const [perGoal, cap] =
+                GOAL_BONUS[playingRole];
+
+              change += Math.min(
+                cap,
+                perGoal *
+                Math.log2(1 + goals)
+              );
+            }
+
+            /* ===========================================
+               BONUS ASSIST AL PASSAGGIO
+               =========================================== */
+
+            if (
+              stat === "pas" &&
+              vote > 6
+            ) {
+              const [perAssist, cap] =
+                ASSIST_BONUS[playingRole];
+
+              change += Math.min(
+                cap,
+                perAssist *
+                Math.log2(1 + assists)
+              );
+            }
+
+            /* Bonus secondario dribbling */
+
+            if (
+              stat === "dri" &&
+              vote > 6
+            ) {
+              change += Math.min(
+                0.10,
+                0.025 *
+                Math.log2(1 + assists)
+              );
+            }
+
+            /* ===========================================
+               RALLENTAMENTO CONTINUO
+
+               Una statistica molto alta cresce
+               più lentamente, soprattutto
+               se supera molto l'OVR.
+
+               Nessun blocco per fascia.
+               =========================================== */
+
+            const high = Math.max(
+              0,
+              before - 78
+            );
+
+            const gap = Math.max(
+              0,
+              before - contextOvr - 8
+            );
+
+            change /= (
+              (1 + Math.pow(high / 18, 2)) *
+              (1 + Math.pow(gap / 12, 2))
+            );
+
+          } else if (change < 0) {
+
+            /* ===========================================
+               DOWNGRADE
+
+               Nessun rallentamento delle perdite.
+
+               Una valutazione generale negativa
+               rende la perdita più importante.
+               =========================================== */
+
+            change *= general < 6
+              ? 1.12
+              : 1;
+          }
+
+          data[stat] = round3(
+            clamp(
+              before +
+              clamp(
+                change,
+                -3.8,
+                1.5
+              ),
+              20,
+              99
+            )
+          );
+
+          previous.push(vote);
+
+          if (previous.length > 4) {
+            previous.shift();
+          }
+        }
+      });
+
+      currentOVR =
+        finalOvr;
+
+      const saved =
+        writeStats(data);
+
+      if (
+        typeof renderPlayerCardStats ===
+        "function"
+      ) {
+        renderPlayerCardStats();
+      }
+
+      console.log(
+        "MATCHPULSE V8",
+        {
+          ovr: currentOVR,
+          stats: saved,
+          matches: history.length,
+          anchorOvr: state.anchorOvr
+        }
+      );
+
+      return saved;
+
+    } finally {
+      rebuilding = false;
+    }
+  }
+
+  /* =======================================================
+     OVR UNIFICATO
+
+     Per la carta base restituisce V8.
+     Per oggetti estranei continua a usare
+     la precedente funzione.
+
+     Questo evita di trasformare
+     l'OVR di una vecchia promo.
+     ======================================================= */
+
+  function calculateV8(stats) {
+    if (
+      stats &&
+      Number.isFinite(
+        Number(stats._mpV8OVR)
+      )
+    ) {
+      return clamp(
+        Math.round(
+          Number(stats._mpV8OVR)
+        ),
+        60,
+        99
+      );
+    }
+
+    if (
+      stats &&
+      !Number.isFinite(
+        Number(stats.promoOvr)
+      )
+    ) {
+      const current =
+        getCurrentStats();
+
+      const sameStats = STATS.every(
+        stat =>
+          Math.round(
+            n(stats[stat], -1)
+          ) ===
+          Math.round(
+            n(current[stat], -2)
+          )
+      );
+
+      if (sameStats) {
+        return currentOVR;
+      }
+    }
+
+    return previousCalculateOVR(stats);
+  }
+
+  /* =======================================================
+     GETTER CARTA BASE
+
+     Il metadato _mpV8OVR serve
+     allo snapshot delle promo reali.
+
+     NON è una settima statistica.
+     ======================================================= */
+
+  const getBaseCardStats = () => ({
+    ...getCurrentStats(),
+    _mpV8OVR: currentOVR
+  });
+
+  /* =======================================================
+     SOSTITUISCE LE FUNZIONI GENERALI
+     ======================================================= */
+
+  calculateOVR =
+    calculateV8;
+
+  window.calculateOVR =
+    calculateV8;
+
+  getCardStats =
+    getBaseCardStats;
+
+  window.getCardStats =
+    getBaseCardStats;
+
+  saveCardStats =
+    writeStats;
+
+  window.saveCardStats =
+    writeStats;
+
+  rebuildCardStatsFromHistory =
+    rebuildV8;
+
+  window.rebuildCardStatsFromHistory =
+    rebuildV8;
+
+  applyMatchUpgrades =
+    function () {
+      return rebuildV8();
+    };
+
+  window.applyMatchUpgrades =
+    applyMatchUpgrades;
+
+  /* =======================================================
+     AGGIORNA ANCHE I RIEPILOGHI OVR
+     ======================================================= */
+
+  if (previousPlayerRatings) {
+    playerRatings = function (...args) {
+      const output =
+        previousPlayerRatings(...args);
+
+      const ovr =
+        currentOVR;
+
+      return {
+        ...output,
+
+        ovr,
+
+        tier:
+          ovr < 65
+            ? "Bronzo"
+            : ovr < 75
+              ? "Argento"
+              : ovr < 90
+                ? "Oro"
+                : "Icona",
+
+        tierClass:
+          ovr < 65
+            ? "tier-bronze"
+            : ovr < 75
+              ? "tier-silver"
+              : ovr < 90
+                ? "tier-gold"
+                : "tier-icon"
+      };
+    };
+
+    window.playerRatings =
+      playerRatings;
+  }
+
+  /* =======================================================
+     CLUB
+
+     Porta l'OVR V8 dentro card_stats
+     senza aggiungere colonne Supabase.
+     ======================================================= */
+
+  if (
+    typeof mpClubGetCardStats ===
+    "function"
+  ) {
+    const oldClubStats =
+      mpClubGetCardStats;
+
+    mpClubGetCardStats =
+      function (...args) {
+        return {
+          ...oldClubStats(...args),
+          _mpV8OVR: currentOVR
+        };
+      };
+
+    window.mpClubGetCardStats =
+      mpClubGetCardStats;
+  }
+
+  /* =======================================================
+     PROMO FUTURE
+
+     Usa l'OVR base V8 congelato nello
+     snapshot per la nuova promo.
+
+     La riparazione V4 viene applicata
+     SOLTANTO alla carta appena generata.
+
+     Le promo precedenti non vengono
+     modificate da questa operazione.
+     ======================================================= */
+
+  if (
+    typeof window.mpPromoGenerateCard ===
+      "function" &&
+
+    typeof window.mpPromoRepairCardsV4 ===
+      "function"
+  ) {
+    const oldGeneratePromo =
+      window.mpPromoGenerateCard;
+
+    window.mpPromoGenerateCard =
+      function (...args) {
+        const source =
+          typeof getCardStats === "function"
+            ? getCardStats()
+            : null;
+
+        const baseOvr = n(
+          source?._mpV8OVR,
+          NaN
+        );
+
+        const generated =
+          oldGeneratePromo.apply(
+            this,
+            args
+          );
+
+        if (
+          !generated?.id ||
+          !Number.isFinite(baseOvr)
+        ) {
+          return generated;
+        }
+
+        const cardsKey =
+          "matchpulse_promo_cards_v1";
+
+        let allCards;
+
+        try {
+          allCards = JSON.parse(
+            localStorage.getItem(
+              cardsKey
+            ) || "[]"
+          );
+
+          if (!Array.isArray(allCards)) {
+            return generated;
+          }
+
+          const index = allCards.findIndex(
+            card =>
+              card?.id === generated.id
+          );
+
+          if (index < 0) {
+            return generated;
+          }
+
+        } catch {
+          return generated;
+        }
+
+        const index =
+          allCards.findIndex(
+            card =>
+              card?.id === generated.id
+          );
+
+        let corrected = {
+          ...allCards[index],
+
+          baseOvr:
+            Math.round(baseOvr)
+        };
+
+        try {
+          /* Isola la sola nuova promo */
+
+          localStorage.setItem(
+            cardsKey,
+            JSON.stringify([corrected])
+          );
+
+          const rebuilt =
+            window.mpPromoRepairCardsV4(
+              false
+            );
+
+          corrected =
+            rebuilt?.find(
+              card =>
+                card?.id === generated.id
+            ) || corrected;
+
+        } catch (error) {
+          console.warn(
+            "MATCHPULSE V8 PROMO",
+            error
+          );
+
+        } finally {
+          allCards[index] =
+            corrected;
+
+          localStorage.setItem(
+            cardsKey,
+            JSON.stringify(allCards)
+          );
+        }
+
+        return corrected;
+      };
+  }
+
+  /* =======================================================
+     CAMBIO RUOLO O STILE
+
+     Il V7 contiene un vecchio rebuild
+     differito.
+
+     Facciamo seguire sempre il nuovo
+     calcolo V8.
+     ======================================================= */
+
+  if (
+    typeof window.savePlayerProfile ===
+    "function"
+  ) {
+    const previousSaveProfile =
+      window.savePlayerProfile;
+
+    window.savePlayerProfile =
+      function (...args) {
+        const result =
+          previousSaveProfile.apply(
+            this,
+            args
+          );
+
+        setTimeout(
+          () => {
+            rebuildV8();
+            scheduleSync();
+          },
+          350
+        );
+
+        return result;
+      };
+
+    savePlayerProfile =
+      window.savePlayerProfile;
+  }
+
+  /* =======================================================
+     SINCRONIZZAZIONE CLOUD CLUB
+     ======================================================= */
+
+  function scheduleSync() {
+    clearTimeout(syncTimer);
+
+    syncTimer = setTimeout(
+      async () => {
+        try {
+          if (
+            typeof window.mpSyncMyClubProfile !==
+              "function" ||
+
+            typeof mpGetMyClub !==
+              "function"
+          ) {
+            return;
+          }
+
+          const club =
+            await mpGetMyClub();
+
+          if (club?.club_id) {
+            await window.mpSyncMyClubProfile(
+              club.club_id
+            );
+          }
+
+        } catch (error) {
+          console.warn(
+            "MATCHPULSE V8 CLUB SYNC",
+            error
+          );
+        }
+      },
+      600
+    );
+  }
+
+  /* =======================================================
+     AVVIO
+
+     Il V6 e il V7 hanno timer propri.
+
+     La migrazione V8 è già salvata.
+     Dopo i vecchi timer, ricostruiamo
+     definitivamente la nuova carta.
+     ======================================================= */
+
+  setTimeout(
+    () => {
+      rebuildV8();
+
+      if (
+        typeof render === "function"
+      ) {
+        render();
+      }
+
+      if (
+        typeof renderPlayerCardStats ===
+        "function"
+      ) {
+        renderPlayerCardStats();
+      }
+
+      scheduleSync();
+    },
+    900
+  );
+
+  /* =======================================================
+     FUNZIONI DI CONTROLLO
+     ======================================================= */
+
+  window.mpV8RebuildFromHistory =
+    function () {
+      const result =
+        rebuildV8();
+
+      scheduleSync();
+
+      return result;
+    };
+
+  window.mpV8Inspect =
+    function () {
+      return {
+        version: 8,
+
+        ovr: currentOVR,
+
+        stats: getCurrentStats(),
+
+        migration: {
+          ...state
+        },
+
+        matches:
+          matches().length
+      };
+    };
+
+  window.MP_CARD_EVOLUTION_V8_READY =
+    true;
+
+})();
