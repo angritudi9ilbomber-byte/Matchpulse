@@ -104,7 +104,8 @@
       'matchpulse-m3.js?v=20261112-b3',
       'matchpulse-premium-r1.js?v=20261112-r1',
       'matchpulse-premium-b.js?v=20261112-b32',
-      'matchpulse-m4-badge.js?v=20261112-m4'
+      'matchpulse-m4-badge.js?v=20261112-m4',
+      'matchpulse-m5-renderer.js?v=20261112-m5'
     ]) {
       await new Promise((resolve,reject)=>{
         const s=document.createElement('script');s.src=url;s.async=false;

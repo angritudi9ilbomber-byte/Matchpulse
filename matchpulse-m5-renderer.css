@@ -1,0 +1,131 @@
+/* MATCHPULSE M5 — carrello grafico senza modifiche al motore V8.
+ * IMPORTANTE: caricare questo CSS per ULTIMO, dopo B3.2 e M4.
+ */
+body .player-card.mp5-rendered[data-mp5-look]{
+  box-sizing:border-box!important;
+  position:relative!important;isolation:isolate!important;
+  width:min(100%,340px)!important;max-width:100%!important;aspect-ratio:2/3!important;height:auto!important;min-height:0!important;
+  padding:0!important;overflow:visible!important;
+  border:0!important;border-radius:0!important;
+  background:#0d1424!important;outline:0!important;
+  box-shadow:0 15px 42px #0009!important;
+}
+body .player-card.mp5-rendered[data-mp5-look]::before,
+body .player-card.mp5-rendered[data-mp5-look]::after,
+body .player-card.mp5-rendered[data-mp5-look]>.player-card-glow,
+body .player-card.mp5-rendered[data-mp5-look]>.mp-b-card-layer{display:none!important}
+body .player-card.mp5-rendered[data-mp5-look]>.mp5-surface{
+  display:block!important;position:absolute!important;inset:0!important;
+  margin:0!important;padding:0!important;z-index:0!important;
+  pointer-events:none!important;overflow:hidden!important;
+}
+body .player-card.mp5-rendered[data-mp5-look]>.mp5-surface>.mp5-art-image{
+  display:block!important;width:100%!important;height:100%!important;
+  object-fit:fill!important;object-position:center!important;
+  pointer-events:none!important;filter:none!important;
+}
+/* Tutte le posizioni sono relative alla CARTA, mai allo schermo. */
+body .player-card.mp5-rendered[data-mp5-look]>.player-top{
+  position:absolute!important;z-index:10!important;
+  top:15%!important;left:13%!important;right:15%!important;bottom:auto!important;
+  margin:0!important;padding:0!important;transform:none!important;
+  display:flex!important;justify-content:space-between!important;align-items:flex-start!important;
+}
+body .player-card.mp5-rendered[data-mp5-look]>.player-top strong{
+  color:var(--mp5-ink,#fff)!important;
+  display:block!important;font-size:clamp(30px,10.5vw,52px)!important;
+  line-height:.92!important;text-shadow:0 2px 5px #0008,0 0 2px #fff7!important;
+}
+body .player-card.mp5-rendered[data-mp5-look]>.player-top span{
+  display:block!important;color:var(--mp5-ink,#fff)!important;font-size:clamp(9px,2.5vw,12px)!important;
+  line-height:1.2!important;text-shadow:0 1px 5px #0006!important;
+}
+body .player-card.mp5-rendered[data-mp5-look]>.player-card-side-info{
+  display:grid!important;position:absolute!important;z-index:12!important;
+  left:8%!important;right:auto!important;top:39%!important;bottom:auto!important;
+  width:29%!important;margin:0!important;padding:0!important;
+  gap:4px!important;transform:none!important;
+}
+body .player-card.mp5-rendered[data-mp5-look]>.player-card-side-info>div{
+  min-width:0!important;padding:3px 4px!important;
+  border:1px solid #ffffff54!important;border-radius:7px!important;
+  background:#08111a9c!important;box-shadow:none!important;
+}
+body .player-card.mp5-rendered[data-mp5-look]>.player-card-side-info strong,
+body .player-card.mp5-rendered[data-mp5-look]>.player-card-side-info span{
+  display:block!important;color:#fff!important;text-shadow:0 1px 4px #000c!important;
+  white-space:normal!important;overflow-wrap:break-word!important;
+  letter-spacing:0!important;line-height:1.14!important;
+}
+body .player-card.mp5-rendered[data-mp5-look]>.player-card-side-info strong{font-size:clamp(8px,2.15vw,11px)!important}
+body .player-card.mp5-rendered[data-mp5-look]>.player-card-side-info span{font-size:clamp(6px,1.8vw,8px)!important}
+body .player-card.mp5-rendered[data-mp5-look]>.player-photo-wrap{
+  display:block!important;position:absolute!important;z-index:9!important;
+  top:28%!important;left:62%!important;right:auto!important;bottom:auto!important;
+  width:42%!important;height:33%!important;margin:0!important;padding:0!important;
+  transform:translateX(-50%)!important;
+  overflow:hidden!important;border:1px solid #fff5!important;border-radius:9px!important;
+  box-shadow:0 7px 20px #0008!important;background:transparent!important;
+}
+body .player-card.mp5-rendered[data-mp5-look] .player-photo{
+  width:100%!important;height:100%!important;display:block!important;
+  object-fit:cover!important;
+  transform:scale(var(--photo-zoom,1))!important;
+  object-position:var(--photo-x,50%) var(--photo-y,30%)!important;
+}
+body .player-card.mp5-rendered[data-mp5-look]>h3{
+  position:absolute!important;z-index:11!important;
+  top:63%!important;left:11%!important;right:11%!important;bottom:auto!important;
+  margin:0!important;padding:0!important;text-align:center!important;
+  font-size:clamp(17px,5vw,25px)!important;line-height:1.04!important;
+  color:var(--mp5-ink,#fff)!important;text-shadow:0 1px 7px #000c,0 0 2px #fff8!important;
+}
+body .player-card.mp5-rendered[data-mp5-look]>.player-stats{
+  position:absolute!important;z-index:14!important;
+  left:15%!important;right:15%!important;bottom:15%!important;top:auto!important;
+  margin:0!important;padding:0!important;transform:none!important;
+  display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:1px 3px!important;opacity:1!important;visibility:visible!important;
+}
+body .player-card.mp5-rendered[data-mp5-look]>.player-stats>div{
+  display:block!important;text-align:center!important;padding:2px 1px!important;
+  border:1px solid #ffffff21!important;border-radius:5px!important;background:#070b17ad!important;box-shadow:none!important;
+}
+body .player-card.mp5-rendered[data-mp5-look]>.player-stats strong{
+  display:block!important;color:#fff!important;
+  font-size:clamp(15px,4.5vw,19px)!important;font-weight:1000!important;
+  line-height:1!important;text-shadow:0 1px 6px #000b,0 0 2px #fff6!important;
+}
+body .player-card.mp5-rendered[data-mp5-look]>.player-stats span{
+  display:block!important;color:#f7f4ff!important;
+  font-size:clamp(8px,2.25vw,10px)!important;line-height:1.15!important;
+  letter-spacing:.04em!important;text-shadow:0 1px 5px #000a!important;
+}
+/* Lo slot comune M4 rimane SEMPRE fuori dal renderer. */
+body .player-card.mp5-rendered[data-mp5-look]>.mp-m4-medallion{
+  z-index:80!important;display:grid!important;
+}
+/* Mostra una sola estetica, lasciando inalterate le foto promo originali. */
+body .mp5-preview-overlay{
+  position:fixed;inset:0;z-index:10000010;
+  display:grid;place-items:center;padding:max(10px,env(safe-area-inset-top)) 12px max(10px,env(safe-area-inset-bottom));
+}
+.mp5-preview-shade{position:absolute;inset:0;background:#080615e9;backdrop-filter:blur(9px)}
+.mp5-preview-dialog{position:relative;z-index:1;width:min(540px,100%);max-height:90dvh;overflow:auto;
+  padding:14px 16px 22px;background:linear-gradient(150deg,#281747,#0b1931);color:#fff;
+  border:1px solid #bd80e6;border-radius:20px;box-shadow:0 23px 90px #000b}
+.mp5-preview-dialog header{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:16px}
+.mp5-preview-dialog header strong{font-size:12px;letter-spacing:.1em;color:#f1c5ff}
+.mp5-preview-dialog button{border-radius:10px;color:#fff;border:1px solid #bf8df8;background:#66319d;padding:10px 12px;cursor:pointer}
+.mp5-preview-dialog label{font-weight:800;font-size:12px;display:block;margin-bottom:8px}
+.mp5-preview-dialog select{display:block;width:100%;padding:12px;color:#fff;background:#211532;border:1px solid #ae78d4;border-radius:10px}
+.mp5-preview-stage{display:grid;place-items:center;padding:15px 20px;min-height:310px;background:#02081780;border-radius:12px;margin:14px 0}
+.mp5-preview-stage .player-card{width:min(300px,100%)!important;max-width:100%!important;transform:none!important}
+.mp5-preview-note,.mp5-no-home{font-size:12px;line-height:1.5;color:#d7c7e8;text-align:center}
+.mp5-founder-test{background:#6e3aac;color:white;border:1px solid #d1a2fa;border-radius:10px;padding:12px;font-weight:800;cursor:pointer}
+@media(max-width:420px){
+ body .player-card.mp5-rendered[data-mp5-look]>.player-card-side-info{gap:2px!important}
+ body .player-card.mp5-rendered[data-mp5-look]>.player-card-side-info>div{padding:2px 3px!important}
+ .mp5-preview-stage{padding:9px 18px}
+}
+@media(prefers-reduced-motion:reduce){body .player-card.mp5-rendered[data-mp5-look] *{animation:none!important;transition:none!important}}
