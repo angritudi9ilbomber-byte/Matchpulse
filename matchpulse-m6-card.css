@@ -226,77 +226,204 @@ body .player-card.mp6-rendered>.mp6-preview-medallion img{width:100%!important;h
 
 
 /* ============================================
-   MATCHPULSE — FIX CARTA E ANTEPRIME
+   MATCHPULSE — LAYOUT COMUNE DEFINITIVO
+   Home · Club · Anteprime · Inventario
    ============================================ */
 
-/* Piede debole e mosse abilità sotto le statistiche */
+/* RUOLO SEMPRE LEGGIBILE */
+
+body .player-card.mp6-rendered
+> .player-top .card-overall-label {
+  color: #fff !important;
+  text-shadow:
+    0 2px 5px #000,
+    0 0 3px #000 !important;
+}
+
+/* ============================================
+   CARTE COMUNI, RARE ED EPICHE
+   Nome e statistiche separati
+   ============================================ */
+
+body .player-card.mp6-rendered:not(.mp6-stats-row)
+> h3 {
+  top: 64.5% !important;
+}
+
+body .player-card.mp6-rendered:not(.mp6-stats-row)
+> .player-stats {
+  top: 73.5% !important;
+}
+
+/* ============================================
+   STATISTICHE — TUTTE LE CARTE
+   ============================================ */
+
+body .player-card.mp6-rendered
+> .player-stats {
+  min-height: 0 !important;
+  height: auto !important;
+  align-content: start !important;
+  grid-auto-rows: min-content !important;
+  gap: 1px 3px !important;
+}
+
+body .player-card.mp6-rendered
+> .player-stats > div {
+  box-sizing: border-box !important;
+
+  height: clamp(23px, 9cqw, 31px) !important;
+  min-height: 0 !important;
+  max-height: 31px !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  gap: 1px !important;
+  padding: 1px 0 !important;
+  line-height: 1 !important;
+  overflow: hidden !important;
+}
+
+body .player-card.mp6-rendered
+> .player-stats > div strong {
+  font-size: clamp(12px, 5cqw, 18px) !important;
+  line-height: 1 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+body .player-card.mp6-rendered
+> .player-stats > div span {
+  font-size: clamp(6px, 2.2cqw, 8px) !important;
+  line-height: 1 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* ============================================
+   LEGGENDARIE — SEI STATISTICHE IN RIGA
+   ============================================ */
+
+body .player-card.mp6-rendered.mp6-stats-row
+> .player-stats {
+  top: 79% !important;
+  gap: 0 !important;
+}
+
+body .player-card.mp6-rendered.mp6-stats-row
+> .player-stats > div {
+  height: clamp(23px, 8cqw, 29px) !important;
+  min-height: 0 !important;
+  max-height: 29px !important;
+}
+
+body .player-card.mp6-rendered.mp6-stats-row
+> .player-stats > div strong {
+  font-size: clamp(11px, 4.5cqw, 16px) !important;
+}
+
+body .player-card.mp6-rendered.mp6-stats-row
+> .player-stats > div span {
+  font-size: clamp(6px, 2.1cqw, 8px) !important;
+}
+
+/* ============================================
+   PIEDE DEBOLE E MOSSE ABILITÀ
+   Stessa posizione per TUTTE le skin
+   ============================================ */
+
 body .player-card.mp6-rendered
 > .mp-card-ability-stars {
   position: absolute !important;
-  top: 92% !important;
-  bottom: auto !important;
-  left: 13% !important;
-  right: 13% !important;
-  width: auto !important;
-  margin: 0 !important;
-  padding: 0 !important;
   z-index: 18 !important;
 
   display: grid !important;
+  top: 91% !important;
+  left: 12% !important;
+  right: 12% !important;
+  bottom: auto !important;
+
+  width: auto !important;
+  height: auto !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
   grid-template-columns:
     repeat(2, minmax(0, 1fr)) !important;
-  gap: 3px !important;
 
-  background: transparent !important;
+  gap: 8px !important;
+  align-items: start !important;
   transform: none !important;
 }
+
+/* Due piccoli pannelli indipendenti */
 
 body .player-card.mp6-rendered
 > .mp-card-ability-stars > div {
   display: flex !important;
   flex-direction: column !important;
+
   align-items: center !important;
+  justify-content: center !important;
+
   gap: 1px !important;
+  margin: 0 !important;
+  padding: 2px 3px !important;
 
   min-width: 0 !important;
-  margin: 0 !important;
-  padding: 0 !important;
+  height: auto !important;
 
-  background: transparent !important;
-  border: 0 !important;
+  border: 1px solid
+    rgba(255,255,255,.18) !important;
+
+  border-radius: 5px !important;
+  background: rgba(6,9,23,.74) !important;
   box-shadow: none !important;
 }
 
+/* Etichette */
+
 body .player-card.mp6-rendered
-> .mp-card-ability-stars span {
+> .mp-card-ability-stars > div > span {
   display: block !important;
-  margin: 0 !important;
-  font-size: clamp(5px, 2cqw, 7px) !important;
+
+  font-size:
+    clamp(5px, 1.8cqw, 7px) !important;
+
   line-height: 1 !important;
   text-align: center !important;
   white-space: nowrap !important;
+
+  color: #fff !important;
+  letter-spacing: .05em !important;
+  text-shadow: 0 1px 3px #000 !important;
 }
+
+/* Stelle */
 
 body .player-card.mp6-rendered
-> .mp-card-ability-stars strong {
+> .mp-card-ability-stars > div > strong {
   display: flex !important;
   justify-content: center !important;
-  font-size: clamp(8px, 3.2cqw, 12px) !important;
-  line-height: 1.05 !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  font-size:
+    clamp(8px, 2.8cqw, 11px) !important;
+
+  line-height: 1 !important;
+  white-space: nowrap !important;
 }
 
-/* L'emblema può sporgere fuori dalla carta */
-body .player-card.mp6-rendered[data-mp4-emblem] {
-  overflow: visible !important;
-}
+/* ============================================
+   ANTEPRIMA MOBILE
+   ============================================ */
 
-/* La grafica della skin resta ritagliata nella carta */
-body .player-card.mp6-rendered[data-mp4-emblem]
-> .mp6-art-layer {
-  overflow: hidden !important;
-}
-
-/* Anteprima: carta completa dentro al popup */
 body .mp6-preview-stage
 .player-card.mp6-rendered[data-mp6-look] {
   width: min(100%, 270px) !important;
@@ -307,4 +434,17 @@ body .mp6-preview-stage
 .mp6-preview-stage {
   min-height: 0 !important;
   padding: 22px 18px !important;
+}
+
+/* ============================================
+   EMBLEMA ESTERNO
+   ============================================ */
+
+body .player-card.mp6-rendered[data-mp4-emblem] {
+  overflow: visible !important;
+}
+
+body .player-card.mp6-rendered[data-mp4-emblem]
+> .mp6-art-layer {
+  overflow: hidden !important;
 }
