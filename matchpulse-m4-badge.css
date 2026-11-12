@@ -1,0 +1,44 @@
+/* MATCHPULSE M4 — medaglione indipendente. Solo estetica, mai statistiche. */
+:root{--mp4-badge-size:clamp(32px,16%,70px)}
+.player-card[data-mp4-emblem]{position:relative!important;overflow:visible!important;isolation:isolate}
+.player-card[data-mp4-emblem]>.mp-m4-medallion{
+  position:absolute!important;right:-7.5%!important;top:6%!important;
+  width:var(--mp4-badge-size)!important;height:auto!important;aspect-ratio:1/1!important;
+  display:grid!important;place-items:center!important;z-index:65!important;pointer-events:none!important;
+  padding:5px!important;box-sizing:border-box!important;border-radius:50%!important;
+  background:radial-gradient(circle at 35% 25%,#5d4377,#110d22 63%,#03030a 100%)!important;
+  border:2px solid #ffe2a2!important;
+  box-shadow:0 6px 12px #000a,0 0 0 3px #130a21,0 0 18px #e9a9ff7a!important;
+}
+.player-card[data-mp4-emblem]>.mp-m4-medallion img{width:100%!important;height:100%!important;object-fit:contain!important;display:block!important;pointer-events:none!important}
+/* Il badge vecchio interno non deve duplicare quello nuovo. */
+.player-card[data-mp4-emblem] .mp-b-card-layer .mp-b-badge{display:none!important}
+/* Permetti al medaglione di sporgere anche sulle skin con cornici molto spesse. */
+.premium-home .featured-card-wrap,
+.mp-b-preview-stage,.mp-b-preview-modal,
+.mp-m4-card-stage{overflow:visible!important}
+.mp-m4-inventory-slot{display:flex;align-items:center;gap:11px;flex-wrap:wrap;margin:15px 0;
+  padding:13px 14px;border-radius:13px;background:#22193b;border:1px solid #7953a9;color:#fff;font:inherit}
+.mp-m4-inventory-slot strong{color:#f0d5ff;font-size:12px;letter-spacing:.06em}
+.mp-m4-inventory-slot span{font-size:12px;color:#d7c5ea}
+.mp-m4-inventory-slot button{margin-left:auto;border-radius:10px;border:1px solid #a966e3;
+  padding:9px 12px;background:#622a99;color:white;font-weight:800;cursor:pointer}
+.mp-m4-inventory-slot button:disabled{opacity:.4;cursor:default}
+.mp-m4-inventory-slot[data-status='error']{border-color:#f39d83}
+.mp-m4-preview-host{position:fixed;inset:0;z-index:10000001;display:grid;place-items:center;
+  padding:max(14px,env(safe-area-inset-top)) 12px max(14px,env(safe-area-inset-bottom))}
+.mp-m4-preview-shade{position:absolute;inset:0;background:#050514e8;backdrop-filter:blur(12px)}
+.mp-m4-preview-dialog{position:relative;z-index:1;width:min(500px,100%);max-height:88dvh;overflow:auto;
+  border-radius:22px;border:1px solid #b77ed5;padding:15px 20px 22px;background:linear-gradient(140deg,#2d194b,#101a32);color:#fff}
+.mp-m4-preview-dialog header{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.mp-m4-preview-dialog header button{background:#62308f;border:1px solid #bc8fe6;color:#fff;border-radius:10px;min-width:42px;min-height:42px;cursor:pointer}
+.mp-m4-preview-dialog h3{margin:6px 0 15px;font-size:19px}
+.mp-m4-card-stage{display:grid;place-items:center;min-height:350px;padding:25px 25px 35px;
+  border-radius:18px;background:radial-gradient(circle,#3a2257,#07101e 70%)}
+.mp-m4-card-stage .player-card{width:min(280px,90%)!important;max-width:100%!important;transform:none!important}
+.mp-m4-card-stage .player-card .mp-m4-medallion{box-sizing:border-box}
+.mp-m4-preview-note{font-size:12px;color:#d8c4e6;text-align:center;margin-top:13px}
+.mp-m4-founder-action{background:#64309d;border:1px solid #cc9bf9;border-radius:10px;color:#fff;
+  font-weight:900;padding:10px 14px;min-height:42px;margin-top:10px;cursor:pointer}
+@media(max-width:440px){.player-card[data-mp4-emblem]>.mp-m4-medallion{right:-6.3%!important;top:8%!important}}
+@media(prefers-reduced-motion:reduce){.player-card>.mp-m4-medallion{animation:none!important;transition:none!important}}
