@@ -1,5 +1,5 @@
 /* ===============================================================
-   MATCHPULSE PREMIUM B / R3.0 DEFINITIVO — NEGOZIO DEFINITIVO
+   MATCHPULSE PREMIUM B / R3.1 · ASSET FIX — NEGOZIO DEFINITIVO
    Overlay progressivo sopra app.js + M1 + M2 + M3 + Premium A.
    Non concede token e non modifica le RPC di acquisto reali.
    Founder Sandbox: solo account verificato dalla RPC di admin.
@@ -38,7 +38,53 @@
  const THEMES={op:'ONE PIECE',db:'DRAGON BALL',cp:'CYBERPUNK 2077',f1:'FORMULA 1',
    fcgold:'FC ORIGINALS',fcice:'FC ORIGINALS',fcneon:'FC ORIGINALS',fcblack:'FC ORIGINALS'};
  const ESC=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
- const src=(theme,type)=>`b-art/${theme}-${type}.svg?v=20261112-b3`;
+ // Risolviamo gli asset rispetto allo script caricato, non alla pagina:
+ // funziona anche nelle installazioni sotto una sottocartella del sito.
+ const ASSET_BASE=new URL('b-art/',document.currentScript?.src||document.baseURI);
+ const src=(theme,type)=>new URL(`${theme}-${type}.svg?v=20261112-b31`,ASSET_BASE).href;
+ // Evita che il nuovo layout nasconda le immagini precedenti quando
+ // una risorsa SVG non viene pubblicata o restituisce 404.
+ function assetMissing(){
+   const page=MAIN.querySelector('.mp-m2-page');
+   if(!page||page.querySelector('.mp-b-assets-warning'))return;
+   const warning=document.createElement('div');
+   warning.className='mp-b-assets-warning';
+   warning.textContent='Alcune illustrazioni non sono disponibili: controlla di aver pubblicato la cartella b-art accanto ai file del sito.';
+   page.querySelector('.mp-m2-utility-tabs')?.insertAdjacentElement('afterend',warning);
+ }
+ function ensureArtwork(root,imgs,readyClass,onFailure){
+   let failed=false;
+   const ok=()=>{
+     if(failed)return;
+     if(imgs.every(el=>el.complete && el.naturalWidth>0))root.classList.add(readyClass);
+   };
+   const bad=()=>{
+     if(failed)return;
+     failed=true;
+     root.classList.remove(readyClass);
+     onFailure?.();
+     assetMissing();
+   };
+   imgs.forEach(el=>{
+     if(el.complete){if(el.naturalWidth===0)bad();}
+     else {el.addEventListener('load',ok,{once:true});el.addEventListener('error',bad,{once:true});}
+   });
+   ok();
+ }
+ // Diagnostica on-demand per verificare in Safari che gli SVG siano raggiungibili.
+ window.mpBAssetCheck=async()=>{
+   const names=['op-badge.svg','op-frame.svg','op-background.svg',
+     'db-badge.svg','db-frame.svg','db-background.svg',
+     'cp-badge.svg','cp-frame.svg','cp-background.svg',
+     'f1-badge.svg','f1-frame.svg','f1-background.svg',
+     'fcgold-background.svg'];
+   const checks=await Promise.all(names.map(async name=>{
+     const uri=new URL(name,ASSET_BASE).href;
+     try{const r=await fetch(uri,{cache:'no-store'});return {name,ok:r.ok,status:r.status,url:uri};}
+     catch(e){return {name,ok:false,error:String(e),url:uri};}
+   }));
+   return {base:ASSET_BASE.href,ok:checks.every(x=>x.ok),checks};
+ };
  const liveRoute=()=>typeof route==='string'?route:'';
  const isPromo=el=>!!el?.closest('.mp-promo-card,.mp-promo-v3-card,[data-promo-card="true"]')||el?.dataset?.promoCard==='true';
  const m2State=()=>{try{return window.mpM2Inspect?.()||{};}catch{return{};}};
@@ -143,7 +189,7 @@
  function decorateProduct(product){
    const slug=productSlug(product),config=ORIGINAL[slug];
    if(!config)return;
-   if(product.dataset.bSlug===slug && product.querySelector('.mp-b-shop-art')) return;
+   if(product.dataset.bSlug===slug && (product.querySelector('.mp-b-shop-art')||product.dataset.bArtFailed==='1')) return;
    const [theme,rarity]=config;
    const art=product.querySelector('.mp-m2-art');if(!art)return;
    product.dataset.bSlug=slug;
@@ -156,6 +202,10 @@
      (rarity==='common'?img(theme,'badge','mp-b-product-badge'):img(theme,'frame','mp-b-product-frame'))+
      `<span class="mp-b-product-kind">${rarity==='common'?'EMBLEMA':rarity==='rare'?'CORNICE 3D':'SKIN COMPLETA'}</span>`;
    art.appendChild(artEl);
+   ensureArtwork(art,[...artEl.querySelectorAll('img')],'mp-b-art-ready',()=>{
+     product.dataset.bArtFailed='1';
+     artEl.remove();
+   });
  }
  const themeFromPack=p=>{
    for(const t of ['onepiece','dragonball','cyberpunk','formula1','matchpulse'])
@@ -166,13 +216,17 @@
  function decoratePack(pack){
    const art=pack.querySelector('.mp-m2-pack-art');if(!art)return;
    const theme=themeFromPack(art);
-   if(pack.dataset.bPackTheme===theme && pack.querySelector('.mp-b-pack-cover'))return;
+   if(pack.dataset.bPackTheme===theme && (pack.querySelector('.mp-b-pack-cover')||pack.dataset.bPackMissing==='1'))return;
    pack.dataset.bPackTheme=theme;
    const shell=art.querySelector('.mp-m2-pack-shell');if(!shell)return;
    shell.querySelector('.mp-b-pack-cover')?.remove();
    shell.insertAdjacentHTML('afterbegin',img(slugFromPack(theme),'background','mp-b-pack-cover')+
      (['onepiece','dragonball','cyberpunk','formula1'].includes(theme)?img(slugFromPack(theme),'badge','mp-b-pack-crest'):''));
    shell.classList.add('mp-b-pack-shell');
+   ensureArtwork(shell,[...shell.querySelectorAll('img')],'mp-b-pack-art-ready',()=>{
+     shell.querySelectorAll('.mp-b-pack-cover,.mp-b-pack-crest').forEach(el=>el.remove());
+     pack.dataset.bPackMissing='1';
+   });
  }
  function banner(){
    const page=MAIN.querySelector('.mp-m2-page');if(!page||page.querySelector('.mp-b-catalog-header'))return;
@@ -468,7 +522,7 @@
  window.mpBSandboxReset=()=>{if(!STATE.admin)return;STATE.sandboxOwned.clear();STATE.sandboxHistory=[];
    STATE.sandboxEquipped=null;renderLabInventory();};
  window.mpBClosePreview=()=>document.querySelector('.mp-b-dev-overlay')?.remove();
- window.mpBInspect=()=>({version:'B3.0',premiumA:!!window.MP_PREMIUM_R1_READY,
+ window.mpBInspect=()=>({version:'B3.1',premiumA:!!window.MP_PREMIUM_R1_READY,
    shopReady:!!window.MP_M2_READY,founderVerified:STATE.admin,
    cosmeticCatalog:Object.keys(BY_ID).length,decoratedCards:document.querySelectorAll('.player-card[data-b-skin]').length,
    clubDecorated:document.querySelectorAll('.mp-club-showcase-card[data-b-club-skin],.mp-club-member-card[data-b-club-skin]').length,
