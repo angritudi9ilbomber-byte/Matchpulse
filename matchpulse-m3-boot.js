@@ -100,13 +100,12 @@
     for (const url of [
       'app.js?v=20261112-m3',
       'matchpulse-m1.js?v=20261112-m3',
-      'matchpulse-m2.js?v=20261112-m3',
+      'matchpulse-m2.js?v=20261112-CLEAN',
       'matchpulse-m3.js?v=20261112-b3',
       'matchpulse-premium-r1.js?v=20261112-r1',
-      'matchpulse-premium-b.js?v=20261112-b32',
       'matchpulse-m4-badge.js?v=20261112-m4',
       'matchpulse-m6-card.js?v=m6-20261112',
-      'matchpulse-m6-founder.js?v=m6-20261112'
+      'matchpulse-m6-card.js?v=m6-20261112-CLEAN',
 
     ]) {
       await new Promise((resolve,reject)=>{

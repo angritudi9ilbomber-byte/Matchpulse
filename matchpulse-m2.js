@@ -168,8 +168,40 @@
     formula1:{name:'FORMULA 1',tag:'GRAND PRIX',description:'Carbonio, velocità e circuiti da leggenda.'}
   };
   const M6_TIER={common:['COMUNE','FC Originals: skin completa. Collaborazioni: emblema esterno.'],rare:['RARA','FC Originals: skin completa. Collaborazioni: decorazioni tematiche.'],epic:['EPICA','FC Originals: skin completa. Collaborazioni: cornice scolpita.'],legendary:['LEGGENDARIA','Skin completa, esclusiva e ricca di dettagli.']};
-  const m6Asset=id=>M6_FILES[id]?'mp-m6-art/'+M6_FILES[id]+'?v=m6-20261112':'';
-  const m6Cover=theme=>'mp-m6-art/cover_'+theme+'.webp?v=m6-20261112';
+  
+const m6Asset = id => {
+  const file = M6_FILES[id];
+  if (!file) return '';
+
+  const isBadge = [
+    'op_straw',
+    'db_kame',
+    'cp_night',
+    'f1_grid'
+  ].includes(id);
+
+  const folder = isBadge
+    ? 'mp-m4-art/'
+    : 'mp-m5-art/';
+
+  return folder + file + '?v=fix-m6-assets';
+};
+
+const m6Cover = theme => {
+  const covers = {
+    matchpulse: 'fc_leggendaria.webp',
+    onepiece: 'op_leggendaria.webp',
+    dragonball: 'db_leggendaria.webp',
+    cyberpunk: 'cp_leggendaria.webp',
+    formula1: 'f1_leggendaria.webp',
+    any: 'fc_epica.webp'
+  };
+
+  return 'mp-m5-art/' +
+    (covers[theme] || covers.matchpulse) +
+    '?v=fix-m6-assets';
+};
+
   const m6Has=id=>owned(id);
   const m6Active=id=>id==='op_straw'||id==='db_kame'||id==='cp_night'||id==='f1_grid'
     ? window.mpM4Inspect?.().emblem===id : equippedId()===id;

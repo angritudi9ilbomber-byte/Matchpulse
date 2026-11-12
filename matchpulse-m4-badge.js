@@ -51,7 +51,7 @@
  }
  function applyAll(){
    document.querySelectorAll('.player-card').forEach(card=>{
-     if(card.closest('.mp-m4-preview-host'))return;
+     if(card.closest('.mp-m4-preview-host,.mp6-preview-overlay'))return;
      if(card.closest('.mp-m2-product,.mp-m2-reveal'))return;
      const insideClub=Boolean(card.closest('.mp-club-page,#mpClubMemberModal,.mp-club-showcase-card,.mp-club-member-card,.mp-club-home-card'));
      let id=null;

@@ -15,7 +15,12 @@
   op_ocean_epic:'op-ocean-epic',db_aura_epic:'db-aura-epic',cp_neon_epic:'cp-neon-epic',f1_racing_epic:'f1-racing-epic'
  };
  const common={op_straw:'onepiece.png',db_kame:'dragonball.png',cp_night:'cyberpunk.png',f1_grid:'formula1.png'};
- const scriptBase=new URL('mp-m6-art/',document.currentScript?.src||document.baseURI);
+ 
+const scriptBase = new URL(
+  'mp-m5-art/',
+  document.currentScript?.src || document.baseURI
+);
+
  const resolve=id=>alias[id]||id;
  const isPromo=card=>!!card.closest('.mp-promo-card,.mp-promo-v3-card,[data-promo-card="true"],.mp-m2-product,.mp-m2-reveal-skin')||card.dataset.promoCard==='true';
  let latestHome=null,shown=false,queued=false;
@@ -27,7 +32,15 @@
   card.removeAttribute('data-mp6-look');
  }
  function target(card){
-  const source=card.dataset.mp6PreviewId||card.dataset.m2Skin||card.dataset.m3Skin||card.dataset.bTestSkin||'';
+  
+const source =
+  card.dataset.mp6PreviewId ||
+  card.dataset.m2Skin ||
+  card.dataset.m3Skin ||
+  card.closest('[data-m3-skin]')?.dataset.m3Skin ||
+  card.dataset.bTestSkin ||
+  '';
+
   const slug=resolve(source);
   return fileBySlug[slug]?slug:null;
  }
@@ -39,7 +52,12 @@
   clean(card);
   const art=document.createElement('div');art.className='mp6-art-layer';art.setAttribute('aria-hidden','true');
   const img=document.createElement('img');img.alt='';img.loading='eager';img.decoding='async';img.src=new URL(fileBySlug[slug],scriptBase).href;
-  img.onerror=()=>{if(card.dataset.mp6Look===slug)clean(card);};
+  
+img.onerror = () => {
+  console.warn('M6 immagine non caricata:', slug);
+  img.style.visibility = 'hidden';
+};
+
   art.appendChild(img);card.prepend(art);
   card.dataset.mp6Look=slug;card.classList.add('mp6-rendered');
  }
@@ -47,8 +65,15 @@
    if(!common[id])return;
    card.querySelector(':scope > .mp-m4-medallion')?.remove();
    const b=document.createElement('span');b.className='mp-m4-medallion mp6-preview-medallion';b.setAttribute('aria-hidden','true');
-   const img=document.createElement('img');img.src=new URL(common[id],scriptBase).href;img.alt='';b.append(img);
-   card.append(b);card.dataset.mp4Emblem=id;
+   
+const img = document.createElement('img');
+img.src = new URL(
+  'mp-m4-art/' + common[id],
+  document.baseURI
+).href;
+img.alt = '';
+b.append(img);
+
  }
  function sync(){
   queued=false;

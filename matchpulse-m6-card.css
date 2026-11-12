@@ -41,3 +41,121 @@ body .player-card.mp6-rendered>.mp6-preview-medallion{position:absolute!importan
 body .player-card.mp6-rendered>.mp6-preview-medallion img{width:100%!important;height:100%!important;object-fit:contain!important}
 @media(max-width:430px){body .player-card.mp6-rendered>.player-card-side-info{gap:2px!important}body .player-card.mp6-rendered>.player-card-side-info>div{padding:2px!important}}
 @media(prefers-reduced-motion:reduce){body .player-card.mp6-rendered *{animation:none!important;transition:none!important}}
+
+/* ================================================
+   MATCHPULSE CLEAN
+   POSIZIONI MANUALI DELLA CARTA
+   ================================================ */
+
+body .player-card.mp6-rendered {
+
+  /* OVR E RUOLO */
+  --m6-ovr-x: 15%;
+  --m6-ovr-y: 17%;
+  --m6-ovr-w: 28%;
+
+  /* INFORMAZIONI LATERALI */
+  --m6-side-x: 10%;
+  --m6-side-y: 43%;
+  --m6-side-w: 29%;
+
+  /* FOTO DEL GIOCATORE */
+  --m6-photo-x: 37%;
+  --m6-photo-y: 27%;
+  --m6-photo-w: 47%;
+  --m6-photo-h: 34%;
+
+  /* NOME */
+  --m6-name-x: 10%;
+  --m6-name-y: 66%;
+  --m6-name-w: 80%;
+
+  /* STATISTICHE */
+  --m6-stats-x: 15%;
+  --m6-stats-y: 77%;
+  --m6-stats-w: 70%;
+
+  /* PIEDE DEBOLE E MOSSE ABILITÀ */
+  --m6-stars-y: 92%;
+}
+
+/* OVR */
+body .player-card.mp6-rendered
+> .player-top {
+  inset: auto !important;
+  left: var(--m6-ovr-x) !important;
+  top: var(--m6-ovr-y) !important;
+  width: var(--m6-ovr-w) !important;
+}
+
+/* INFORMAZIONI LATERALI */
+body .player-card.mp6-rendered
+> .player-card-side-info {
+  left: var(--m6-side-x) !important;
+  top: var(--m6-side-y) !important;
+  width: var(--m6-side-w) !important;
+}
+
+/* FOTO */
+body .player-card.mp6-rendered
+> .player-photo-wrap {
+  left: var(--m6-photo-x) !important;
+  top: var(--m6-photo-y) !important;
+  width: var(--m6-photo-w) !important;
+  height: var(--m6-photo-h) !important;
+}
+
+/* NOME */
+body .player-card.mp6-rendered
+> h3 {
+  left: var(--m6-name-x) !important;
+  right: auto !important;
+  top: var(--m6-name-y) !important;
+  width: var(--m6-name-w) !important;
+}
+
+/* STATISTICHE */
+body .player-card.mp6-rendered
+> .player-stats {
+  left: var(--m6-stats-x) !important;
+  right: auto !important;
+  top: var(--m6-stats-y) !important;
+  width: var(--m6-stats-w) !important;
+}
+
+/* PIEDE DEBOLE E MOSSE ABILITÀ */
+body .player-card.mp6-rendered
+> .mp-card-ability-stars {
+  position: absolute !important;
+  left: 16% !important;
+  right: 16% !important;
+  top: var(--m6-stars-y) !important;
+  bottom: auto !important;
+  z-index: 16 !important;
+
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 4px !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+  transform: none !important;
+}
+
+body .player-card.mp6-rendered
+> .mp-card-ability-stars > div {
+  min-width: 0 !important;
+  padding: 0 !important;
+}
+
+body .player-card.mp6-rendered
+> .mp-card-ability-stars span {
+  font-size: clamp(6px, 1.8cqw, 8px) !important;
+  line-height: 1 !important;
+}
+
+body .player-card.mp6-rendered
+> .mp-card-ability-stars strong {
+  font-size: clamp(9px, 3cqw, 12px) !important;
+  line-height: 1 !important;
+}
