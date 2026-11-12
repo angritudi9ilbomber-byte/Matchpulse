@@ -18,7 +18,11 @@
     'db_saiyan':['dragonball','db-saiyan'], 'db_ultra':['dragonball','db-ultra'],
     'cp_night':['cyberpunk','cp-night'], 'cp_edge':['cyberpunk','cp-edge'],
     'cp_samurai':['cyberpunk','cp-samurai'], 'f1_grid':['formula1','f1-grid'],
-    'f1_pole':['formula1','f1-pole'], 'f1_champ':['formula1','f1-champ']
+    'f1_pole':['formula1','f1-pole'], 'f1_champ':['formula1','f1-champ'],
+    'mp_gold_dynasty':['matchpulse','fc-dynasty'],
+    'mp_icebreak':['matchpulse','fc-ice'],
+    'mp_neon_pulse':['matchpulse','fc-neon'],
+    'mp_blackout':['matchpulse','fc-blackout']
   };
   const S={selected:null, archives:[], loading:false, error:'',
     clubSkinByUser:new Map(), catalog:new Map(), lastClubLoad:0, clubLoading:null,
@@ -66,7 +70,7 @@
     return Array.isArray(members) && members.some(m=>m?.user_id===userId && m?.card_stats?.promoCard===true);
   }
   function applyClubSkins(){
-    if(!S.clubSkinByUser.size)return;
+    // Anche una mappa vuota deve rimuovere eventuali estetiche non piu' equipaggiate.
     const candidates=document.querySelectorAll('.mp-club-showcase-card,.mp-club-member-card,.mp-club-home-card');
     candidates.forEach(el=>{
       const uid=el.dataset.m3UserId||memberIdOf(el);
@@ -127,10 +131,17 @@
         const members=typeof MP_CLUB_MEMBERS_CACHE!=='undefined' ? MP_CLUB_MEMBERS_CACHE : [];
         if(!Array.isArray(members)||!members.length)return;
         const ids=[...new Set(members.map(m=>m.user_id).filter(Boolean))];
-        const {data,error}=await db().from(EQUIPPED_TABLE)
-          .select('user_id,season_id,skin_id').eq('season_id',SEASON).in('user_id',ids);
+        // M2 protegge gli equipaggiamenti con RLS personale. La RPC B3
+        // controlla lato server la membership nel club prima di restituire
+        // soltanto le skin equipaggiate dai membri della stessa squadra.
+        const {data,error}=await db().rpc('mp_b3_get_club_equipped',{
+          p_club_id:String(club.club_id)
+        });
         if(error)throw error;
-        S.clubSkinByUser=new Map((data||[]).map(row=>[row.user_id,row.skin_id]));
+        const allowed=new Set(ids.map(String));
+        S.clubSkinByUser=new Map((data||[])
+          .filter(row=>row.season_id===SEASON && allowed.has(String(row.user_id)))
+          .map(row=>[row.user_id,row.skin_id]));
         S.lastClubLoad=Date.now();applyClubSkins();
       }catch(e){
         console.warn('M3: Skin dei membri del Club non disponibili',e?.message||e);
