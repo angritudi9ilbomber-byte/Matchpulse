@@ -101,7 +101,8 @@
       'app.js?v=20261112-m3',
       'matchpulse-m1.js?v=20261112-m3',
       'matchpulse-m2.js?v=20261112-m3',
-      'matchpulse-m3.js?v=20261112-m3'
+      'matchpulse-m3.js?v=20261112-m3',
+      'matchpulse-premium-r1.js?v=20261112-r1'
     ]) {
       await new Promise((resolve,reject)=>{
         const s=document.createElement('script');s.src=url;s.async=false;
