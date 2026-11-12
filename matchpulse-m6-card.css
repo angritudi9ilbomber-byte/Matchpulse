@@ -223,3 +223,88 @@ body .player-card.mp6-rendered>.mp6-preview-medallion img{width:100%!important;h
  body .player-card.mp6-rendered *,
  .mp6-preview-dialog *{animation:none!important;transition:none!important}
 }
+
+
+/* ============================================
+   MATCHPULSE — FIX CARTA E ANTEPRIME
+   ============================================ */
+
+/* Piede debole e mosse abilità sotto le statistiche */
+body .player-card.mp6-rendered
+> .mp-card-ability-stars {
+  position: absolute !important;
+  top: 92% !important;
+  bottom: auto !important;
+  left: 13% !important;
+  right: 13% !important;
+  width: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  z-index: 18 !important;
+
+  display: grid !important;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr)) !important;
+  gap: 3px !important;
+
+  background: transparent !important;
+  transform: none !important;
+}
+
+body .player-card.mp6-rendered
+> .mp-card-ability-stars > div {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 1px !important;
+
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+body .player-card.mp6-rendered
+> .mp-card-ability-stars span {
+  display: block !important;
+  margin: 0 !important;
+  font-size: clamp(5px, 2cqw, 7px) !important;
+  line-height: 1 !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+}
+
+body .player-card.mp6-rendered
+> .mp-card-ability-stars strong {
+  display: flex !important;
+  justify-content: center !important;
+  font-size: clamp(8px, 3.2cqw, 12px) !important;
+  line-height: 1.05 !important;
+}
+
+/* L'emblema può sporgere fuori dalla carta */
+body .player-card.mp6-rendered[data-mp4-emblem] {
+  overflow: visible !important;
+}
+
+/* La grafica della skin resta ritagliata nella carta */
+body .player-card.mp6-rendered[data-mp4-emblem]
+> .mp6-art-layer {
+  overflow: hidden !important;
+}
+
+/* Anteprima: carta completa dentro al popup */
+body .mp6-preview-stage
+.player-card.mp6-rendered[data-mp6-look] {
+  width: min(100%, 270px) !important;
+  max-width: 100% !important;
+  aspect-ratio: 3 / 4 !important;
+}
+
+.mp6-preview-stage {
+  min-height: 0 !important;
+  padding: 22px 18px !important;
+}

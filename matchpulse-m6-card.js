@@ -18,7 +18,15 @@
   op_ocean_epic:'op-ocean-epic',db_aura_epic:'db-aura-epic',cp_neon_epic:'cp-neon-epic',f1_racing_epic:'f1-racing-epic'
  };
  const common={op_straw:'onepiece.png',db_kame:'dragonball.png',cp_night:'cyberpunk.png',f1_grid:'formula1.png'};
- const scriptBase=new URL('mp-m6-art/',document.currentScript?.src||document.baseURI);
+ const scriptBase = new URL(
+  'mp-m5-art/',
+  document.currentScript?.src || document.baseURI
+);
+
+const badgeBase = new URL(
+  'mp-m4-art/',
+  document.currentScript?.src || document.baseURI
+);
  const resolve=id=>alias[id]||id;
  const isPromo=card=>!!card.closest('.mp-promo-card,.mp-promo-v3-card,[data-promo-card="true"],.mp-m2-product,.mp-m2-reveal-skin')||card.dataset.promoCard==='true';
 
@@ -128,7 +136,12 @@
     img.loading='eager';
     img.decoding='async';
     img.src=new URL(fileBySlug[slug],scriptBase).href;
-    img.onerror=()=>{if(card.dataset.mp6Look===slug)clean(card);};
+    img.onerror = () => {
+  console.error(
+    'MatchPulse: impossibile caricare la skin',
+    img.src
+  );
+};
     art.appendChild(img);
     card.prepend(art);
     card.dataset.mp6Look=slug;
@@ -144,7 +157,7 @@
   b.className='mp-m4-medallion mp6-preview-medallion';
   b.setAttribute('aria-hidden','true');
   const img=document.createElement('img');
-  img.src=new URL(common[id],scriptBase).href;
+  img.src = new URL(common[id], badgeBase).href;
   img.alt='';
   b.append(img);
   card.append(b);
@@ -199,22 +212,62 @@
   modal.querySelectorAll('.mp6-close-preview').forEach(b=>b.onclick=removeModal);
   const c=sourceCard();
   if(c){
-    const clone=c.cloneNode(true);
-    clone.querySelectorAll('.mp6-art-layer,.mp5-surface,.mp-b-card-layer').forEach(n=>n.remove());
-    clone.classList.remove('mp6-rendered','mp5-rendered');
-    clone.removeAttribute('data-mp6-look');
-    resetVars(clone);
-    delete clone.dataset.mp6Look;
-    for(const k of ['m2Skin','m3Skin','bTestSkin'])delete clone.dataset[k];
-    if(common[id]){
-      clone.removeAttribute('data-mp6-preview-id');
-      clean(clone);
-      badgePreview(clone,id);
-    }else{
-      clone.dataset.mp6PreviewId=id;
-      apply(clone);
-    }
-    modal.querySelector('.mp6-preview-stage').append(clone);
+    
+const clone = c.cloneNode(true);
+
+// Rimuove i livelli copiati, non i dati del giocatore.
+clone.querySelectorAll(
+  '.mp6-art-layer,' +
+  '.mp5-surface,' +
+  '.mp-b-card-layer,' +
+  '.mp-m4-medallion'
+).forEach(node => node.remove());
+
+clone.classList.remove(
+  'mp6-rendered',
+  'mp5-rendered',
+  'mp6-stats-row'
+);
+
+clone.removeAttribute('data-mp6-look');
+clone.removeAttribute('data-mp4-emblem');
+
+resetVars(clone);
+
+delete clone.dataset.mp6Look;
+delete clone.dataset.mp4Emblem;
+
+if (common[id]) {
+
+  // EMBLEMA: conserva la skin realmente equipaggiata.
+  clone.removeAttribute('data-mp6-preview-id');
+
+  // Se non c'è nessuna skin equipaggiata,
+  // usa Verdalia come sfondo dimostrativo.
+  if (!target(clone)) {
+    clone.dataset.mp6PreviewId = 'mp_gold_dynasty';
+  }
+
+  apply(clone);
+  badgePreview(clone, id);
+
+} else {
+
+  // SKIN: mostra esclusivamente quella selezionata.
+  for (const key of [
+    'm2Skin',
+    'm3Skin',
+    'bTestSkin'
+  ]) {
+    delete clone.dataset[key];
+  }
+
+  clone.dataset.mp6PreviewId = id;
+  apply(clone);
+}
+
+modal.querySelector('.mp6-preview-stage').append(clone);
+
   }else{
     modal.querySelector('.mp6-preview-stage').innerHTML='<div class="mp6-no-card">Apri la Home almeno una volta per visualizzare l’anteprima con la tua foto e le tue statistiche reali.</div>';
   }

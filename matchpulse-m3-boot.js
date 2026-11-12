@@ -102,10 +102,10 @@
       'matchpulse-m1.js?v=20261112-m3',
       'matchpulse-m2.js?v=20261112-CLEAN',
       'matchpulse-m3.js?v=20261112-b3',
-      'matchpulse-premium-r1.js?v=20261112-r1',
+      'matchpulse-premium-r1.js?v=20261113-fix',
       'matchpulse-m4-badge.js?v=20261112-m4',
       'matchpulse-m6-card.js?v=m6-20261112',
-      'matchpulse-m6-card.js?v=m6-20261112-CLEAN',
+      'matchpulse-m6-card.js?v=20261113-fix',
 
     ]) {
       await new Promise((resolve,reject)=>{

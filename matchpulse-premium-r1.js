@@ -134,31 +134,6 @@ home.appendChild(collection);
     updateWallet();
   }
   function schedule(){if(raf)return;raf=requestAnimationFrame(sync);}
-  function scrollTopNow(){
-    const html=document.scrollingElement||document.documentElement;
-    if(html)html.scrollTop=0;
-    document.body.scrollTop=0;
-    window.scrollTo(0,0);
-  }
-  // La SPA manteneva la scroll-position della pagina precedente su iPhone.
-  // Eseguiamo reset solo se cambia route, non durante i refresh dei dati.
-  if(typeof setRoute==='function'){
-    const previous=setRoute;
-    setRoute=function(next,...args){
-      const before=typeof route!=='undefined'?route:'';
-      const result=previous.apply(this,[next,...args]);
-      if(String(next)!==String(before)){
-        scrollTopNow();
-        requestAnimationFrame(scrollTopNow);
-      }
-      schedule();
-      return result;
-    };
-    window.setRoute=setRoute;
-  }
-  nav.addEventListener('click',event=>{
-    if(event.target.closest('button[data-route]'))requestAnimationFrame(scrollTopNow);
-  },true);
   // Non osserviamo attributi: così classi e animazioni non creano loop.
   const observer=new MutationObserver(mutations=>{
     if(mutations.some(m=>m.type==='childList'&&(m.addedNodes.length||m.removedNodes.length)))schedule();
