@@ -399,3 +399,96 @@ body::after{border-color:rgba(191,60,255,.15)!important;box-shadow:0 0 75px rgba
  .mp-club-entry-card{padding:18px!important}
  .history-match-list{grid-template-columns:1fr!important}
 }
+
+/* MATCHPULSE R1 — home shop teaser + safe area club */
+.mp-r1-shop-promo{grid-column:2/-1;grid-row:5;padding:18px 21px!important}
+.mp-r1-shop-hero{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:18px;
+  align-items:center;
+  padding:18px;
+  border:1px solid rgba(190,128,255,.18);
+  border-radius:18px;
+  background:
+    radial-gradient(circle at 85% 10%,rgba(205,118,255,.18),transparent 28%),
+    radial-gradient(circle at 0% 100%,rgba(94,78,255,.17),transparent 30%),
+    linear-gradient(135deg,rgba(29,22,57,.98),rgba(11,16,35,.96));
+}
+.mp-r1-shop-copy strong{
+  display:block;
+  font-size:clamp(22px,2.2vw,31px);
+  line-height:1.06;
+  font-weight:1000;
+  letter-spacing:-.05em;
+  margin-bottom:8px;
+  color:#fff;
+}
+.mp-r1-shop-copy p{
+  margin:0;
+  color:#cbc7de;
+  font-size:14px;
+  line-height:1.55;
+  max-width:56ch;
+}
+.mp-r1-shop-pills{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:14px;
+}
+.mp-r1-shop-pills span{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:8px 11px;
+  border-radius:999px;
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(208,161,255,.18);
+  color:#efeaff;
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:.04em;
+}
+.mp-r1-shop-actions{
+  display:grid;
+  gap:10px;
+  min-width:220px;
+}
+.mp-r1-shop-actions button{
+  padding:14px 16px;
+  border-radius:14px;
+  border:1px solid rgba(214,171,255,.24);
+  font-weight:1000;
+  letter-spacing:.04em;
+  cursor:pointer;
+}
+.mp-r1-shop-actions .primary{
+  background:linear-gradient(120deg,#8b39f1,#c75cf2);
+  color:#fff;
+}
+.mp-r1-shop-actions .secondary{
+  background:rgba(255,255,255,.03);
+  color:#f1d7ff;
+}
+
+/* safe area club */
+.mp-club-page{
+  padding-top:calc(6px + env(safe-area-inset-top,0px))!important;
+}
+.mp-club-profile-backdrop{
+  padding:calc(18px + env(safe-area-inset-top,0px)) 24px calc(24px + env(safe-area-inset-bottom,0px))!important;
+}
+
+@media(max-width:1080px){
+  .mp-r1-shop-promo{grid-column:1/-1;grid-row:8}
+}
+@media(max-width:760px){
+  .mp-r1-shop-hero{
+    grid-template-columns:1fr;
+    gap:14px;
+    padding:16px;
+  }
+  .mp-r1-shop-actions{min-width:0}
+  .mp-r1-shop-actions button{width:100%}
+}
