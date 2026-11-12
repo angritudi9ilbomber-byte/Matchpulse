@@ -1,0 +1,14 @@
+.mp6-founder-dialog{position:relative;z-index:2;width:min(640px,100%);max-height:90dvh;overflow:auto;padding:18px;background:linear-gradient(145deg,#291742,#0d1531);border:1px solid #bd84e5;border-radius:22px;color:#fff;box-shadow:0 18px 70px #000b}
+.mp6-founder-dialog header{display:flex;justify-content:space-between;align-items:start;gap:15px}.mp6-founder-dialog header small{color:#d6a2fe;letter-spacing:.13em}.mp6-founder-dialog h2{margin:5px 0;font-size:24px;color:#fff}.mp6-founder-dialog>p{color:#d8c8e5;font-size:12px;line-height:1.5}
+.mp6-founder-dialog button{min-height:41px;padding:9px 12px;border-radius:10px;background:#7135a8;color:#fff;border:1px solid #c28de6;font-size:12px;font-weight:900;cursor:pointer}
+.mp6-founder-dialog select{width:100%;padding:10px;border:1px solid #a27cc6;border-radius:10px;background:#1c1935;color:#fff;margin:9px 0;font:inherit}
+.mp6-founder-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.mp6-founder-panel{background:#17162e;border:1px solid #80549d;border-radius:15px;padding:13px;margin:10px 0;display:grid;gap:6px}
+.mp6-founder-panel strong{font-size:11px;letter-spacing:.06em;color:#f1d2ff}.mp6-founder-panel>p{color:#c8b5d7;font-size:12px;margin:6px 0}.mp6-founder-buttons{display:flex;flex-wrap:wrap;gap:7px}
+.mp6-founder-dialog .is-danger{background:#722a46;border-color:#dd6f9e}.mp6-founder-dialog .is-secondary{background:#33234f}
+.mp6-founder-reveal-enter{border-radius:15px;display:grid;place-items:center;gap:8px;padding:20px;background:radial-gradient(circle,#6d36bc6b,#0d1124);border:1px solid #e1a9ff;animation:mp6reveal .65s cubic-bezier(.18,.85,.2,1) both}
+.mp6-founder-reveal-plate{width:70px;height:95px;border:2px solid #ffe1a2;border-radius:12px;background:linear-gradient(145deg,#7c32c4,#22113b);box-shadow:0 0 35px #cd80fd8c;display:grid;place-items:center;font-size:36px}
+.mp6-founder-reveal-enter h3{margin:3px 0;font-size:20px;text-align:center}.mp6-founder-reveal-enter p{font-size:11px;letter-spacing:.12em;color:#edd1ff}
+.mp6-founder-reveal-enter button{width:min(100%,260px)}#mp6FounderStatus{border-top:1px solid #664684;padding-top:10px}.mp6-founder-done{width:100%}
+@keyframes mp6reveal{from{opacity:0;transform:translateY(20px) scale(.88)}to{opacity:1;transform:none}}
+@media(max-width:500px){.mp6-founder-grid{grid-template-columns:1fr}.mp6-founder-dialog{padding:13px}.mp6-founder-panel{margin:4px 0}}
+@media(prefers-reduced-motion:reduce){.mp6-founder-reveal-enter{animation:none}}

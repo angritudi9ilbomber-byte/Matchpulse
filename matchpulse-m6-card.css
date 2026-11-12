@@ -1,0 +1,43 @@
+/* M6 — tela 3:4 identica ai file grafici; un unico layout per LIVE/PREVIEW/CLUB.
+   I contenuti REALI del V8 sono conservati, mai duplicati o sostituiti. */
+body .player-card.mp6-rendered[data-mp6-look]{
+ position:relative!important;isolation:isolate!important;overflow:visible!important;
+ display:block!important;box-sizing:border-box!important;
+ width:min(100%,355px)!important;max-width:100%!important;aspect-ratio:3/4!important;height:auto!important;min-height:0!important;
+ margin-inline:auto!important;padding:0!important;border:0!important;border-radius:0!important;
+ background:transparent!important;outline:none!important;transform:none!important;
+ box-shadow:0 16px 40px #0007!important;container-type:inline-size!important;
+}
+body .player-card.mp6-rendered::before,body .player-card.mp6-rendered::after,
+body .player-card.mp6-rendered>.player-card-glow,
+body .player-card.mp6-rendered>.mp-b-card-layer,
+body .player-card.mp6-rendered>.mp-m3-art-overlay,
+body .player-card.mp6-rendered>.mp5-surface{display:none!important}
+body .player-card.mp6-rendered>.mp6-art-layer{position:absolute!important;inset:0!important;z-index:0!important;pointer-events:none!important;overflow:hidden!important;display:block!important}
+body .player-card.mp6-rendered>.mp6-art-layer img{display:block!important;width:100%!important;height:100%!important;object-fit:fill!important;object-position:center!important;filter:none!important;max-width:none!important}
+/* Numeri veri, ancorati alla tela invece che alla viewport. */
+body .player-card.mp6-rendered>.player-top{position:absolute!important;inset:17% 57% auto 15%!important;z-index:10!important;margin:0!important;padding:0!important;display:block!important;transform:none!important;background:none!important}
+body .player-card.mp6-rendered>.player-top>div{display:flex!important;flex-direction:column!important;align-items:flex-start!important;background:none!important;border:0!important;padding:0!important;box-shadow:none!important}
+body .player-card.mp6-rendered .card-ovr{font-size:clamp(26px,10cqw,43px)!important;line-height:1!important;color:#fff9e8!important;text-shadow:0 2px 6px #000,0 0 2px #000!important;font-weight:1000!important}
+body .player-card.mp6-rendered .card-overall-label{color:#fff!important;text-shadow:0 2px 4px #000!important;font-size:clamp(10px,3.8cqw,16px)!important;letter-spacing:0!important;font-weight:1000!important}
+/* Informazioni aggiuntive sul lato, fuori dall'area foto. */
+body .player-card.mp6-rendered>.player-card-side-info{position:absolute!important;z-index:12!important;left:10%!important;top:43%!important;right:auto!important;bottom:auto!important;width:29%!important;display:grid!important;gap:3px!important;margin:0!important;padding:0!important;transform:none!important}
+body .player-card.mp6-rendered>.player-card-side-info>div{position:relative!important;display:block!important;min-width:0!important;border:1px solid #f4e4bd66!important;border-radius:7px!important;background:#0b0b1cbf!important;padding:3px 4px!important;box-shadow:0 2px 6px #0005!important}
+body .player-card.mp6-rendered>.player-card-side-info>div>*{max-width:100%!important}
+body .player-card.mp6-rendered>.player-card-side-info strong,
+body .player-card.mp6-rendered>.player-card-side-info span{position:relative!important;display:block!important;color:#fff!important;white-space:normal!important;overflow-wrap:anywhere!important;letter-spacing:0!important;text-shadow:0 1px 3px #000!important;line-height:1.15!important}
+body .player-card.mp6-rendered>.player-card-side-info strong{font-size:clamp(8px,3cqw,12px)!important}
+body .player-card.mp6-rendered>.player-card-side-info span{font-size:clamp(7px,2.3cqw,9px)!important}
+/* La foto non deve MAI ricevere dimensioni dal template estetico. */
+body .player-card.mp6-rendered>.player-photo-wrap{position:absolute!important;z-index:11!important;left:37%!important;top:27%!important;width:47%!important;height:34%!important;right:auto!important;bottom:auto!important;margin:0!important;padding:0!important;transform:none!important;box-sizing:border-box!important;border:1px solid #fff9!important;border-radius:12px!important;overflow:hidden!important;background:#0d0f22e0!important;box-shadow:0 6px 15px #0008!important}
+body .player-card.mp6-rendered>.player-photo-wrap img.player-photo{position:relative!important;width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;object-fit:cover!important;object-position:var(--photo-x,50%) var(--photo-y,30%)!important;transform:scale(var(--photo-zoom,1))!important;filter:none!important;opacity:1!important;display:block!important}
+body .player-card.mp6-rendered>h3{position:absolute!important;z-index:13!important;top:66%!important;left:10%!important;right:10%!important;bottom:auto!important;margin:0!important;padding:4px 0!important;line-height:1.06!important;text-align:center!important;font-size:clamp(15px,5.7cqw,23px)!important;font-weight:1000!important;letter-spacing:.015em!important;color:#fff!important;text-shadow:0 2px 5px #000,0 0 2px #000!important;white-space:normal!important;overflow-wrap:anywhere!important;transform:none!important}
+body .player-card.mp6-rendered>.player-stats{position:absolute!important;z-index:14!important;left:15%!important;right:15%!important;top:77%!important;bottom:auto!important;display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;grid-template-rows:repeat(2,minmax(0,1fr))!important;gap:1px 3px!important;margin:0!important;padding:0!important;opacity:1!important;visibility:visible!important;transform:none!important;background:transparent!important}
+body .player-card.mp6-rendered>.player-stats>div{display:grid!important;place-items:center!important;gap:1px!important;margin:0!important;padding:2px 1px!important;min-width:0!important;border:1px solid #ffffff21!important;border-radius:5px!important;background:#070b1cba!important;box-shadow:none!important;min-height:0!important}
+body .player-card.mp6-rendered>.player-stats strong{display:block!important;color:#fff!important;font-size:clamp(13px,6cqw,22px)!important;line-height:1!important;text-shadow:0 1px 5px #000!important}
+body .player-card.mp6-rendered>.player-stats span{display:block!important;color:#fff!important;font-size:clamp(7px,2.8cqw,10px)!important;line-height:1.15!important;letter-spacing:.03em!important}
+body .player-card.mp6-rendered>.mp-m4-medallion{display:grid!important;z-index:80!important}
+body .player-card.mp6-rendered>.mp6-preview-medallion{position:absolute!important;top:8%!important;right:-7%!important;width:clamp(36px,17%,65px)!important;aspect-ratio:1!important;z-index:85!important;padding:5px!important;box-sizing:border-box!important;background:#1b1234!important;border:2px solid #f7dca8!important;border-radius:50%!important;box-shadow:0 0 0 3px #161026,0 8px 18px #0008!important}
+body .player-card.mp6-rendered>.mp6-preview-medallion img{width:100%!important;height:100%!important;object-fit:contain!important}
+@media(max-width:430px){body .player-card.mp6-rendered>.player-card-side-info{gap:2px!important}body .player-card.mp6-rendered>.player-card-side-info>div{padding:2px!important}}
+@media(prefers-reduced-motion:reduce){body .player-card.mp6-rendered *{animation:none!important;transition:none!important}}

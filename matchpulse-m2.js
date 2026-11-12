@@ -29,10 +29,11 @@
   const RARITIES = {
     common: {name:"COMUNE", rank:1},
     rare: {name:"RARA", rank:2},
-    legendary: {name:"LEGGENDARIA", rank:3}
+    epic: {name:"EPICA", rank:3},
+    legendary: {name:"LEGGENDARIA", rank:4}
   };
   const S = {
-    tab: "skins", theme: "all", ready: false, loading: false,
+    tab: "skins", theme: "all", collection: "", ready: false, loading: false,
     busy:false, error:"", lastLoad:0, userId:null,
     skins:[], packs:[], inventory:[], equipped:[], orders:[], ledger:[],
     pending:null, reveal:null, revealOpened:false
@@ -150,72 +151,88 @@
       <span class="mp-m2-pack-word">MATCHPULSE</span><span class="mp-m2-pack-seam"></span>
       <strong>PACK</strong></div></div>`;
   }
-  function skinCard(s, inventoryMode=false) {
-    const has = owned(s.id);
-    const current = equippedId() === s.id;
-    const action = inventoryMode
-      ? `<button class="mp-m2-action ${current ? "is-equipped" : ""}" ${S.busy ? "disabled" : ""} onclick="mpM2Equip('${esc(current ? "" : s.id)}')">${current ? "RIMUOVI" : "EQUIPAGGIA"}</button>`
-      : has
-        ? `<button class="mp-m2-action is-owned" onclick="mpM2Tab('inventory')">GIÀ TUA ✓</button>`
-        : `<button class="mp-m2-action" ${S.busy || !S.ready ? "disabled" : ""} onclick="mpM2Open('skin','${esc(s.id)}')">ACQUISTA</button>`;
-    return `<article class="mp-m2-product">
-      <div class="mp-m2-art-wrap">${artForSkin(s)}${badge(s.rarity)}</div>
-      <div class="mp-m2-product-info"><span class="mp-m2-theme-name">${esc(THEMES[s.theme]?.name||s.theme)}</span>
-      <h3>${esc(s.title)}</h3><p>${esc(s.description)}</p>
-      <div class="mp-m2-buy-row"><span class="mp-m2-cost">✦ ${Number(s.price)||0}</span>${action}</div></div>
-    </article>`;
+  // M6: catalogo a collezioni; tutte le immagini sono file individuali.
+  const M6_FILES={
+    mp_gold_dynasty:'fc_comune.webp',mp_icebreak:'fc_rara.webp',mp_neon_pulse:'fc_epica.webp',mp_blackout:'fc_leggendaria.webp',
+    op_nakama:'op_rara.webp',op_ocean_epic:'op_epica.webp',op_gear:'op_leggendaria.webp',
+    db_saiyan:'db_rara.webp',db_aura_epic:'db_epica.webp',db_ultra:'db_leggendaria.webp',
+    cp_edge:'cp_rara.webp',cp_neon_epic:'cp_epica.webp',cp_samurai:'cp_leggendaria.webp',
+    f1_pole:'f1_rara.webp',f1_racing_epic:'f1_epica.webp',f1_champ:'f1_leggendaria.webp',
+    op_straw:'onepiece.png',db_kame:'dragonball.png',cp_night:'cyberpunk.png',f1_grid:'formula1.png'
+  };
+  const M6_COLLECTIONS={
+    matchpulse:{name:'FC ORIGINALS',tag:'LE ORIGINALI MATCHPULSE',description:'Quattro estetiche originali, una per rarità, senza modificare OVR e statistiche.'},
+    onepiece:{name:'ONE PIECE',tag:'GRAND LINE',description:'Il richiamo dell’oceano, delle vele e del cappello di paglia.'},
+    dragonball:{name:'DRAGON BALL',tag:'AWAKENING',description:'Energia, Sfere del Drago e luce da battaglia.'},
+    cyberpunk:{name:'CYBERPUNK 2077',tag:'NIGHT CITY',description:'Neon, metropoli futuristiche e tecnologia.'},
+    formula1:{name:'FORMULA 1',tag:'GRAND PRIX',description:'Carbonio, velocità e circuiti da leggenda.'}
+  };
+  const M6_TIER={common:['COMUNE','FC Originals: skin completa. Collaborazioni: emblema esterno.'],rare:['RARA','FC Originals: skin completa. Collaborazioni: decorazioni tematiche.'],epic:['EPICA','FC Originals: skin completa. Collaborazioni: cornice scolpita.'],legendary:['LEGGENDARIA','Skin completa, esclusiva e ricca di dettagli.']};
+  const m6Asset=id=>M6_FILES[id]?'mp-m6-art/'+M6_FILES[id]+'?v=m6-20261112':'';
+  const m6Cover=theme=>'mp-m6-art/cover_'+theme+'.webp?v=m6-20261112';
+  const m6Has=id=>owned(id);
+  const m6Active=id=>id==='op_straw'||id==='db_kame'||id==='cp_night'||id==='f1_grid'
+    ? window.mpM4Inspect?.().emblem===id : equippedId()===id;
+  function m6Artwork(s){
+    const file=m6Asset(s.id), common=s.rarity==='common'&&s.theme!=='matchpulse';
+    if(!file)return `<div class="mp6-placeholder">ILLUSTRAZIONE IN PREPARAZIONE</div>`;
+    return `<div class="mp6-art-frame ${common?'mp6-common':''}"><img src="${file}" alt="" loading="eager" decoding="async"><span class="mp6-art-type">${s.theme==='matchpulse'?'SKIN ORIGINALE':common?'EMBLEMA':s.rarity==='rare'?'DECORAZIONE':s.rarity==='epic'?'CORNICE 3D':'SKIN COMPLETA'}</span></div>`;
   }
-  function packCard(p) {
-    const odds = packOdds(p);
-    const soldout = !odds.length;
-    return `<article class="mp-m2-pack-item">
-      ${artForPack(p)}
-      <div class="mp-m2-pack-details"><span class="mp-m2-theme-name">${esc(THEMES[p.theme]?.name||"")}</span>
-      <h3>${esc(p.title)}</h3><p>${esc(p.description)}</p>
-      <div class="mp-m2-odds">${odds.length ? odds.map(x => `<span>${esc(RARITIES[x.rarity].name)} <b>${x.percent}%</b></span>`).join("") : '<span class="is-empty">NESSUNA SKIN DISPONIBILE</span>'}</div>
-      <div class="mp-m2-buy-row"><span class="mp-m2-cost">✦ ${Number(p.price)||0}</span>
-        <button class="mp-m2-action" ${soldout || S.busy ? "disabled" : ""} onclick="mpM2Open('pack','${esc(p.id)}')">${soldout ? "ESAURITO" : "APRI PACCHETTO"}</button>
-      </div></div>
-    </article>`;
+  function m6RarityGuide(mode='collab'){return `<div class="mp6-rarity-guide">${Object.entries(M6_TIER).map(([id,[name,desc]])=>
+    `<div class="mp6-rarity-item mp6-tier-${id}"><i></i><strong>${name}</strong><span>${mode==='fc'?({common:'Skin originale sobria e raffinata.',rare:'Skin più decorata e ricca di materiali.',epic:'Skin architettonica scenografica.',legendary:'Skin più elaborata, con effetti premium.'}[id]):desc}</span></div>`).join('')}</div>`;}
+  function m6SkinCard(s,fromInventory=false){
+    const mine=m6Has(s.id),equipped=m6Active(s.id), tier=M6_TIER[s.rarity]||['ESTETICA',''];
+    let action;
+    if(fromInventory)action=`<button class="mp6-action" type="button" onclick="mpM6Equip('${esc(s.id)}')">${equipped?'RIMUOVI':'EQUIPAGGIA'}</button>`;
+    else if(mine)action=`<button class="mp6-action mp6-owned" onclick="mpM2Tab('inventory')">GIÀ TUA ✓</button>`;
+    else action=`<button class="mp6-action" type="button" ${S.busy?'disabled':''} onclick="mpM2Open('skin','${esc(s.id)}')">ACQUISTA</button>`;
+    return `<article class="mp6-cosmetic mp6-tier-${esc(s.rarity)}" data-cosmetic-id="${esc(s.id)}">
+      <div class="mp6-cosmetic-top">${m6Artwork(s)}<span class="mp6-rarity-pill">${tier[0]}</span></div>
+      <div class="mp6-cosmetic-copy"><small>${esc(M6_COLLECTIONS[s.theme]?.name||s.theme)}</small><h4>${esc(s.title)}</h4><p>${esc(s.description)}</p>
+      <div class="mp6-cosmetic-foot"><b>✦ ${Number(s.price)||0}</b><div class="mp6-cosmetic-buttons"><button class="mp6-action mp6-outline" onclick="mpM6Preview('${esc(s.id)}')">ANTEPRIMA</button>${action}</div></div>
+      </div></article>`;
   }
-  function drawStore() {
-    if (!MAIN || route !== "store") return;
-    const selected = Object.entries(THEMES).filter(([id]) => !["any","matchpulse"].includes(id));
-    const catalog = S.skins.filter(x => x.active !== false && (S.theme === "all" || x.theme === S.theme));
-    const mine = S.skins.filter(x => owned(x.id));
-    MAIN.innerHTML = `<section class="mp-m2-page mp-m1-page">
-      <div class="mp-m2-hero"><div class="mp-m2-hero-grid"></div>
-        <div class="mp-m2-title-block"><p class="mp-m2-kicker">MATCHPULSE / ULTIMATE TEAM</p>
-          <h2>THE <em>STORE</em></h2><p>La tua carta. Il tuo stile. Nessun boost alle statistiche.</p></div>
-        <div class="mp-m2-wallet"><small>SALDO · STAGIONE ${esc(todayRome().replace("-","/"))}</small>
-          <strong>✦ ${S.ready ? balance() : "—"}</strong>
-          <button type="button" onclick="setRoute('challenges')">GUADAGNA TOKEN ↗</button></div>
-      </div>
-      <div class="mp-m2-utility-tabs" role="tablist">
-        ${[["skins","ESTETICHE"],["packs","PACCHETTI"],["inventory","IL MIO INVENTARIO"]]
-          .map(([id,name]) => `<button type="button" role="tab" aria-selected="${S.tab===id}" class="${S.tab===id?"active":""}" onclick="mpM2Tab('${id}')">${name}</button>`).join("")}
-      </div>
-      ${S.error ? `<div class="mp-m2-message error"><strong>Negozio non disponibile</strong><p>${esc(S.error)}</p><button onclick="mpM2Retry()">RIPROVA</button></div>` : ""}
-      ${S.loading && !S.ready ? '<div class="mp-m2-message">Connessione al negozio…</div>' : ""}
-      ${S.ready ? (S.tab === "skins" ? `
-          <div class="mp-m2-section-title"><div><span>01 / COLLEZIONI</span><h3>SKIN ESCLUSIVE</h3></div><small>${catalog.length} estetiche</small></div>
-          <div class="mp-m2-theme-filter"><button class="${S.theme==="all"?"active":""}" onclick="mpM2Theme('all')">TUTTE</button>
-          ${selected.map(([id,t]) => `<button class="${S.theme===id?"active":""}" onclick="mpM2Theme('${id}')">${esc(t.name)}</button>`).join("")}</div>
-          <div class="mp-m2-skin-grid">${catalog.map(x => skinCard(x)).join("") || '<div class="mp-m2-message">Nessuna skin.</div>'}</div>
-        ` : S.tab === "packs" ? `
-          <div class="mp-m2-section-title"><div><span>02 / DROP</span><h3>PACCHETTI MISTERIOSI</h3></div><small>1 SKIN GARANTITA</small></div>
-          <div class="mp-m2-hint">Le probabilità cambiano se esaurisci alcune rarità. Il negozio mostra sempre le probabilità effettive prima dell'acquisto. Niente doppioni.</div>
-          <div class="mp-m2-pack-grid">${S.packs.map(x => packCard(x)).join("")}</div>
-        ` : `
-          <div class="mp-m2-section-title"><div><span>03 / COLLEZIONE</span><h3>LE MIE SKIN</h3></div><small>${mine.length} / ${S.skins.length}</small></div>
-          <div class="mp-m2-inventory-head"><span>${equippedId() ? "SKIN ATTIVA: "+esc(findSkin(equippedId())?.title || "") : "CARTA BASE ORIGINALE EQUIPAGGIATA"}</span>
-           <button ${equippedId() ? "" : "disabled"} onclick="mpM2Equip('')">RIMUOVI SKIN</button></div>
-          ${mine.length ? `<div class="mp-m2-skin-grid">${mine.map(x => skinCard(x,true)).join("")}</div>` : `<div class="mp-m2-message">Non hai ancora skin. Vai su Estetiche o Pacchetti per iniziare la tua collezione.</div>`}
-          <p class="mp-m2-hint">Le skin sono equipaggiabili soltanto durante la stagione in cui vengono ottenute. Le carte promo non vengono modificate.</p>
-          ${S.orders.length ? `<div class="mp-m2-orders"><h3>ULTIMI ACQUISTI</h3>${S.orders.slice(0,8).map(x =>
-            `<div><span>${esc(findSkin(x.skin_id)?.title||x.skin_id)}</span><small>✦ ${Number(x.cost)||0}</small></div>`).join("")}</div>` : ""}
-        `) : ""}
+  function m6CollectionPanel(theme){
+    const entries=S.skins.filter(x=>x.theme===theme&&x.active!==false).sort((a,b)=>RARITIES[a.rarity].rank-RARITIES[b.rarity].rank);
+    const info=M6_COLLECTIONS[theme];
+    return `<section class="mp6-focused" data-theme="${theme}">
+      <div class="mp6-focused-heading"><button class="mp6-back" onclick="mpM6Collection('')">← COLLEZIONI</button><div><small>${info.tag}</small><h3>${info.name}</h3><p>${info.description}</p></div></div>
+      <div class="mp6-showcase">${entries.map(s=>m6SkinCard(s)).join('')||'<p>Catalogo temporaneamente non disponibile.</p>'}</div>
     </section>`;
+  }
+  function m6CollectionTile(theme){const x=M6_COLLECTIONS[theme];return `<button class="mp6-collection-tile" type="button" data-theme="${theme}" onclick="mpM6Collection('${theme}')"><img src="${m6Cover(theme)}" alt="" loading="lazy"><span><small>${x.tag}</small><strong>${x.name}</strong><em>ESPLORA LA COLLEZIONE ↗</em></span></button>`;}
+  function m6PackCard(p){
+    const odds=packOdds(p), disabled=odds.length===0;
+    const kind=p.theme==='any'?'matchpulse':p.theme, pic=m6Cover(kind);
+    return `<article class="mp6-pack"><div class="mp6-pack-picture"><div class="mp6-pack-tilt"><img src="${pic}" alt="" loading="lazy"><span>MATCHPULSE</span><strong>PACK</strong></div></div>
+       <div class="mp6-pack-info"><small>${esc(M6_COLLECTIONS[p.theme]?.name||'TUTTE LE COLLEZIONI')}</small><h3>${esc(p.title)}</h3><p>${esc(p.description)}</p>
+       <div class="mp6-odds">${odds.length?odds.map(o=>`<span>${RARITIES[o.rarity].name} <b>${o.percent}%</b></span>`).join(''):'<span>PACCHETTO ESAURITO</span>'}</div>
+       <div class="mp6-pack-footer"><b>✦ ${Number(p.price)||0}</b><button type="button" class="mp6-action" ${disabled||S.busy?'disabled':''} onclick="mpM2Open('pack','${esc(p.id)}')">${disabled?'ESAURITO':'APRI PACCHETTO'}</button></div></div></article>`;
+  }
+  function drawStore(){
+    if(!MAIN||route!=='store')return;
+    const total=S.skins.filter(s=>s.active!==false).length;
+    const mine=S.skins.filter(s=>m6Has(s.id));
+    MAIN.innerHTML=`<section class="mp6-store mp-m2-page"><header class="mp6-hero"><small>MATCHPULSE / COLLEZIONI COSMETICHE</small><h2>LA TUA CARTA.<br><em>IL TUO STILE.</em></h2><p>Estetiche originali e collaborazioni. Nessun aumento di OVR o statistiche.</p>
+      <div class="mp6-wallet"><div><small>SALDO STAGIONE ${esc(todayRome().replace('-','/'))}</small><strong>✦ ${S.ready?balance():'—'}</strong></div><button onclick="setRoute('challenges')">GUADAGNA TOKEN ↗</button></div>
+      <div class="mp6-founder-entry" id="mp6FounderEntry"></div></header>
+      <nav class="mp6-tabs" aria-label="Sezioni del Negozio" role="tablist">${[['skins','COSMETICHE'],['packs','PACCHETTI'],['inventory','INVENTARIO']].map(([id,name])=>
+        `<button role="tab" aria-selected="${S.tab===id}" class="${S.tab===id?'active':''}" onclick="mpM2Tab('${id}')">${name}</button>`).join('')}</nav>
+      ${S.error?`<div class="mp6-error"><b>Negozio non disponibile</b><p>${esc(S.error)}</p><button onclick="mpM2Retry()">RIPROVA</button></div>`:''}
+      ${!S.ready?'<p class="mp6-loading">Caricamento catalogo e saldo…</p>':S.tab==='skins'?
+        (S.collection?m6CollectionPanel(S.collection):`<section class="mp6-intro"><small>01 / ESTETICHE ESCLUSIVE</small><h3>FC ORIGINALS</h3><p>Quattro estetiche originali di MatchPulse, applicabili a qualsiasi carta senza modificare statistiche e OVR.</p>${m6RarityGuide('fc')}
+         <div class="mp6-showcase">${S.skins.filter(s=>s.theme==='matchpulse'&&s.active!==false).sort((a,b)=>RARITIES[a.rarity].rank-RARITIES[b.rarity].rank).map(s=>m6SkinCard(s)).join('')}</div></section>
+         <section class="mp6-intro"><small>02 / COLLEZIONI TEMATICHE</small><h3>COLLABORAZIONI</h3><p>Apri una collezione per vedere Comune, Rara, Epica e Leggendaria, con anteprima sulla tua carta.</p>
+         <div class="mp6-collection-tiles">${['onepiece','dragonball','cyberpunk','formula1'].map(m6CollectionTile).join('')}</div></section>`)
+      :S.tab==='packs'?`<section class="mp6-intro"><small>02 / APERTURA PACCHETTI</small><h3>PACCHETTI</h3><p>Probabilità effettive: le rarità esaurite vengono escluse. Nessun doppione.</p>
+        <div class="mp6-packs">${S.packs.filter(p=>p.active!==false).map(m6PackCard).join('')}</div></section>`:
+        `<section class="mp6-intro"><small>03 / OGGETTI POSSEDUTI</small><h3>IL MIO INVENTARIO</h3><p>${mine.length} di ${total} cosmetici sbloccati nella stagione attuale.</p>
+        <div class="mp6-equipped-summary"><span>ESTETICA ATTIVA: <b>${esc(findSkin(equippedId())?.title||'CARTA ORIGINALE')}</b></span><button onclick="mpM6Equip('')" ${!equippedId()?'disabled':''}>RIMUOVI SKIN</button></div>
+        <div class="mp6-equipped-summary"><span>EMBLEMA ESTERNO: <b>${esc(findSkin(window.mpM4Inspect?.().emblem)?.title||'NESSUNO')}</b></span><button onclick="mpM6Equip('REMOVE_BADGE')">RIMUOVI EMBLEMA</button></div>
+        ${mine.length?`<div class="mp6-showcase">${mine.sort((a,b)=>RARITIES[a.rarity].rank-RARITIES[b.rarity].rank).map(s=>m6SkinCard(s,true)).join('')}</div>`:'<p>Non hai ancora cosmetici acquistati.</p>'}
+        <p class="mp6-inventory-footnote">Oggetti cosmetici disponibili nella stagione in cui sono stati ottenuti. Le promo non vengono modificate.</p></section>`}
+      </section>`;
+    window.mpM6FounderMount?.();
   }
   function toastMessage(message) {
     if (typeof toast === "function") toast(message);
@@ -292,8 +309,7 @@
         showReveal();
       } else {
         toastMessage(`Skin ${skin.title} acquistata!`);
-        S.tab="inventory";
-        if (route === "store") drawStore();
+        S.reveal={skin,pack:null};S.revealOpened=false;showReveal();
       }
       await updateM1Wallet();
     } catch(e) {
@@ -307,15 +323,15 @@
     if (!S.reveal) return;
     const skin=S.reveal.skin;
     const rarity=skin.rarity || "common";
-    overlay(`<div class="mp-m2-shade"></div><div class="mp-m2-reveal" role="dialog" aria-modal="true" aria-label="Apertura pacchetto">
-      <p class="mp-m2-kicker">MATCHPULSE / PACK REVEAL</p>
+    overlay(`<div class="mp-m2-shade" onclick="mpM2FinishReveal()"></div><div class="mp-m2-reveal" role="dialog" aria-modal="true" aria-label="Apertura pacchetto">
+      <button class="mp6-reveal-x" onclick="mpM2FinishReveal()" aria-label="Chiudi">✕</button><p class="mp-m2-kicker">MATCHPULSE / PACK REVEAL</p>
       <div class="mp-m2-reveal-scene ${S.revealOpened?"is-open":""}">
         <div class="mp-m2-reveal-sealed"><span>✦</span><strong>ULTIMATE PACK</strong><small>TOCCA PER APRIRE</small></div>
-        <div class="mp-m2-reveal-skin">${artForSkin(skin,"large")}${badge(rarity)}</div>
+        <div class="mp-m2-reveal-skin">${m6Artwork(skin)}${badge(rarity)}</div>
       </div>
       <div class="mp-m2-reveal-footer"><h2>${S.revealOpened?esc(skin.title):"COSA HAI TROVATO?"}</h2>
       <p>${S.revealOpened ? esc(THEMES[skin.theme]?.name||skin.theme) : "Una skin è già stata assegnata al tuo inventario."}</p>
-      ${S.revealOpened ? `<button class="mp-m2-confirm-buy" onclick="mpM2Equip('${esc(skin.id)}')">EQUIPAGGIA ORA</button>
+      ${S.revealOpened ? `<button class="mp-m2-confirm-buy" onclick="mpM6Equip('${esc(skin.id)}')">EQUIPAGGIA ORA</button>
         <button class="mp-m2-cancel" onclick="mpM2FinishReveal()">VAI ALL'INVENTARIO</button>` :
         `<button class="mp-m2-confirm-buy" onclick="mpM2RevealOpen()">APRI IL PACCHETTO ✦</button>`}
       </div></div>`);
@@ -327,8 +343,8 @@
       root.querySelectorAll(".player-card").forEach(card => {
         if (card.closest(".mp-m2-product")) return;
         if (card.classList.contains("mp-promo-card") || card.dataset.promoCard === "true") return;
-        card.classList.toggle("mp-m2-card-equipped", Boolean(skin));
-        if (skin) {
+        card.classList.toggle("mp-m2-card-equipped", Boolean(skin) && !["op_straw","db_kame","cp_night","f1_grid"].includes(skin.id));
+        if (skin && !["op_straw","db_kame","cp_night","f1_grid"].includes(skin.id)) {
           card.setAttribute("data-m2-theme",skin.theme);
           card.setAttribute("data-m2-skin",skin.css_theme);
           card.setAttribute("data-m2-title",skin.title);
@@ -409,8 +425,10 @@
   window.renderHome=renderHome;
   window.mpM2Tab = id => {
     if (!["skins","packs","inventory"].includes(id)) return;
-    S.tab=id;drawStore();
+    S.tab=id;S.collection="";drawStore();
   };
+  window.mpM6Collection = id => { if(id && !M6_COLLECTIONS[id]) return; S.collection=id;drawStore();window.scrollTo(0,0); };
+  window.mpM6Catalog = () => ({skins:S.skins.map(x=>({...x})), packs:S.packs.map(x=>({...x})),owned:new Set(S.inventory.map(x=>x.skin_id)),wallet:balance(),season:todayRome(),userId:S.userId});
   window.mpM2Theme = id => {
     if (id !== "all" && !THEMES[id]) return;
     S.theme=id;drawStore();
@@ -420,8 +438,19 @@
   window.mpM2Close = closeOverlay;
   window.mpM2Confirm = confirmPurchase;
   window.mpM2Equip = equip;
+  window.mpM6Equip=async id=>{
+    if(id==='REMOVE_BADGE'){if(typeof window.mpM4Equip==='function')await window.mpM4Equip('');drawStore();return;}
+    if(id && !findSkin(id))return;
+    if(id && findSkin(id)?.rarity==='common' && findSkin(id)?.theme!=='matchpulse'){
+      if(typeof window.mpM4Equip!=='function'){alert('Installa prima il modulo M4 emblemi.');return;}
+      const old=window.mpM4Inspect?.().emblem;
+      await window.mpM4Equip(old===id?'':id);drawStore();return;
+    }
+    await equip(equippedId()===id ? null : id);drawStore();
+  };
   window.mpM2RevealOpen=()=>{if(!S.reveal) return;S.revealOpened=true;showReveal();};
   window.mpM2FinishReveal=()=>{closeOverlay();S.tab="inventory";if(route==="store") drawStore();};
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.querySelector('.mp-m2-modal-host'))window.mpM2Close();});
   window.mpM2AfterWalletChange = () => { S.lastLoad=0; void load(true); };
   window.mpM2Inspect=()=>({
     version:VERSION, backendReady:S.ready, backendError:S.error,
