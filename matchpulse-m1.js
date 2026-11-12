@@ -264,6 +264,7 @@
       store.busy = false;
       if (route === "challenges") renderChallengesUI();
       refreshHomeWallet();
+      if (typeof window.mpM2AfterWalletChange === "function") window.mpM2AfterWalletChange();
     }
   }
   window.mpM1Tab = id => {
@@ -401,6 +402,12 @@
     window.deleteMatch = deleteMatch;
   }
   if (NAV) NAV.classList.add("mp-m1-nav");
+  window.mpM1RefreshWallet = async function () {
+    store.lastLoad = 0;
+    store.ready = false;
+    await load(true);
+    return wallet(timeContext());
+  };
   window.MP_M1_READY = true;
   window.mpM1Inspect = () => ({ version: CLIENT_VERSION, season: timeContext().season,
     week: timeContext().week, role: roleLock(timeContext()),
