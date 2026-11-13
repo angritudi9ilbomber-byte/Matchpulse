@@ -508,7 +508,9 @@ const drafts=new Map(
   (pending||[]).map(v=>[v.challenge_id,v])
 );
 
-F.goals=(goals.data||[]).map(g=>{
+F.goals=(goals.data||[])
+  .filter(g=>!g.founder_deleted)
+  .map(g=>{
   const draft=drafts.get(g.id);
 
   return draft
@@ -584,6 +586,13 @@ F.goals=(goals.data||[]).map(g=>{
         </select>
       </label>
 
+      ${F.editing ? `
+  <button type="button"
+    onclick="mpM1FounderDelete()"
+    style="${buttonStyle};background:#8b233b">
+    🗑 ELIMINA OBIETTIVO SELEZIONATO
+  </button>
+` : ''}
       <form id="mfGoalForm" onsubmit="mpM1FounderSave(event)"
         style="display:grid;gap:9px">
 
@@ -639,7 +648,7 @@ F.goals=(goals.data||[]).map(g=>{
         </label>
 
         <button type="submit" style="${buttonStyle}">
-          SALVA / PROGRAMMA LUNEDÌ
+          SALVA ORA
         </button>
       </form>
 
@@ -784,11 +793,7 @@ F.goals=(goals.data||[]).map(g=>{
       F.editing=data;
       await refresh();
       window.mpM1Retry?.();
-      alert(
-  o.scope==='milestone'
-    ? 'Traguardo aggiornato.'
-    : 'Modifica programmata per lunedì alle 00:00.'
-);
+      alert('Obiettivo salvato e pubblicato subito!');
     }catch(e){
       message(e);
     }
@@ -877,6 +882,44 @@ F.goals=(goals.data||[]).map(g=>{
       message(e);
     }
   };
+
+
+window.mpM1FounderDelete = async () => {
+  const goal = selectedGoal();
+
+  if (!goal) {
+    alert('Seleziona prima un obiettivo.');
+    return;
+  }
+
+  if (!confirm(
+    'Eliminare definitivamente dalla lista "' +
+    goal.title + '"?\n\n' +
+    'L’obiettivo sparirà subito per tutti. ' +
+    'I token già riscattati resteranno invariati.'
+  )) return;
+
+  try {
+    const { error } = await db().rpc(
+      'mp_m1_founder_delete',
+      { p_id: goal.id }
+    );
+
+    if (error) throw error;
+
+    F.editing = '';
+
+    await refresh();
+    window.mpM1Retry?.();
+
+    alert('Obiettivo eliminato.');
+  } catch (e) {
+    alert(
+      'Eliminazione non riuscita: ' +
+      (e?.message || String(e))
+    );
+  }
+};
 
   window.MP_M1_FOUNDER_READY=true;
   if(entry())window.mpM1FounderMount();
