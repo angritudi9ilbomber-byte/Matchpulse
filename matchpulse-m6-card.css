@@ -703,7 +703,7 @@ body .player-card[data-mp6-look="fc-ice"] {
   --t-style-shift: 0px;
   --t-side-label: 11px; --t-side-value: 11px;
   --t-ps-size: 55px;
-  --t-ps-x: 20%;
+  --t-ps-x: -65%;
 
   --t-photo-x: 45%; --t-photo-y: 27.5%;
   --t-photo-w: 30%; --t-photo-h: 26%;
@@ -1276,4 +1276,31 @@ body .player-card.mp6-rendered[data-mp6-look]
   transform: translateY(-50%) !important;
   object-fit: contain !important;
   z-index: 20 !important;
+}
+
+
+/* DIMENSIONI RESPONSIVE PER MOBILE */
+@media (max-width: 600px) {
+
+  body .player-card.mp6-rendered[data-mp6-look] {
+    --t-ovr-size: 9cqw;
+    --t-role-size: 3cqw;
+
+    --t-side-label: 2.1cqw;
+    --t-side-value: 2.9cqw;
+
+    --t-ps-x: -5cqw;
+    --t-ps-y: 0px;
+    --t-ps-size: 9cqw;
+
+    --t-name-size: 5.5cqw;
+
+    --t-stat-height: 7.5cqw;
+    --t-stat-number: 4.5cqw;
+    --t-stat-label: 2cqw;
+
+    --t-ability-label: 1.8cqw;
+    --t-stars-size: 2.8cqw;
+  }
+
 }
