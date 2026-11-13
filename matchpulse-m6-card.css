@@ -252,7 +252,7 @@ body .player-card.mp6-rendered:not(.mp6-stats-row)
 
 body .player-card.mp6-rendered:not(.mp6-stats-row)
 > .player-stats {
-  top: 73.5% !important;
+  top: 70% !important;
 }
 
 /* ============================================
@@ -272,7 +272,7 @@ body .player-card.mp6-rendered
 > .player-stats > div {
   box-sizing: border-box !important;
 
-  height: clamp(23px, 9cqw, 31px) !important;
+  height: clamp(20px, 7cqw, 26px) !important;
   min-height: 0 !important;
   max-height: 31px !important;
 
@@ -289,7 +289,7 @@ body .player-card.mp6-rendered
 
 body .player-card.mp6-rendered
 > .player-stats > div strong {
-  font-size: clamp(12px, 5cqw, 18px) !important;
+  font-size: clamp(10px, 4cqw, 15px) !important;
   line-height: 1 !important;
   margin: 0 !important;
   padding: 0 !important;
@@ -426,14 +426,14 @@ body .player-card.mp6-rendered
 
 body .mp6-preview-stage
 .player-card.mp6-rendered[data-mp6-look] {
-  width: min(100%, 270px) !important;
+  width: min(100%, 355px) !important;
   max-width: 100% !important;
   aspect-ratio: 3 / 4 !important;
 }
 
 .mp6-preview-stage {
   min-height: 0 !important;
-  padding: 22px 18px !important;
+  padding: 6px 2px !important;
 }
 
 /* ============================================
@@ -447,4 +447,833 @@ body .player-card.mp6-rendered[data-mp4-emblem] {
 body .player-card.mp6-rendered[data-mp4-emblem]
 > .mp6-art-layer {
   overflow: hidden !important;
+}
+
+
+/* MATCHPULSE — EDITOR MANUALE PER SINGOLA CARTA */
+
+body .player-card.mp6-rendered[data-mp6-look] {
+  width: min(100%, var(--t-card, 355px)) !important;
+}
+
+body .mp6-preview-stage
+.player-card.mp6-rendered[data-mp6-look] {
+  width: min(100%, var(--t-preview, 320px)) !important;
+}
+
+body .mp6-preview-dialog {
+  padding-left: 10px !important;
+  padding-right: 10px !important;
+}
+
+body .mp6-preview-stage {
+  padding: 8px 4px !important;
+}
+
+body .player-card.mp6-rendered[data-mp6-look]
+> .player-top {
+  inset: auto !important;
+  left: var(--t-ovr-x, 15%) !important;
+  top: var(--t-ovr-y, 17%) !important;
+}
+
+body .player-card.mp6-rendered[data-mp6-look]
+.card-ovr {
+  font-size: var(--t-ovr-size, 36px) !important;
+}
+
+body .player-card.mp6-rendered[data-mp6-look]
+.card-overall-label {
+  font-size: var(--t-role-size, 12px) !important;
+}
+
+body .player-card.mp6-rendered[data-mp6-look]
+> .player-card-side-info {
+  left: var(--t-side-x, 10%) !important;
+  top: var(--t-side-y, 43%) !important;
+  width: var(--t-side-w, 29%) !important;
+  gap: var(--t-side-gap, 3px) !important;
+}
+
+body .player-card.mp6-rendered[data-mp6-look]
+> .player-card-side-info > div:nth-child(1) {
+  left: 0 !important;
+  top: var(--t-shirt-shift, 0px) !important;
+}
+
+body .player-card.mp6-rendered[data-mp6-look]
+> .player-card-side-info > div:nth-child(2) {
+  left: 0 !important;
+  top: var(--t-foot-shift, 0px) !important;
+}
+
+body .player-card.mp6-rendered[data-mp6-look]
+> .player-card-side-info > div:nth-child(3) {
+  left: 0 !important;
+  top: var(--t-style-shift, 0px) !important;
+}
+
+body .player-card.mp6-rendered[data-mp6-look]
+.player-card-side-info span {
+  font-size: var(--t-side-label, 8px) !important;
+}
+
+body .player-card.mp6-rendered[data-mp6-look]
+.player-card-side-info strong {
+  font-size: var(--t-side-value, 11px) !important;
+}
+
+body .player-card.mp6-rendered[data-mp6-look]
+.player-card-side-info .card-ps-plus-icon {
+  width: var(--t-ps-size, 15px) !important;
+  height: var(--t-ps-size, 15px) !important;
+  max-width: none !important;
+  max-height: none !important;
+}
+
+body .player-card.mp6-rendered[data-mp6-look]
+> .player-photo-wrap {
+  left: var(--t-photo-x, 37%) !important;
+  top: var(--t-photo-y, 27%) !important;
+  width: var(--t-photo-w, 47%) !important;
+  height: var(--t-photo-h, 34%) !important;
+}
+
+body .player-card.mp6-rendered[data-mp6-look]
+> h3 {
+  left: var(--t-name-x, 10%) !important;
+  top: var(--t-name-y, 66%) !important;
+  width: var(--t-name-w, 80%) !important;
+  right: auto !important;
+  font-size: var(--t-name-size, 21px) !important;
+}
+
+body .player-card.mp6-rendered[data-mp6-look]
+> .player-stats,
+body .player-card.mp6-rendered[data-mp6-look].mp6-stats-row
+> .player-stats {
+  left: var(--t-stats-x, 15%) !important;
+  top: var(--t-stats-y, 74%) !important;
+  width: var(--t-stats-w, 70%) !important;
+  right: auto !important;
+  height: auto !important;
+  grid-template-columns:
+    repeat(var(--t-cols, 3), minmax(0, 1fr)) !important;
+  grid-template-rows:
+    repeat(var(--t-rows, 2), minmax(0, 1fr)) !important;
+  gap: var(--t-stats-gap, 2px) !important;
+}
+
+body .player-card.mp6-rendered[data-mp6-look]
+> .player-stats > div,
+body .player-card.mp6-rendered[data-mp6-look].mp6-stats-row
+> .player-stats > div {
+  height: var(--t-stat-height, 27px) !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  box-sizing: border-box !important;
+  padding: 1px 0 !important;
+}
+
+body .player-card.mp6-rendered[data-mp6-look]
+.player-stats strong,
+body .player-card.mp6-rendered[data-mp6-look].mp6-stats-row
+.player-stats strong {
+  font-size: var(--t-stat-number, 17px) !important;
+  line-height: 1 !important;
+}
+
+body .player-card.mp6-rendered[data-mp6-look]
+.player-stats span,
+body .player-card.mp6-rendered[data-mp6-look].mp6-stats-row
+.player-stats span {
+  font-size: var(--t-stat-label, 8px) !important;
+  line-height: 1 !important;
+}
+
+/* Piede debole e mosse: posizionabili separatamente */
+body .player-card.mp6-rendered[data-mp6-look]
+> .mp-card-ability-stars {
+  position: static !important;
+}
+
+body .player-card.mp6-rendered[data-mp6-look]
+> .mp-card-ability-stars > div {
+  position: absolute !important;
+  right: auto !important;
+  bottom: auto !important;
+  z-index: 18 !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+}
+
+body .player-card.mp6-rendered[data-mp6-look]
+> .mp-card-ability-stars > div:first-child {
+  left: var(--t-weak-x, 13%) !important;
+  top: var(--t-weak-y, 91%) !important;
+  width: var(--t-weak-w, 33%) !important;
+}
+
+body .player-card.mp6-rendered[data-mp6-look]
+> .mp-card-ability-stars > div:last-child {
+  left: var(--t-skills-x, 54%) !important;
+  top: var(--t-skills-y, 91%) !important;
+  width: var(--t-skills-w, 33%) !important;
+}
+
+body .player-card.mp6-rendered[data-mp6-look]
+.mp-card-ability-stars > div > span {
+  font-size: var(--t-ability-label, 6px) !important;
+}
+
+body .player-card.mp6-rendered[data-mp6-look]
+.mp-card-ability-stars > div > strong {
+  font-size: var(--t-stars-size, 10px) !important;
+}
+
+body .player-card[data-mp4-emblem]
+> .mp-m4-medallion,
+body .player-card.mp6-rendered
+> .mp6-preview-medallion {
+  top: var(--t-badge-y, 8%) !important;
+  right: var(--t-badge-right, -6%) !important;
+  left: auto !important;
+  width: var(--t-badge-size, 17%) !important;
+}
+
+/* Consente al medaglione di sporgere */
+body .player-card.mp6-rendered[data-mp6-look]
+[data-mp4-emblem] {
+  overflow: visible !important;
+}
+
+body .player-card.mp6-rendered[data-mp4-emblem] {
+  overflow: visible !important;
+}
+
+
+
+/* ============================================
+   FC ORIGINALS
+   ============================================ */
+
+/* 01 — VERDALIA · COMUNE */
+body .player-card[data-mp6-look="fc-dynasty"] {
+  --t-card: 355px; --t-preview: 1000px;
+  --t-ovr-x: 20%; --t-ovr-y: 17%;
+  --t-ovr-size: 50px; --t-role-size: 20px;
+
+  --t-side-x: 15%; --t-side-y: 35%;
+  --t-side-w: 17%; --t-side-gap: 3px;
+  --t-shirt-shift: 0px; --t-foot-shift: 0px;
+  --t-style-shift: 0px;
+  --t-side-label: 11px; --t-side-value: 11px;
+  --t-ps-size: 55px;
+
+  --t-photo-x: 37%; --t-photo-y: 25%;
+  --t-photo-w: 45%; --t-photo-h: 30%;
+
+  --t-name-x: 10%; --t-name-y: 61%;
+  --t-name-w: 80%; --t-name-size: 30px;
+
+  --t-stats-x: 16%; --t-stats-y: 70%;
+  --t-stats-w: 68%; --t-cols: 3; --t-rows: 2;
+  --t-stats-gap: 3px; --t-stat-height: 25px;
+  --t-stat-number: 17px; --t-stat-label: 8px;
+
+  --t-weak-x: 20%; --t-weak-y: 82%;
+  --t-weak-w: 25%;
+  --t-skills-x: 52%; --t-skills-y: 82%;
+  --t-skills-w: 25%;
+  --t-ability-label: 6px; --t-stars-size: 10px;
+
+  --t-badge-y: 8%; --t-badge-right: -6%;
+  --t-badge-size: 17%;
+}
+
+/* 02 — SAKURA VESPER · RARA */
+body .player-card[data-mp6-look="fc-ice"] {
+  --t-card: 355px; --t-preview: 1000px;
+  --t-ovr-x: 25%; --t-ovr-y: 22%;
+  --t-ovr-size: 50px; --t-role-size: 20px;
+
+  --t-side-x: 23%; --t-side-y: 35%;
+  --t-side-w: 20%; --t-side-gap: 3px;
+  --t-shirt-shift: 0px; --t-foot-shift: 0px;
+  --t-style-shift: 0px;
+  --t-side-label: 11px; --t-side-value: 11px;
+  --t-ps-size: 55px;
+  --t-ps-x: 20%;
+
+  --t-photo-x: 45%; --t-photo-y: 27.5%;
+  --t-photo-w: 30%; --t-photo-h: 26%;
+
+  --t-name-x: 10%; --t-name-y: 58%;
+  --t-name-w: 80%; --t-name-size: 23px;
+
+  --t-stats-x: 26%; --t-stats-y: 64%;
+  --t-stats-w: 50%; --t-cols: 3; --t-rows: 2;
+  --t-stats-gap: 2px; --t-stat-height: 24px;
+  --t-stat-number: 16px; --t-stat-label: 7px;
+
+  --t-weak-x: 23%; --t-weak-y: 54%;
+  --t-weak-w: 20%;
+  --t-skills-x: 55%; --t-skills-y: 54%;
+  --t-skills-w: 20%;
+  --t-ability-label: 6px; --t-stars-size: 10px;
+
+  --t-badge-y: 8%; --t-badge-right: -6%;
+  --t-badge-size: 17%;
+}
+
+/* 03 — AUREA ATLAS · EPICA */
+body .player-card[data-mp6-look="fc-neon"] {
+  --t-card: 355px; --t-preview: 1000px;
+  --t-ovr-x: 30%; --t-ovr-y: 18%;
+  --t-ovr-size: 50px; --t-role-size: 20px;
+
+  --t-side-x: 21.5%; --t-side-y: 33%;
+  --t-side-w: 22%; --t-side-gap: 3px;
+  --t-shirt-shift: 0px; --t-foot-shift: 0px;
+  --t-style-shift: 0px;
+  --t-side-label: 8px; --t-side-value: 10px;
+  --t-ps-size: 55px;
+  --t-ps-x: -75%;
+
+  --t-photo-x: 45%; --t-photo-y: 22%;
+  --t-photo-w: 36%; --t-photo-h: 26%;
+
+  --t-name-x: 11%; --t-name-y: 57%;
+  --t-name-w: 75%; --t-name-size: 25px;
+
+  --t-stats-x: 19%; --t-stats-y: 64%;
+  --t-stats-w: 60%; --t-cols: 3; --t-rows: 2;
+  --t-stats-gap: 2px; --t-stat-height: 23px;
+  --t-stat-number: 15px; --t-stat-label: 7px;
+
+  --t-weak-x: 20%; --t-weak-y: 50%;
+  --t-weak-w: 25%;
+  --t-skills-x: 54%; --t-skills-y: 50%;
+  --t-skills-w: 25%;
+  --t-ability-label: 6px; --t-stars-size: 10px;
+
+  --t-badge-y: 8%; --t-badge-right: -6%;
+  --t-badge-size: 17%;
+}
+
+/* 04 — ASTRAL CROWN · LEGGENDARIA */
+body .player-card[data-mp6-look="fc-blackout"] {
+  --t-card: 355px; --t-preview: 1000px;
+  --t-ovr-x: 25%; --t-ovr-y: 21%;
+  --t-ovr-size: 45px; --t-role-size: 18px;
+
+  --t-side-x: 19%; --t-side-y: 35%;
+  --t-side-w: 20%; --t-side-gap: 3px;
+  --t-shirt-shift: 0px; --t-foot-shift: 0px;
+  --t-style-shift: 0px;
+  --t-side-label: 8px; --t-side-value: 10px;
+  --t-ps-size: 55px;
+
+  --t-photo-x: 40%; --t-photo-y: 27%;
+  --t-photo-w: 38%; --t-photo-h: 26%;
+
+  --t-name-x: 10%; --t-name-y: 58%;
+  --t-name-w: 80%; --t-name-size: 25px;
+
+  --t-stats-x: 20%; --t-stats-y: 66%;
+  --t-stats-w: 60%; --t-cols: 6; --t-rows: 1;
+  --t-stats-gap: 0px; --t-stat-height: 28px;
+  --t-stat-number: 15px; --t-stat-label: 7px;
+
+  --t-weak-x: 24%; --t-weak-y: 73%;
+  --t-weak-w: 23%;
+  --t-skills-x: 54%; --t-skills-y: 73%;
+  --t-skills-w: 23%;
+  --t-ability-label: 6px; --t-stars-size: 10px;
+
+  --t-badge-y: 8%; --t-badge-right: -6%;
+  --t-badge-size: 17%;
+}
+
+
+/* ============================================
+   ONE PIECE
+   ============================================ */
+
+/* 05 — ONE PIECE · RARA */
+body .player-card[data-mp6-look="op-nakama"] {
+  --t-card: 355px; --t-preview: 1000px;
+  --t-ovr-x: 22%; --t-ovr-y: 17%;
+  --t-ovr-size: 50px; --t-role-size: 25px;
+
+  --t-side-x: 14%; --t-side-y: 35%;
+  --t-side-w: 25%; --t-side-gap: 3px;
+  --t-shirt-shift: 0px; --t-foot-shift: 0px;
+  --t-style-shift: 0px;
+  --t-side-label: 8px; --t-side-value: 10px;
+  --t-ps-size: 55px;
+  --t-ps-x: -48%;
+
+  --t-photo-x: 42%; --t-photo-y: 23%;
+  --t-photo-w: 42%; --t-photo-h: 29%;
+
+  --t-name-x: 10%; --t-name-y: 57%;
+  --t-name-w: 80%; --t-name-size: 26px;
+
+  --t-stats-x: 17%; --t-stats-y: 65%;
+  --t-stats-w: 66%; --t-cols: 3; --t-rows: 2;
+  --t-stats-gap: 3px; --t-stat-height: 25px;
+  --t-stat-number: 16px; --t-stat-label: 8px;
+
+  --t-weak-x: 25%; --t-weak-y: 78%;
+  --t-weak-w: 20%;
+  --t-skills-x: 54%; --t-skills-y: 78%;
+  --t-skills-w: 20%;
+  --t-ability-label: 6px; --t-stars-size: 10px;
+
+  --t-badge-y: 8%; --t-badge-right: -6%;
+  --t-badge-size: 17%;
+}
+
+/* 06 — TIMONE DELL'ORIZZONTE · EPICA */
+body .player-card[data-mp6-look="op-ocean-epic"] {
+  --t-card: 355px; --t-preview: 1000px;
+  --t-ovr-x: 25%; --t-ovr-y: 20%;
+  --t-ovr-size: 50px; --t-role-size: 25px;
+
+  --t-side-x: 19%; --t-side-y: 35%;
+  --t-side-w: 23%; --t-side-gap: 3px;
+  --t-shirt-shift: 0px; --t-foot-shift: 0px;
+  --t-style-shift: 0px;
+  --t-side-label: 8px; --t-side-value: 10px;
+  --t-ps-size: 55px;
+  --t-ps-x: -70%;
+
+  --t-photo-x: 45%; --t-photo-y: 25%;
+  --t-photo-w: 36%; --t-photo-h: 25%;
+
+  --t-name-x: 11%; --t-name-y: 57%;
+  --t-name-w: 78%; --t-name-size: 25px;
+
+  --t-stats-x: 19%; --t-stats-y: 64%;
+  --t-stats-w: 62%; --t-cols: 3; --t-rows: 2;
+  --t-stats-gap: 2px; --t-stat-height: 23px;
+  --t-stat-number: 15px; --t-stat-label: 7px;
+
+  --t-weak-x: 19%; --t-weak-y: 52%;
+  --t-weak-w: 25%;
+  --t-skills-x: 54%; --t-skills-y: 52%;
+  --t-skills-w: 25%;
+  --t-ability-label: 6px; --t-stars-size: 10px;
+
+  --t-badge-y: 8%; --t-badge-right: -6%;
+  --t-badge-size: 17%;
+}
+
+/* 07 — ODISSEA DELLA GRAND LINE · LEGGENDARIA */
+body .player-card[data-mp6-look="op-gear"] {
+  --t-card: 355px; --t-preview: 1000px;
+  --t-ovr-x: 15%; --t-ovr-y: 12%;
+  --t-ovr-size: 43px; --t-role-size: 16px;
+
+  --t-side-x: 14%; --t-side-y: 28%;
+  --t-side-w: 22%; --t-side-gap: 3px;
+  --t-shirt-shift: 0px; --t-foot-shift: 0px;
+  --t-style-shift: 0px;
+  --t-side-label: 8px; --t-side-value: 10px;
+  --t-ps-size: 55px;
+
+  --t-photo-x: 38%; --t-photo-y: 20%;
+  --t-photo-w: 35%; --t-photo-h: 23%;
+
+  --t-name-x: 10%; --t-name-y: 64.5%;
+  --t-name-w: 80%; --t-name-size: 30px;
+
+  --t-stats-x: 12%; --t-stats-y: 75%;
+  --t-stats-w: 80%; --t-cols: 6; --t-rows: 1;
+  --t-stats-gap: 5px; --t-stat-height: 40px;
+  --t-stat-number: 20px; --t-stat-label: 15px;
+
+  --t-weak-x: 13%; --t-weak-y: 45%;
+  --t-weak-w: 20%;
+  --t-skills-x: 40%; --t-skills-y: 45%;
+  --t-skills-w: 20%;
+  --t-ability-label: 6px; --t-stars-size: 10px;
+
+  --t-badge-y: 8%; --t-badge-right: -6%;
+  --t-badge-size: 17%;
+}
+
+
+/* ============================================
+   DRAGON BALL
+   ============================================ */
+
+/* 08 — DRAGON BALL · RARA */
+body .player-card[data-mp6-look="db-saiyan"] {
+  --t-card: 355px; --t-preview: 320px;
+  --t-ovr-x: 15%; --t-ovr-y: 17%;
+  --t-ovr-size: 36px; --t-role-size: 12px;
+
+  --t-side-x: 9%; --t-side-y: 43%;
+  --t-side-w: 27%; --t-side-gap: 3px;
+  --t-shirt-shift: 0px; --t-foot-shift: 0px;
+  --t-style-shift: 0px;
+  --t-side-label: 8px; --t-side-value: 10px;
+  --t-ps-size: 14px;
+
+  --t-photo-x: 37%; --t-photo-y: 29%;
+  --t-photo-w: 42%; --t-photo-h: 29%;
+
+  --t-name-x: 10%; --t-name-y: 65%;
+  --t-name-w: 80%; --t-name-size: 20px;
+
+  --t-stats-x: 17%; --t-stats-y: 73%;
+  --t-stats-w: 66%; --t-cols: 3; --t-rows: 2;
+  --t-stats-gap: 3px; --t-stat-height: 25px;
+  --t-stat-number: 16px; --t-stat-label: 8px;
+
+  --t-weak-x: 13%; --t-weak-y: 91%;
+  --t-weak-w: 33%;
+  --t-skills-x: 54%; --t-skills-y: 91%;
+  --t-skills-w: 33%;
+  --t-ability-label: 6px; --t-stars-size: 10px;
+
+  --t-badge-y: 8%; --t-badge-right: -6%;
+  --t-badge-size: 17%;
+}
+
+/* 09 — DRAGON BALL · EPICA */
+body .player-card[data-mp6-look="db-aura-epic"] {
+  --t-card: 355px; --t-preview: 330px;
+  --t-ovr-x: 15%; --t-ovr-y: 17%;
+  --t-ovr-size: 35px; --t-role-size: 12px;
+
+  --t-side-x: 10%; --t-side-y: 44%;
+  --t-side-w: 25%; --t-side-gap: 3px;
+  --t-shirt-shift: 0px; --t-foot-shift: 0px;
+  --t-style-shift: 0px;
+  --t-side-label: 8px; --t-side-value: 10px;
+  --t-ps-size: 14px;
+
+  --t-photo-x: 39%; --t-photo-y: 30%;
+  --t-photo-w: 36%; --t-photo-h: 25%;
+
+  --t-name-x: 11%; --t-name-y: 65%;
+  --t-name-w: 78%; --t-name-size: 20px;
+
+  --t-stats-x: 19%; --t-stats-y: 72%;
+  --t-stats-w: 62%; --t-cols: 3; --t-rows: 2;
+  --t-stats-gap: 2px; --t-stat-height: 23px;
+  --t-stat-number: 15px; --t-stat-label: 7px;
+
+  --t-weak-x: 14%; --t-weak-y: 90.5%;
+  --t-weak-w: 32%;
+  --t-skills-x: 54%; --t-skills-y: 90.5%;
+  --t-skills-w: 32%;
+  --t-ability-label: 6px; --t-stars-size: 10px;
+
+  --t-badge-y: 8%; --t-badge-right: -6%;
+  --t-badge-size: 17%;
+}
+
+/* 10 — DRAGON BALL · LEGGENDARIA */
+body .player-card[data-mp6-look="db-ultra"] {
+  --t-card: 355px; --t-preview: 330px;
+  --t-ovr-x: 15%; --t-ovr-y: 17%;
+  --t-ovr-size: 36px; --t-role-size: 12px;
+
+  --t-side-x: 8%; --t-side-y: 44%;
+  --t-side-w: 24%; --t-side-gap: 3px;
+  --t-shirt-shift: 0px; --t-foot-shift: 0px;
+  --t-style-shift: 0px;
+  --t-side-label: 8px; --t-side-value: 10px;
+  --t-ps-size: 14px;
+
+  --t-photo-x: 33%; --t-photo-y: 30%;
+  --t-photo-w: 35%; --t-photo-h: 23%;
+
+  --t-name-x: 10%; --t-name-y: 66.5%;
+  --t-name-w: 80%; --t-name-size: 20px;
+
+  --t-stats-x: 10%; --t-stats-y: 79%;
+  --t-stats-w: 80%; --t-cols: 6; --t-rows: 1;
+  --t-stats-gap: 0px; --t-stat-height: 28px;
+  --t-stat-number: 15px; --t-stat-label: 7px;
+
+  --t-weak-x: 13%; --t-weak-y: 90.5%;
+  --t-weak-w: 33%;
+  --t-skills-x: 54%; --t-skills-y: 90.5%;
+  --t-skills-w: 33%;
+  --t-ability-label: 6px; --t-stars-size: 10px;
+
+  --t-badge-y: 8%; --t-badge-right: -6%;
+  --t-badge-size: 17%;
+}
+
+
+/* ============================================
+   CYBERPUNK 2077
+   ============================================ */
+
+/* 11 — CYBERPUNK · RARA */
+body .player-card[data-mp6-look="cp-edge"] {
+  --t-card: 355px; --t-preview: 320px;
+  --t-ovr-x: 15%; --t-ovr-y: 17%;
+  --t-ovr-size: 36px; --t-role-size: 12px;
+
+  --t-side-x: 9%; --t-side-y: 43%;
+  --t-side-w: 27%; --t-side-gap: 3px;
+  --t-shirt-shift: 0px; --t-foot-shift: 0px;
+  --t-style-shift: 0px;
+  --t-side-label: 8px; --t-side-value: 10px;
+  --t-ps-size: 14px;
+
+  --t-photo-x: 37%; --t-photo-y: 29%;
+  --t-photo-w: 42%; --t-photo-h: 29%;
+
+  --t-name-x: 10%; --t-name-y: 65%;
+  --t-name-w: 80%; --t-name-size: 20px;
+
+  --t-stats-x: 17%; --t-stats-y: 73%;
+  --t-stats-w: 66%; --t-cols: 3; --t-rows: 2;
+  --t-stats-gap: 3px; --t-stat-height: 25px;
+  --t-stat-number: 16px; --t-stat-label: 8px;
+
+  --t-weak-x: 13%; --t-weak-y: 91%;
+  --t-weak-w: 33%;
+  --t-skills-x: 54%; --t-skills-y: 91%;
+  --t-skills-w: 33%;
+  --t-ability-label: 6px; --t-stars-size: 10px;
+
+  --t-badge-y: 8%; --t-badge-right: -6%;
+  --t-badge-size: 17%;
+}
+
+/* 12 — CYBERPUNK · EPICA */
+body .player-card[data-mp6-look="cp-neon-epic"] {
+  --t-card: 355px; --t-preview: 330px;
+  --t-ovr-x: 15%; --t-ovr-y: 17%;
+  --t-ovr-size: 35px; --t-role-size: 12px;
+
+  --t-side-x: 10%; --t-side-y: 44%;
+  --t-side-w: 25%; --t-side-gap: 3px;
+  --t-shirt-shift: 0px; --t-foot-shift: 0px;
+  --t-style-shift: 0px;
+  --t-side-label: 8px; --t-side-value: 10px;
+  --t-ps-size: 14px;
+
+  --t-photo-x: 39%; --t-photo-y: 30%;
+  --t-photo-w: 36%; --t-photo-h: 25%;
+
+  --t-name-x: 11%; --t-name-y: 65%;
+  --t-name-w: 78%; --t-name-size: 20px;
+
+  --t-stats-x: 19%; --t-stats-y: 72%;
+  --t-stats-w: 62%; --t-cols: 3; --t-rows: 2;
+  --t-stats-gap: 2px; --t-stat-height: 23px;
+  --t-stat-number: 15px; --t-stat-label: 7px;
+
+  --t-weak-x: 14%; --t-weak-y: 90.5%;
+  --t-weak-w: 32%;
+  --t-skills-x: 54%; --t-skills-y: 90.5%;
+  --t-skills-w: 32%;
+  --t-ability-label: 6px; --t-stars-size: 10px;
+
+  --t-badge-y: 8%; --t-badge-right: -6%;
+  --t-badge-size: 17%;
+}
+
+/* 13 — CYBERPUNK · LEGGENDARIA */
+body .player-card[data-mp6-look="cp-samurai"] {
+  --t-card: 355px; --t-preview: 330px;
+  --t-ovr-x: 15%; --t-ovr-y: 17%;
+  --t-ovr-size: 36px; --t-role-size: 12px;
+
+  --t-side-x: 8%; --t-side-y: 44%;
+  --t-side-w: 24%; --t-side-gap: 3px;
+  --t-shirt-shift: 0px; --t-foot-shift: 0px;
+  --t-style-shift: 0px;
+  --t-side-label: 8px; --t-side-value: 10px;
+  --t-ps-size: 14px;
+
+  --t-photo-x: 33%; --t-photo-y: 30%;
+  --t-photo-w: 35%; --t-photo-h: 23%;
+
+  --t-name-x: 10%; --t-name-y: 66.5%;
+  --t-name-w: 80%; --t-name-size: 20px;
+
+  --t-stats-x: 10%; --t-stats-y: 79%;
+  --t-stats-w: 80%; --t-cols: 6; --t-rows: 1;
+  --t-stats-gap: 0px; --t-stat-height: 28px;
+  --t-stat-number: 15px; --t-stat-label: 7px;
+
+  --t-weak-x: 13%; --t-weak-y: 90.5%;
+  --t-weak-w: 33%;
+  --t-skills-x: 54%; --t-skills-y: 90.5%;
+  --t-skills-w: 33%;
+  --t-ability-label: 6px; --t-stars-size: 10px;
+
+  --t-badge-y: 8%; --t-badge-right: -6%;
+  --t-badge-size: 17%;
+}
+
+
+/* ============================================
+   FORMULA 1
+   ============================================ */
+
+/* 14 — FORMULA 1 · RARA */
+body .player-card[data-mp6-look="f1-pole"] {
+  --t-card: 355px; --t-preview: 320px;
+  --t-ovr-x: 15%; --t-ovr-y: 17%;
+  --t-ovr-size: 36px; --t-role-size: 12px;
+
+  --t-side-x: 9%; --t-side-y: 43%;
+  --t-side-w: 27%; --t-side-gap: 3px;
+  --t-shirt-shift: 0px; --t-foot-shift: 0px;
+  --t-style-shift: 0px;
+  --t-side-label: 8px; --t-side-value: 10px;
+  --t-ps-size: 14px;
+
+  --t-photo-x: 37%; --t-photo-y: 29%;
+  --t-photo-w: 42%; --t-photo-h: 29%;
+
+  --t-name-x: 10%; --t-name-y: 65%;
+  --t-name-w: 80%; --t-name-size: 20px;
+
+  --t-stats-x: 17%; --t-stats-y: 73%;
+  --t-stats-w: 66%; --t-cols: 3; --t-rows: 2;
+  --t-stats-gap: 3px; --t-stat-height: 25px;
+  --t-stat-number: 16px; --t-stat-label: 8px;
+
+  --t-weak-x: 13%; --t-weak-y: 91%;
+  --t-weak-w: 33%;
+  --t-skills-x: 54%; --t-skills-y: 91%;
+  --t-skills-w: 33%;
+  --t-ability-label: 6px; --t-stars-size: 10px;
+
+  --t-badge-y: 8%; --t-badge-right: -6%;
+  --t-badge-size: 17%;
+}
+
+/* 15 — FORMULA 1 · EPICA */
+body .player-card[data-mp6-look="f1-racing-epic"] {
+  --t-card: 355px; --t-preview: 330px;
+  --t-ovr-x: 15%; --t-ovr-y: 17%;
+  --t-ovr-size: 35px; --t-role-size: 12px;
+
+  --t-side-x: 10%; --t-side-y: 44%;
+  --t-side-w: 25%; --t-side-gap: 3px;
+  --t-shirt-shift: 0px; --t-foot-shift: 0px;
+  --t-style-shift: 0px;
+  --t-side-label: 8px; --t-side-value: 10px;
+  --t-ps-size: 14px;
+
+  --t-photo-x: 39%; --t-photo-y: 30%;
+  --t-photo-w: 36%; --t-photo-h: 25%;
+
+  --t-name-x: 11%; --t-name-y: 65%;
+  --t-name-w: 78%; --t-name-size: 20px;
+
+  --t-stats-x: 19%; --t-stats-y: 72%;
+  --t-stats-w: 62%; --t-cols: 3; --t-rows: 2;
+  --t-stats-gap: 2px; --t-stat-height: 23px;
+  --t-stat-number: 15px; --t-stat-label: 7px;
+
+  --t-weak-x: 14%; --t-weak-y: 90.5%;
+  --t-weak-w: 32%;
+  --t-skills-x: 54%; --t-skills-y: 90.5%;
+  --t-skills-w: 32%;
+  --t-ability-label: 6px; --t-stars-size: 10px;
+
+  --t-badge-y: 8%; --t-badge-right: -6%;
+  --t-badge-size: 17%;
+}
+
+/* 16 — FORMULA 1 · LEGGENDARIA */
+body .player-card[data-mp6-look="f1-champ"] {
+  --t-card: 355px; --t-preview: 330px;
+  --t-ovr-x: 15%; --t-ovr-y: 17%;
+  --t-ovr-size: 36px; --t-role-size: 12px;
+
+  --t-side-x: 8%; --t-side-y: 44%;
+  --t-side-w: 24%; --t-side-gap: 3px;
+  --t-shirt-shift: 0px; --t-foot-shift: 0px;
+  --t-style-shift: 0px;
+  --t-side-label: 8px; --t-side-value: 10px;
+  --t-ps-size: 14px;
+
+  --t-photo-x: 33%; --t-photo-y: 30%;
+  --t-photo-w: 35%; --t-photo-h: 23%;
+
+  --t-name-x: 10%; --t-name-y: 66.5%;
+  --t-name-w: 80%; --t-name-size: 20px;
+
+  --t-stats-x: 10%; --t-stats-y: 79%;
+  --t-stats-w: 80%; --t-cols: 6; --t-rows: 1;
+  --t-stats-gap: 0px; --t-stat-height: 28px;
+  --t-stat-number: 15px; --t-stat-label: 7px;
+
+  --t-weak-x: 13%; --t-weak-y: 90.5%;
+  --t-weak-w: 33%;
+  --t-skills-x: 54%; --t-skills-y: 90.5%;
+  --t-skills-w: 33%;
+  --t-ability-label: 6px; --t-stars-size: 10px;
+
+  --t-badge-y: 8%; --t-badge-right: -6%;
+  --t-badge-size: 17%;
+}
+
+
+/* ============================================
+   I 4 EMBLEMI COMUNI
+   Non modificano il layout della skin.
+   ============================================ */
+
+/* 17 — CAPPELLO DI PAGLIA */
+body .player-card[data-mp4-emblem="op_straw"] {
+  --t-badge-y: 8%;
+  --t-badge-right: -6%;
+  --t-badge-size: 17%;
+}
+
+/* 18 — SFERA DEL DRAGO */
+body .player-card[data-mp4-emblem="db_kame"] {
+  --t-badge-y: 8%;
+  --t-badge-right: -6%;
+  --t-badge-size: 17%;
+}
+
+/* 19 — IMPIANTO OTTICO CYBERPUNK */
+body .player-card[data-mp4-emblem="cp_night"] {
+  --t-badge-y: 8%;
+  --t-badge-right: -6%;
+  --t-badge-size: 17%;
+}
+
+/* 20 — CASCO DA PILOTA FORMULA 1 */
+body .player-card[data-mp4-emblem="f1_grid"] {
+  --t-badge-y: 8%;
+  --t-badge-right: -6%;
+  --t-badge-size: 17%;
+}
+
+
+/* POSIZIONE PLAYSTYLE+ — PER SINGOLA CARTA */
+
+body .player-card.mp6-rendered[data-mp6-look]
+> .player-card-side-info > div
+> .card-ps-plus-icon {
+  position: absolute !important;
+
+  left: var(--t-ps-x, -60px) !important;
+  top: calc(50% + var(--t-ps-y, 0px)) !important;
+
+  width: var(--t-ps-size, 62px) !important;
+  height: var(--t-ps-size, 62px) !important;
+
+  transform: translateY(-50%) !important;
+  object-fit: contain !important;
+  z-index: 20 !important;
 }

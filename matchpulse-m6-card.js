@@ -43,24 +43,24 @@ const badgeBase = new URL(
 
  const PRESETS={
   'fc-dynasty':{},
-  'fc-ice':{},
-  'fc-neon':{photoLeft:'34%',photoTop:'26%',photoWidth:'45%',photoHeight:'33%',sideTop:'43%',statsTop:'77%'},
+  'fc-ice':{photoLeft:'39%',photoTop:'30%',photoWidth:'37%',photoHeight:'27%',sideWidth:'24%',statsLeft:'18%',statsRight:'18%'},
+  'fc-neon':{photoLeft:'39%',photoTop:'30%',photoWidth:'37%',photoHeight:'27%',sideTop:'43%',statsTop:'77%'},
   'fc-blackout':{layout:'row',photoLeft:'34%',photoTop:'28%',photoWidth:'41%',photoHeight:'29%',sideLeft:'9%',sideTop:'42%',sideWidth:'26%',nameTop:'66%',statsTop:'78.5%',statsLeft:'10%',statsRight:'10%'},
 
   'op-nakama':{photoLeft:'35%',photoTop:'28%',photoWidth:'45%',photoHeight:'33%',sideLeft:'7%',sideTop:'43%',sideWidth:'26%',statsTop:'77.5%'},
-  'op-ocean-epic':{photoLeft:'35%',photoTop:'28%',photoWidth:'43%',photoHeight:'31%',sideLeft:'7%',sideTop:'43%',sideWidth:'26%',nameTop:'66.5%',statsTop:'77.8%'},
+  'op-ocean-epic':{photoLeft:'39%',photoTop:'30%',photoWidth:'37%',photoHeight:'27%',sideLeft:'7%',sideTop:'43%',sideWidth:'24%',nameTop:'66.5%',statsTop:'77.8%'},
   'op-gear':{layout:'row',photoLeft:'31%',photoTop:'30%',photoWidth:'38%',photoHeight:'24%',sideLeft:'6%',sideTop:'43%',sideWidth:'24%',nameTop:'66.8%',statsTop:'79%',statsLeft:'10%',statsRight:'10%'},
 
   'db-saiyan':{photoLeft:'35%',photoTop:'28%',photoWidth:'45%',photoHeight:'33%',sideLeft:'7%',sideTop:'43%',sideWidth:'26%',statsTop:'77.4%'},
-  'db-aura-epic':{photoLeft:'35%',photoTop:'28%',photoWidth:'43%',photoHeight:'31%',sideLeft:'7%',sideTop:'43%',sideWidth:'26%',nameTop:'66.5%',statsTop:'77.8%'},
+  'db-aura-epic':{photoLeft:'39%',photoTop:'30%',photoWidth:'37%',photoHeight:'27%',sideLeft:'7%',sideTop:'43%',sideWidth:'24%',nameTop:'66.5%',statsTop:'77.8%'},
   'db-ultra':{layout:'row',photoLeft:'31%',photoTop:'30%',photoWidth:'38%',photoHeight:'24%',sideLeft:'6%',sideTop:'43%',sideWidth:'24%',nameTop:'66.8%',statsTop:'79%',statsLeft:'10%',statsRight:'10%'},
 
   'cp-edge':{photoLeft:'35%',photoTop:'28%',photoWidth:'45%',photoHeight:'33%',sideLeft:'7%',sideTop:'43%',sideWidth:'26%',statsTop:'77.4%'},
-  'cp-neon-epic':{photoLeft:'35%',photoTop:'28%',photoWidth:'43%',photoHeight:'31%',sideLeft:'7%',sideTop:'43%',sideWidth:'26%',nameTop:'66.5%',statsTop:'77.8%'},
+  'cp-neon-epic':{photoLeft:'39%',photoTop:'30%',photoWidth:'37%',photoHeight:'27%',sideLeft:'7%',sideTop:'43%',sideWidth:'24%',nameTop:'66.5%',statsTop:'77.8%'},
   'cp-samurai':{layout:'row',photoLeft:'31%',photoTop:'30%',photoWidth:'38%',photoHeight:'24%',sideLeft:'6%',sideTop:'43%',sideWidth:'24%',nameTop:'66.8%',statsTop:'79%',statsLeft:'10%',statsRight:'10%'},
 
   'f1-pole':{photoLeft:'35%',photoTop:'28%',photoWidth:'45%',photoHeight:'33%',sideLeft:'7%',sideTop:'43%',sideWidth:'26%',statsTop:'77.4%'},
-  'f1-racing-epic':{photoLeft:'35%',photoTop:'28%',photoWidth:'43%',photoHeight:'31%',sideLeft:'7%',sideTop:'43%',sideWidth:'26%',nameTop:'66.5%',statsTop:'77.8%'},
+  'f1-racing-epic':{photoLeft:'39%',photoTop:'30%',photoWidth:'37%',photoHeight:'27%',sideLeft:'7%',sideTop:'43%',sideWidth:'24%',nameTop:'66.5%',statsTop:'77.8%'},
   'f1-champ':{layout:'row',photoLeft:'31%',photoTop:'30%',photoWidth:'38%',photoHeight:'24%',sideLeft:'6%',sideTop:'43%',sideWidth:'24%',nameTop:'66.8%',statsTop:'79%',statsLeft:'10%',statsRight:'10%'}
  };
 
