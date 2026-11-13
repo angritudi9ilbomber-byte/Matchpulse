@@ -217,9 +217,9 @@ if (publishError) throw publishError;
     f1_racing_epic:"f1_epica.webp",f1_champ:"f1_leggendaria.webp"
   };
   const MP_REWARD_PACKS={
-    pack_classic:["Classico","fc_epica.webp"],
-    pack_fc_originals:["FC Originals","fc_leggendaria.webp"],
-    pack_collaborazioni:["Collaborazioni","op_leggendaria.webp"]
+    pack_classic:["Classico"],
+    pack_fc_originals:["FC Originals"],
+    pack_collaborazioni:["Collaborazioni"]
   };
   function prizeArt(id){
     const file=MP_SKIN_ART[id];
@@ -237,8 +237,8 @@ if (publishError) throw publishError;
     const r=rewardDetails(ch), out=[];
     if(r.tokens)out.push('<span class="mp-m1-prize">✦ '+r.tokens+' token</span>');
     if(r.pack){
-      const meta=MP_REWARD_PACKS[r.pack]||[r.pack,"fc_epica.webp"];
-      out.push('<span class="mp-m1-prize"><img src="mp-m5-art/'+html(meta[1])+'" alt="">'+html(meta[0])+'</span>');
+      const meta=MP_REWARD_PACKS[r.pack]||[r.pack];
+      out.push('<span class="mp-m1-prize"><span class="mp-m1-pack-ico" aria-hidden="true">📦</span>Pacchetto '+html(meta[0])+'</span>');
     }
     for(const [key,kind] of [["skin","Skin"],["emblem","Emblema"]]){
       if(!r[key])continue;
@@ -268,8 +268,8 @@ if (publishError) throw publishError;
     if(!list.length)return "";
     return '<section class="mp-m1-bonus"><h3>🎁 PACCHETTI VINTI · '+list.length+'</h3>'+
       list.map(p=>{
-        const pack=MP_REWARD_PACKS[p.pack_id]||[p.pack_id,"fc_epica.webp"];
-        return '<div class="mp-m1-bonus-item"><img src="mp-m5-art/'+html(pack[1])+'" alt=""><strong>Pacchetto '+html(pack[0])+'</strong>'+
+        const pack=MP_REWARD_PACKS[p.pack_id]||[p.pack_id];
+        return '<div class="mp-m1-bonus-item"><span class="mp-m1-pack-ico" aria-hidden="true">📦</span><strong>Pacchetto '+html(pack[0])+'</strong>'+
           '<button type="button" onclick="mpM1OpenRewardPack(\''+html(p.id)+'\')">APRI GRATIS</button></div>';
       }).join('')+'</section>';
   }

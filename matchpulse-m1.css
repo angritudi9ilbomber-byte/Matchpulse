@@ -220,3 +220,7 @@ body {
   .mp-m1-prize{font-size:10px}
   .mp-m1-bonus-item{flex-wrap:wrap}
 }
+
+/* Pack v3: icona neutra nelle sfide, senza anteprima cosmetica. */
+.mp-m1-pack-ico{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;width:24px;height:28px;border-radius:6px;background:linear-gradient(135deg,#4c2a91,#241b57);border:1px solid rgba(233,193,255,.42);font-size:18px;line-height:1}
+.mp-m1-bonus-item .mp-m1-pack-ico{width:42px;height:45px;font-size:28px;border-radius:8px}
