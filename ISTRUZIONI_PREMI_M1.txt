@@ -12,8 +12,9 @@ NOVITÀ
 ATTIVAZIONE (NON ANCORA ESEGUITA):
 - Eseguire backup del database MatchPulse corretto.
 - Verificare che siano installati il Founder immediato e M2/M6.
-- Prima del merge: eseguire MATCHPULSE_M1_PREMI_MULTIPLI_MIGRAZIONE.sql nel SQL Editor di MatchPulse. Questo file NON revoca più la vecchia RPC; i riscatti dell'app attuale continuano a funzionare.
-- Dopo aver verificato le nuove RPC e aver pubblicato M1.js: eseguire MATCHPULSE_M1_POST_MERGE_SICUREZZA.sql per bloccare l'endpoint legacy che non controlla i nuovi requisiti.
+- Prima del merge: eseguire MATCHPULSE_M1_PREMI_MULTIPLI_MIGRAZIONE.sql sul progetto corretto dopo backup.
+- La migrazione aggiorna il vecchio mp_m1_claim(text) come alias di mp_m1_claim_rewards(text): la versione attuale resta compatibile e non serve revocare il vecchio endpoint.
+- La precedente migrazione di post-merge è deprecata: NON ESEGUIRLA.
 - Verificare che siano state create le 3 RPC:
   mp_m1_founder_save_v2, mp_m1_claim_rewards, mp_m1_open_reward_pack.
 - Testare con account Founder e account amico: goal manuale con 0 token e pacchetto,

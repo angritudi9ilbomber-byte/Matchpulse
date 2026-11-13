@@ -324,11 +324,34 @@ begin
  end if;
 
  return jsonb_build_object(
-   'tokens',v_tokens,'season',v_season,'challenge_id',v_ch.id,
+   'tokens',v_tokens,'season',v_season,
+   'challenge_id',v_ch.id,'challenge',v_ch.id,
    'pack_id',v_pack,'skin_awarded',v_awarded,'already_owned',v_already
  );
 end
-$$;
+$;
+
+-- COMPATIBILITÀ COMPLETA:
+-- anche il vecchio client continua a invocare mp_m1_claim(text).
+-- Lo instradiamo alla nuova funzione, che verifica anche i premi
+-- cosmetici e le condizioni Gol E/O Assist, senza cambiare firma o output tokens.
+create or replace function public.mp_m1_claim(p_challenge_id text)
+returns jsonb language plpgsql security definer set search_path=''
+as $
+begin
+  return public.mp_m1_claim_rewards(p_challenge_id);
+end
+$;
+
+-- L'implementazione originale rimane storicizzata, ma non deve
+-- essere accessibile direttamente, perché ignora reward_config e goal_logic.
+do $revoke_legacy_base$
+begin
+  if to_regprocedure('public.mp_m1_claim_base(text)') is not null then
+    execute 'revoke all on function public.mp_m1_claim_base(text) from public,anon,authenticated';
+  end if;
+end
+$revoke_legacy_base$;
 
 -- Apertura gratuita, estrae con le stesse fasce di rarità del negozio M6.
 -- Prima estrae la rarità disponibile, poi un cosmetico non posseduto.
@@ -403,13 +426,8 @@ begin
 end
 $$;
 
--- COMPATIBILITÀ DURANTE IL DEPLOY:
--- NON revocare ancora mp_m1_claim(text): la versione pubblicata su
--- main la usa fino al merge; revocarla adesso bloccherebbe i riscatti.
--- DOPO il merge, eseguire MATCHPULSE_M1_POST_MERGE_SICUREZZA.sql.
--- ATTENZIONE: fino alla revoca gli utenti con JS vecchio possono usare
--- la vecchia RPC, quindi prima del merge non pubblicare obiettivi con
--- logiche di riscatto nuove.
+-- Il vecchio endpoint è ora un alias sicuro della nuova RPC.
+-- NON occorre una seconda migrazione né un blocco dei vecchi client.
 
 revoke all on function public.mp_m1_founder_save_v2(jsonb)
  from public,anon,authenticated;
@@ -418,6 +436,12 @@ grant execute on function public.mp_m1_founder_save_v2(jsonb) to authenticated;
 revoke all on function public.mp_m1_claim_rewards(text)
  from public,anon,authenticated;
 grant execute on function public.mp_m1_claim_rewards(text) to authenticated;
+
+-- Il vecchio endpoint resta utilizzabile, ma ora è sicuro perché
+-- usa mp_m1_claim_rewards internamente.
+revoke all on function public.mp_m1_claim(text)
+ from public,anon,authenticated;
+grant execute on function public.mp_m1_claim(text) to authenticated;
 
 revoke all on function public.mp_m1_open_reward_pack(uuid)
  from public,anon,authenticated;
