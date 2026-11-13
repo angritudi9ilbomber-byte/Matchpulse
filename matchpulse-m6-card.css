@@ -1304,3 +1304,11 @@ body .player-card.mp6-rendered[data-mp6-look]
   }
 
 }
+
+body .player-card.mp6-rendered
+[data-mp6-look="fc-ice"] {
+  --t-photo-x: 38%;
+  --t-photo-y: 28%;
+  --t-photo-w: 35%;
+  --t-photo-h: 25%;
+}
