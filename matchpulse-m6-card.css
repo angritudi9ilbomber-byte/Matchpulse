@@ -660,23 +660,24 @@ body .player-card.mp6-rendered[data-mp4-emblem] {
 /* 01 — VERDALIA · COMUNE */
 body .player-card[data-mp6-look="fc-dynasty"] {
   --t-card: 1000px; --t-preview: 1000px;
-  --t-ovr-x: 20%; --t-ovr-y: 17%;
+  --t-ovr-x: 20%; --t-ovr-y: 14%;
   --t-ovr-size: 50px; --t-role-size: 20px;
 
   --t-side-x: 15%; --t-side-y: 35%;
-  --t-side-w: 17%; --t-side-gap: 3px;
+  --t-side-w: 24%; --t-side-gap: 3px;
   --t-shirt-shift: 0px; --t-foot-shift: 0px;
   --t-style-shift: 0px;
   --t-side-label: 11px; --t-side-value: 11px;
-  --t-ps-size: 55px;
+  --t-ps-size: 40px;
+  --t-ps-x: -50%;
 
-  --t-photo-x: 37%; --t-photo-y: 25%;
+  --t-photo-x: 40%; --t-photo-y: 25%;
   --t-photo-w: 45%; --t-photo-h: 30%;
 
-  --t-name-x: 10%; --t-name-y: 61%;
-  --t-name-w: 80%; --t-name-size: 30px;
+  --t-name-x: 10%; --t-name-y: 60%;
+  --t-name-w: 80%; --t-name-size: 23px;
 
-  --t-stats-x: 16%; --t-stats-y: 70%;
+  --t-stats-x: 16%; --t-stats-y: 68%;
   --t-stats-w: 68%; --t-cols: 3; --t-rows: 2;
   --t-stats-gap: 3px; --t-stat-height: 25px;
   --t-stat-number: 17px; --t-stat-label: 8px;
@@ -1279,36 +1280,3 @@ body .player-card.mp6-rendered[data-mp6-look]
 }
 
 
-/* DIMENSIONI RESPONSIVE PER MOBILE */
-@media (max-width: 600px) {
-
-  body .player-card.mp6-rendered[data-mp6-look] {
-    --t-ovr-size: 9cqw;
-    --t-role-size: 3cqw;
-
-    --t-side-label: 2.1cqw;
-    --t-side-value: 2.9cqw;
-
-    --t-ps-x: -5cqw;
-    --t-ps-y: 0px;
-    --t-ps-size: 9cqw;
-
-    --t-name-size: 5.5cqw;
-
-    --t-stat-height: 7.5cqw;
-    --t-stat-number: 4.5cqw;
-    --t-stat-label: 2cqw;
-
-    --t-ability-label: 1.8cqw;
-    --t-stars-size: 2.8cqw;
-  }
-
-}
-
-body .player-card.mp6-rendered
-[data-mp6-look="fc-ice"] {
-  --t-photo-x: 38%;
-  --t-photo-y: 28%;
-  --t-photo-w: 35%;
-  --t-photo-h: 25%;
-}
