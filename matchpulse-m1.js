@@ -236,6 +236,7 @@
        <span>STAGIONE ${ctx.season.replace("-","/")}</span>
        <span>${store.tab === "milestone" ? "Nessuna scadenza nella stagione" : "Reset settimanale: lunedì 00:00 · Roma"}</span>
       </div>
+      <div id="mpM1FounderSlot"></div>
       <div class="mp-m1-tabs" role="tablist">${tabs.map(([id,label]) =>
         `<button type="button" role="tab" aria-selected="${store.tab === id}" class="${store.tab === id ? "active" : ""}" onclick="mpM1Tab('${id}')">${label}</button>`).join("")}</div>
       ${store.error ? `<div class="mp-m1-error"><strong>Configurazione sfide necessaria</strong><p>${html(store.error)}</p><button type="button" onclick="mpM1Retry()">Riprova</button></div>` : ""}
@@ -243,7 +244,8 @@
       ${store.ready ? `<div class="mp-m1-challenges-list">${challengeCards(store.tab,ctx)}</div>` : ""}
       ${store.ready && store.tab === "role" ? `<div class="mp-m1-hint">Ruolo di questa settimana: <strong>${html(ROLE_LABELS[roleLock(ctx)])}</strong>. Rimane bloccato fino al prossimo lunedì per evitare riscatti multipli.</div>` : ""}
       ${store.ready && store.tab === "milestone" ? '<div class="mp-m1-hint">Le azioni speciali si registrano con i pulsanti + e −. I traguardi si riscattano una sola volta per stagione.</div>' : ""}
-    </section>`;
+        </section>`;
+    window.mpM1FounderMount?.();
   }
   function refreshHomeWallet() {
     const el = document.querySelector("[data-m1-wallet]");
@@ -415,3 +417,432 @@
     challenges: store.catalogue.length, wallet: wallet(timeContext()) });
   if (typeof render === "function") render();
 })();
+
+
+/* MATCHPULSE — FOUNDER SFIDE MOBILE */
+(function(){
+  'use strict';
+  if(window.MP_M1_FOUNDER_READY)return;
+
+  const F={
+    admin:false,checking:false,open:false,loaded:false,
+    goals:[],players:[],products:[],
+    editing:'',player:'',product:''
+  };
+
+  const db=()=>window.matchpulseSupabase;
+  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({
+    '&':'&amp;','<':'&lt;','>':'&gt;',
+    '"':'&quot;',"'":'&#39;'
+  }[c]));
+
+  const inputStyle=
+    'width:100%;box-sizing:border-box;min-height:44px;padding:10px;' +
+    'border-radius:10px;border:1px solid #77608e;' +
+    'background:#171126;color:white;font-size:16px';
+
+  const buttonStyle=
+    'padding:11px 14px;border:1px solid #9a56d0;' +
+    'border-radius:10px;background:#7128ac;color:white;font-weight:800';
+
+  const roles=[
+    ['ATT','Attaccante'],['ALA','Ala'],['COC','Trequartista'],
+    ['CC','Centrocampista'],['CDC','Mediano'],
+    ['DC','Difensore'],['TERZINO','Terzino']
+  ];
+
+  const types=[
+    ['weekly','Settimanale'],
+    ['role','Di ruolo'],
+    ['milestone','Traguardo stagionale']
+  ];
+
+  const metrics=[
+    ['played','Partite giocate'],
+    ['wins','Vittorie'],
+    ['goals','Gol'],
+    ['assists','Assist'],
+    ['contributions','Gol + assist'],
+    ['role_played','Partite nel ruolo'],
+    ['role_wins','Vittorie nel ruolo'],
+    ['role_goals','Gol nel ruolo'],
+    ['role_assists','Assist nel ruolo'],
+    ['role_contributions','Gol + assist nel ruolo'],
+    ['manual','Manuale +1 / −1']
+  ];
+
+  const opts=(list,current)=>list.map(([v,t])=>
+    `<option value="${esc(v)}" ${v===current?'selected':''}>${esc(t)}</option>`
+  ).join('');
+
+  const entry=()=>document.getElementById('mpM1FounderSlot');
+  const selectedGoal=()=>F.goals.find(x=>x.id===F.editing);
+  const selectedPlayer=()=>F.players.find(x=>x.id===F.player);
+  const message=e=>alert(e?.message||String(e));
+
+  async function refresh(){
+    const [goals,players,skins,packs]=await Promise.all([
+      db().from('matchpulse_m1_challenges')
+        .select('*').order('sort_order'),
+      db().rpc('mp_m1_founder_players'),
+      db().from('matchpulse_m2_skins')
+        .select('id,title,price').order('sort_order'),
+      db().from('matchpulse_m2_packs')
+        .select('id,title,price').order('sort_order')
+    ]);
+
+    for(const r of [goals,players,skins,packs]){
+      if(r.error)throw r.error;
+    }
+
+    F.goals=goals.data||[];
+    F.players=players.data||[];
+    F.products=[
+      ...(skins.data||[]).map(p=>({...p,type:'skin'})),
+      ...(packs.data||[]).map(p=>({...p,type:'pack'}))
+    ];
+    F.loaded=true;
+
+    if(!F.players.some(x=>x.id===F.player))
+      F.player=F.players[0]?.id||'';
+
+    if(!F.products.some(p=>p.type+'|'+p.id===F.product)){
+      const p=F.products[0];
+      F.product=p?p.type+'|'+p.id:'';
+    }
+
+    paint();
+  }
+
+  function paint(){
+    const slot=entry();
+    if(!slot||!F.admin)return;
+
+    if(!F.open){
+      slot.innerHTML=`
+        <button type="button" onclick="mpM1FounderToggle()"
+          style="${buttonStyle};width:100%;margin:12px 0">
+          ✦ FOUNDER · GESTISCI SFIDE E TOKEN
+        </button>`;
+      return;
+    }
+
+    if(!F.loaded){
+      slot.innerHTML='<p>Caricamento Founder…</p>';
+      void refresh().catch(message);
+      return;
+    }
+
+    const ch=selectedGoal()||{};
+    const player=selectedPlayer();
+    const product=F.products.find(p=>p.type+'|'+p.id===F.product);
+
+    slot.innerHTML=`
+    <section style="background:#1c1530;border:1px solid #925dc4;
+      border-radius:16px;padding:14px;margin:14px 0;display:grid;gap:14px">
+
+      <div style="display:flex;align-items:center;
+        justify-content:space-between;gap:8px">
+        <strong>✦ FOUNDER · SFIDE</strong>
+        <button type="button" style="${buttonStyle}"
+          onclick="mpM1FounderToggle()">Chiudi</button>
+      </div>
+
+      <p style="font-size:12px;opacity:.8;margin:0">
+        Gestione riservata. Le modifiche sono condivise con tutti i giocatori.
+      </p>
+
+      <label>Obiettivo da modificare
+        <select style="${inputStyle}"
+          onchange="mpM1FounderChoose(this.value)">
+          <option value="">＋ CREA NUOVO OBIETTIVO</option>
+          ${F.goals.map(g=>`
+            <option value="${esc(g.id)}"
+              ${g.id===F.editing?'selected':''}>
+              ${g.active?'':'[DISATTIVO] '}
+              ${esc(g.title)} · ${esc(g.scope)}
+            </option>`).join('')}
+        </select>
+      </label>
+
+      <form id="mfGoalForm" onsubmit="mpM1FounderSave(event)"
+        style="display:grid;gap:9px">
+
+        <label>Nome obiettivo
+          <input name="title" required maxlength="90"
+            style="${inputStyle}" value="${esc(ch.title||'')}"
+            placeholder="Es. Muro difensivo">
+        </label>
+
+        <label>Descrizione
+          <textarea name="description" required maxlength="350"
+            style="${inputStyle};min-height:70px"
+            placeholder="Come si completa">${esc(ch.description||'')}</textarea>
+        </label>
+
+        <label>Categoria
+          <select name="scope" id="mfScope" style="${inputStyle}"
+            onchange="mpM1FounderScope()">
+            ${opts(types,ch.scope||'weekly')}
+          </select>
+        </label>
+
+        <label>Ruolo (solo sfide di ruolo)
+          <select name="role" style="${inputStyle}">
+            ${opts(roles,ch.role||'DC')}
+          </select>
+        </label>
+
+        <label>Modalità di avanzamento
+          <select name="metric" id="mfMetric" style="${inputStyle}">
+            ${opts(metrics,ch.metric||'played')}
+          </select>
+        </label>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+          <label>Quantità richiesta
+            <input name="target" type="number" min="1" max="1000"
+              required style="${inputStyle}"
+              value="${esc(ch.target||1)}">
+          </label>
+
+          <label>Token premio
+            <input name="reward" type="number" min="1" max="2000"
+              required style="${inputStyle}"
+              value="${esc(ch.reward||10)}">
+          </label>
+        </div>
+
+        <label style="display:flex;align-items:center;gap:8px">
+          <input name="active" type="checkbox"
+            ${ch.active===false?'':'checked'}>
+          Obiettivo attivo
+        </label>
+
+        <button type="submit" style="${buttonStyle}">
+          SALVA OBIETTIVO
+        </button>
+      </form>
+
+      <hr style="width:100%;border-color:#69537b">
+
+      <strong>✦ GESTIONE TOKEN</strong>
+
+      <label>Account
+        <select style="${inputStyle}"
+          onchange="mpM1FounderPlayer(this.value)">
+          ${F.players.map(p=>`
+            <option value="${esc(p.id)}"
+              ${p.id===F.player?'selected':''}>
+              ${esc(p.name)} · ${esc(p.balance)} token
+            </option>`).join('')}
+        </select>
+      </label>
+
+      <label>Imposta saldo a
+        <input id="mfBalance" type="number" min="0" max="50000"
+          style="${inputStyle}" value="${esc(player?.balance??0)}">
+      </label>
+
+      <button type="button" style="${buttonStyle}"
+        onclick="mpM1FounderSetBalance()">
+        CONFERMA NUOVO SALDO
+      </button>
+
+      <small>Inserendo 0 azzeri il saldo disponibile.
+        Inventario e acquisti restano conservati.</small>
+
+      <hr style="width:100%;border-color:#69537b">
+
+      <strong>✦ PREZZI DEL NEGOZIO</strong>
+
+      <label>Prodotto
+        <select style="${inputStyle}"
+          onchange="mpM1FounderProduct(this.value)">
+          ${F.products.map(p=>`
+            <option value="${esc(p.type+'|'+p.id)}"
+              ${p.type+'|'+p.id===F.product?'selected':''}>
+              ${p.type==='pack'?'PACCHETTO':'SKIN'} · ${esc(p.title)}
+            </option>`).join('')}
+        </select>
+      </label>
+
+      <label>Prezzo in token
+        <input id="mfPrice" type="number" min="1" max="9999"
+          style="${inputStyle}" value="${esc(product?.price??80)}">
+      </label>
+
+      <button type="button" style="${buttonStyle}"
+        onclick="mpM1FounderSetPrice()">
+        SALVA PREZZO
+      </button>
+
+      <hr style="width:100%;border-color:#69537b">
+
+      <button type="button" onclick="mpM1FounderPauseAll()"
+        style="${buttonStyle};background:#7b253b">
+        DISATTIVA TUTTI I VECCHI OBIETTIVI
+      </button>
+
+      <small>Questa operazione conserva lo storico delle ricompense
+        e non cancella le partite.</small>
+    </section>`;
+  }
+
+  async function mount(){
+    if(!entry()||!db()||
+      typeof window.mpPromoSecureIsAdmin!=='function')return;
+
+    if(!F.admin&&!F.checking){
+      F.checking=true;
+      try{
+        F.admin=(await window.mpPromoSecureIsAdmin(true))===true;
+      }catch(e){
+        console.warn('M1 Founder: verifica fallita',e);
+      }finally{
+        F.checking=false;
+      }
+    }
+
+    if(F.admin)paint();
+  }
+
+  window.mpM1FounderMount=()=>{void mount();};
+
+  window.mpM1FounderToggle=()=>{
+    F.open=!F.open;
+    paint();
+  };
+
+  window.mpM1FounderChoose=id=>{
+    F.editing=id;
+    paint();
+  };
+
+  window.mpM1FounderPlayer=id=>{
+    F.player=id;
+    paint();
+  };
+
+  window.mpM1FounderProduct=id=>{
+    F.product=id;
+    paint();
+  };
+
+  window.mpM1FounderScope=()=>{
+    document.getElementById('mfMetric').value=
+      document.getElementById('mfScope').value==='role'
+        ?'role_played':'played';
+  };
+
+  window.mpM1FounderSave=async event=>{
+    event.preventDefault();
+
+    const form=event.currentTarget;
+    const o=Object.fromEntries(new FormData(form).entries());
+
+    o.id=F.editing||null;
+    o.active=form.elements.active.checked;
+    o.sort_order=selectedGoal()?.sort_order??500;
+
+    try{
+      const {data,error}=await db().rpc('mp_m1_founder_save',{
+        p_goal:o
+      });
+      if(error)throw error;
+
+      F.editing=data;
+      await refresh();
+      window.mpM1Retry?.();
+      alert('Obiettivo salvato.');
+    }catch(e){
+      message(e);
+    }
+  };
+
+  window.mpM1FounderSetBalance=async()=>{
+    const value=Number(document.getElementById('mfBalance')?.value);
+
+    if(!F.player||!Number.isInteger(value)||
+      value<0||value>50000){
+      alert('Saldo non valido.');
+      return;
+    }
+
+    if(!confirm('Impostare questo saldo a '+value+' token?'))return;
+
+    try{
+      const {error}=await db().rpc('mp_m1_founder_set_balance',{
+        p_user:F.player,
+        p_balance:value
+      });
+      if(error)throw error;
+
+      await refresh();
+      window.mpM1Retry?.();
+      await window.mpM1RefreshWallet?.();
+      window.mpM2AfterWalletChange?.();
+
+      alert('Saldo aggiornato.');
+    }catch(e){
+      message(e);
+    }
+  };
+
+  window.mpM1FounderSetPrice=async()=>{
+    const p=F.products.find(
+      x=>x.type+'|'+x.id===F.product
+    );
+
+    const price=Number(document.getElementById('mfPrice')?.value);
+
+    if(!p||!Number.isInteger(price)||price<1||price>9999){
+      alert('Prezzo non valido.');
+      return;
+    }
+
+    if(!confirm('Cambiare il prezzo di '+p.title+
+      ' a '+price+' token?'))return;
+
+    try{
+      const {error}=await db().rpc('mp_m1_founder_set_price',{
+        p_type:p.type,
+        p_id:p.id,
+        p_price:price
+      });
+      if(error)throw error;
+
+      await refresh();
+      window.mpM2AfterWalletChange?.();
+
+      alert('Prezzo aggiornato.');
+    }catch(e){
+      message(e);
+    }
+  };
+
+  window.mpM1FounderPauseAll=async()=>{
+    if(!confirm(
+      'Disattivare tutti gli obiettivi attuali per tutti i giocatori?'
+    ))return;
+
+    try{
+      const {data,error}=await db().rpc(
+        'mp_m1_founder_pause_all'
+      );
+      if(error)throw error;
+
+      F.editing='';
+      await refresh();
+      window.mpM1Retry?.();
+
+      alert(data+' obiettivi disattivati.');
+    }catch(e){
+      message(e);
+    }
+  };
+
+  window.MP_M1_FOUNDER_READY=true;
+  if(entry())window.mpM1FounderMount();
+})();
+
