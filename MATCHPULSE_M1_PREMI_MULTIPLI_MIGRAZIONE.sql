@@ -35,17 +35,36 @@ alter table public.matchpulse_m1_challenges
       and assists_target between 1 and 1000))
   );
 
-alter table public.matchpulse_m1_claims
-  drop constraint if exists matchpulse_m1_claims_tokens_check;
-alter table public.matchpulse_m1_claims
-  drop constraint if exists mp_m1_claims_tokens_nonnegative;
+-- I vincoli del progetto reale sono:
+--   claims: CHECK (tokens > 0)
+--   inventario: CHECK (obtained_by IN ('direct','pack'))
+-- In Supabase i nomi dei vincoli possono variare.
+-- Eliminiamo SOLO i CHECK riferiti a quelle specifiche colonne,
+-- senza toccare le chiavi primarie, gli indici unici o altri vincoli.
+do $adjust_checks$
+declare
+  v_check record;
+begin
+  for v_check in
+    select conrelid::regclass as table_ref, conname
+      from pg_catalog.pg_constraint
+     where contype='c'
+       and (
+         (conrelid='public.matchpulse_m1_claims'::regclass
+          and pg_catalog.pg_get_constraintdef(oid) ilike '%tokens%')
+         or
+         (conrelid='public.matchpulse_m2_inventory'::regclass
+          and pg_catalog.pg_get_constraintdef(oid) ilike '%obtained_by%')
+       )
+  loop
+    execute format('alter table %s drop constraint %I',
+      v_check.table_ref, v_check.conname);
+  end loop;
+end
+$adjust_checks$;
+
 alter table public.matchpulse_m1_claims
   add constraint mp_m1_claims_tokens_nonnegative check(tokens>=0);
-
-alter table public.matchpulse_m2_inventory
-  drop constraint if exists matchpulse_m2_inventory_obtained_by_check;
-alter table public.matchpulse_m2_inventory
-  drop constraint if exists mp_m1_inventory_obtained_by;
 alter table public.matchpulse_m2_inventory
   add constraint mp_m1_inventory_obtained_by
     check(obtained_by in ('direct','pack','reward','reward_pack'));
