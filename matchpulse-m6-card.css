@@ -668,7 +668,7 @@ body .player-card[data-mp6-look="fc-dynasty"] {
   --t-shirt-shift: 0px; --t-foot-shift: 0px;
   --t-style-shift: 0px;
   --t-side-label: 11px; --t-side-value: 11px;
-  --t-ps-size: 100px;
+  --t-ps-size: 40px;
   --t-ps-x: -50%;
 
   --t-photo-x: 40%; --t-photo-y: 25%;
