@@ -401,10 +401,13 @@ begin
 end
 $$;
 
--- La vecchia funzione non deve restare come scorciatoia per riscattare
--- obiettivi duali senza soddisfare tutte le condizioni, o per ottenere
--- un token fittizio da un premio solo cosmetico.
-revoke all on function public.mp_m1_claim(text) from public,anon,authenticated;
+-- COMPATIBILITÀ DURANTE IL DEPLOY:
+-- NON revocare ancora mp_m1_claim(text): la versione pubblicata su
+-- main la usa fino al merge; revocarla adesso bloccherebbe i riscatti.
+-- DOPO il merge, eseguire MATCHPULSE_M1_POST_MERGE_SICUREZZA.sql.
+-- ATTENZIONE: fino alla revoca gli utenti con JS vecchio possono usare
+-- la vecchia RPC, quindi prima del merge non pubblicare obiettivi con
+-- logiche di riscatto nuove.
 
 revoke all on function public.mp_m1_founder_save_v2(jsonb)
  from public,anon,authenticated;
