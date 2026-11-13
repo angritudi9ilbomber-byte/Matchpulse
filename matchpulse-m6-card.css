@@ -659,7 +659,7 @@ body .player-card.mp6-rendered[data-mp4-emblem] {
 
 /* 01 — VERDALIA · COMUNE */
 body .player-card[data-mp6-look="fc-dynasty"] {
-  --t-card: 355px; --t-preview: 1000px;
+  --t-card: 1000px; --t-preview: 1000px;
   --t-ovr-x: 20%; --t-ovr-y: 17%;
   --t-ovr-size: 50px; --t-role-size: 20px;
 
@@ -693,7 +693,7 @@ body .player-card[data-mp6-look="fc-dynasty"] {
 
 /* 02 — SAKURA VESPER · RARA */
 body .player-card[data-mp6-look="fc-ice"] {
-  --t-card: 355px; --t-preview: 1000px;
+  --t-card: 1000px; --t-preview: 1000px;
   --t-ovr-x: 25%; --t-ovr-y: 22%;
   --t-ovr-size: 50px; --t-role-size: 20px;
 
@@ -728,7 +728,7 @@ body .player-card[data-mp6-look="fc-ice"] {
 
 /* 03 — AUREA ATLAS · EPICA */
 body .player-card[data-mp6-look="fc-neon"] {
-  --t-card: 355px; --t-preview: 1000px;
+  --t-card: 1000px; --t-preview: 1000px;
   --t-ovr-x: 30%; --t-ovr-y: 18%;
   --t-ovr-size: 50px; --t-role-size: 20px;
 
@@ -763,7 +763,7 @@ body .player-card[data-mp6-look="fc-neon"] {
 
 /* 04 — ASTRAL CROWN · LEGGENDARIA */
 body .player-card[data-mp6-look="fc-blackout"] {
-  --t-card: 355px; --t-preview: 1000px;
+  --t-card: 1000px; --t-preview: 1000px;
   --t-ovr-x: 25%; --t-ovr-y: 21%;
   --t-ovr-size: 45px; --t-role-size: 18px;
 
@@ -802,7 +802,7 @@ body .player-card[data-mp6-look="fc-blackout"] {
 
 /* 05 — ONE PIECE · RARA */
 body .player-card[data-mp6-look="op-nakama"] {
-  --t-card: 355px; --t-preview: 1000px;
+  --t-card: 1000px; --t-preview: 1000px;
   --t-ovr-x: 22%; --t-ovr-y: 17%;
   --t-ovr-size: 50px; --t-role-size: 25px;
 
@@ -837,7 +837,7 @@ body .player-card[data-mp6-look="op-nakama"] {
 
 /* 06 — TIMONE DELL'ORIZZONTE · EPICA */
 body .player-card[data-mp6-look="op-ocean-epic"] {
-  --t-card: 355px; --t-preview: 1000px;
+  --t-card: 1000px; --t-preview: 1000px;
   --t-ovr-x: 25%; --t-ovr-y: 20%;
   --t-ovr-size: 50px; --t-role-size: 25px;
 
@@ -872,7 +872,7 @@ body .player-card[data-mp6-look="op-ocean-epic"] {
 
 /* 07 — ODISSEA DELLA GRAND LINE · LEGGENDARIA */
 body .player-card[data-mp6-look="op-gear"] {
-  --t-card: 355px; --t-preview: 1000px;
+  --t-card: 1000px; --t-preview: 1000px;
   --t-ovr-x: 15%; --t-ovr-y: 12%;
   --t-ovr-size: 43px; --t-role-size: 16px;
 
