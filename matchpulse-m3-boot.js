@@ -104,8 +104,8 @@
       'matchpulse-m3.js?v=20261112-b3',
       'matchpulse-premium-r1.js?v=20261113-fix',
       'matchpulse-m4-badge.js?v=20261112-m4',
-      'matchpulse-m6-card.js?v=m6-20261112',
-      'matchpulse-m6-card.js?v=20261113-fix',
+'matchpulse-m6-card.js?v=20261113-fix',
+'matchpulse-m6-founder.js?v=20261113-founder3',
 
     ]) {
       await new Promise((resolve,reject)=>{

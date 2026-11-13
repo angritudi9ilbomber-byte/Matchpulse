@@ -56,11 +56,24 @@
  }
  async function mount(){const spot=document.getElementById('mp6FounderEntry');if(!spot)return;
    if(!S.checked&&typeof window.mpPromoSecureIsAdmin==='function'&&!S.checking){
-     S.checking=true;try{S.admin=(await window.mpPromoSecureIsAdmin(true))===true;S.checked=true;}
+     S.checking=true;try{S.admin=(await window.mpPromoSecureIsAdmin(true))===true;S.checked=S.admin;}
      catch(e){S.admin=false;console.warn('M6 Founder: verifica amministratore fallita',e);}
      finally{S.checking=false;}
    }
-   if(S.admin&&!spot.querySelector('button')){const b=document.createElement('button');b.type='button';b.textContent='✦ APRI FOUNDER LAB';b.onclick=show;spot.append(b);}
+   const liveSpot = document.getElementById('mp6FounderEntry');
+if(S.admin && liveSpot && !liveSpot.querySelector('button')){
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.textContent = '✦ APRI FOUNDER LAB';
+  b.onclick = show;
+  liveSpot.append(b);
+}
+if (liveSpot && !S.admin) {
+  liveSpot.textContent =
+    typeof window.mpPromoSecureIsAdmin === 'function'
+      ? 'FOUNDER: verifica amministratore non superata'
+      : 'FOUNDER: funzione amministratore non caricata';
+}
  }
  window.mpM6FounderMount=()=>{void mount();};
  window.mpM6FounderClose=close;
