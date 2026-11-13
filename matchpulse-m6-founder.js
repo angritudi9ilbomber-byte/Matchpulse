@@ -13,7 +13,18 @@
  function sample(){
    const c=db(),pack=c.packs.find(x=>x.id===pickPack()),forced=selectedRarity();
    if(!pack)return null;
-   let eligible=c.skins.filter(x=>x.active!==false&&!S.owned.has(x.id) && (pack.theme==='any'||pack.theme===x.theme));
+   
+let eligible = c.skins.filter(x =>
+  x.active !== false &&
+  !S.owned.has(x.id) &&
+  (pack.theme === "any" || pack.theme === x.theme) &&
+  (
+    pack.id !== "pack_collaborazioni" ||
+    x.theme !== "matchpulse"
+  )
+);
+
+   
    if(forced!=='auto')eligible=eligible.filter(x=>x.rarity===forced);
    else {
      const weights=['common','rare','epic','legendary'].map(r=>({rarity:r,w:eligible.some(x=>x.rarity===r)?Number(pack[r+'_weight']||0):0})).filter(x=>x.w>0);
@@ -36,7 +47,32 @@
    refreshInventory();
  }
  function refreshInventory(){const el=document.getElementById('mp6FounderOwned');if(el)el.textContent='Cosmetici di test: '+S.owned.size+' · Ultimo: '+(S.revealed[0]||'nessuno');}
- function simulate(){const result=sample();if(!result){notice('Pool virtuale esaurito o nessuna rarità disponibile. Cambia pacchetto oppure resetta il Lab.');return;}reveal(result.id);}
+ 
+function simulate() {
+  const result = sample();
+
+  if (!result) {
+    notice("Pool virtuale esaurito. Cambia pacchetto o resetta il Lab.");
+    return;
+  }
+
+  if (typeof window.mpM2PreviewReward !== "function") {
+    notice("Aggiorna prima matchpulse-m2.js.");
+    return;
+  }
+
+  S.owned.add(result.id);
+  S.revealed.unshift(result.title);
+  refreshInventory();
+
+  const box = document.getElementById("mp6FounderReveal");
+  if (box) box.innerHTML = "";
+
+  notice("Estrazione virtuale. Nessun acquisto reale.");
+
+  window.mpM2PreviewReward(result.id, pickPack());
+}
+
  function show(){if(!S.admin)return;close();S.founderOpen=true;
    const c=db();const host=document.createElement('div');host.className='mp6-founder-overlay mp6-overlay';
    host.innerHTML=`<div class="mp6-modal-backdrop" onclick="mpM6FounderClose()"></div><section class="mp6-founder-dialog" role="dialog" aria-modal="true" aria-label="Laboratorio Founder">

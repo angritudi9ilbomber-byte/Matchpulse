@@ -77,11 +77,22 @@
     return S.ledger.filter(l => l.user_id === S.userId && l.season_id === todayRome())
       .reduce((value,l) => value + Number(l.amount || 0), 0);
   }
-  function eligibleSkins(pack) {
-    return S.skins.filter(s => s.active !== false && !owned(s.id) &&
-      (pack.theme === "any" || s.theme === pack.theme) &&
-      Number(pack[`${s.rarity}_weight`] || 0) > 0);
-  }
+  
+function eligibleSkins(pack) {
+  return S.skins.filter(s =>
+    s.active !== false &&
+    !owned(s.id) &&
+    (pack.theme === "any" || s.theme === pack.theme) &&
+    (
+      pack.id !== "pack_collaborazioni" ||
+      ["onepiece","dragonball","cyberpunk","formula1"]
+        .includes(s.theme)
+    ) &&
+    Number(pack[`${s.rarity}_weight`] || 0) > 0
+  );
+}
+
+  
   function packOdds(pack) {
     const available = eligibleSkins(pack);
     const weights = Object.keys(RARITIES).map(rarity => ({
@@ -233,14 +244,68 @@ const m6Cover = theme => {
     </section>`;
   }
   function m6CollectionTile(theme){const x=M6_COLLECTIONS[theme];return `<button class="mp6-collection-tile" type="button" data-theme="${theme}" onclick="mpM6Collection('${theme}')"><img src="${m6Cover(theme)}" alt="" loading="lazy"><span><small>${x.tag}</small><strong>${x.name}</strong><em>ESPLORA LA COLLEZIONE ↗</em></span></button>`;}
-  function m6PackCard(p){
-    const odds=packOdds(p), disabled=odds.length===0;
-    const kind=p.theme==='any'?'matchpulse':p.theme, pic=m6Cover(kind);
-    return `<article class="mp6-pack"><div class="mp6-pack-picture"><div class="mp6-pack-tilt"><img src="${pic}" alt="" loading="lazy"><span>MATCHPULSE</span><strong>PACK</strong></div></div>
-       <div class="mp6-pack-info"><small>${esc(M6_COLLECTIONS[p.theme]?.name||'TUTTE LE COLLEZIONI')}</small><h3>${esc(p.title)}</h3><p>${esc(p.description)}</p>
-       <div class="mp6-odds">${odds.length?odds.map(o=>`<span>${RARITIES[o.rarity].name} <b>${o.percent}%</b></span>`).join(''):'<span>PACCHETTO ESAURITO</span>'}</div>
-       <div class="mp6-pack-footer"><b>✦ ${Number(p.price)||0}</b><button type="button" class="mp6-action" ${disabled||S.busy?'disabled':''} onclick="mpM2Open('pack','${esc(p.id)}')">${disabled?'ESAURITO':'APRI PACCHETTO'}</button></div></div></article>`;
-  }
+  
+function m6PackCard(p) {
+  const odds = packOdds(p);
+  const disabled = odds.length === 0;
+  const collab = p.id === "pack_collaborazioni";
+  const kind = p.theme === "any" ? "matchpulse" : p.theme;
+
+  const picture = collab
+    ? `<div class="mp6-pack-collab-images">
+        ${["onepiece","dragonball","cyberpunk","formula1"]
+          .map(t => `<img src="${m6Cover(t)}" alt="">`)
+          .join("")}
+       </div>`
+    : `<img src="${m6Cover(kind)}" alt="" loading="lazy">`;
+
+  const label = collab
+    ? "QUATTRO UNIVERSI"
+    : p.theme === "matchpulse"
+      ? "FC ORIGINALS"
+      : "TUTTE LE COLLEZIONI";
+
+  return `
+    <article class="mp6-pack">
+      <div class="mp6-pack-picture">
+        <div class="mp6-pack-tilt">
+          ${picture}
+          <span>MATCHPULSE</span>
+          <strong>PACK</strong>
+        </div>
+      </div>
+      <div class="mp6-pack-info">
+        <small>${label}</small>
+        <h3>${esc(p.title)}</h3>
+        <p>${esc(p.description)}</p>
+
+        <div class="mp6-odds">
+          ${odds.length
+            ? odds.map(o =>
+                `<span>${RARITIES[o.rarity].name}
+                  <b>${o.percent}%</b></span>`
+              ).join("")
+            : "<span>POOL ESAURITO</span>"}
+        </div>
+
+        <div class="mp6-pack-footer">
+          <b>✦ ${Number(p.price) || 0}</b>
+          <div class="mp6-pack-actions">
+            <button class="mp6-action mp6-outline"
+              onclick="mpM2PreviewPack('${esc(p.id)}')">
+              ANTEPRIMA
+            </button>
+            <button class="mp6-action"
+              ${disabled || S.busy ? "disabled" : ""}
+              onclick="mpM2Open('pack','${esc(p.id)}')">
+              ${disabled ? "ESAURITO" : "ACQUISTA E APRI"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </article>`;
+}
+
   function drawStore(){
     if(!MAIN||route!=='store')return;
     const total=S.skins.filter(s=>s.active!==false).length;
@@ -351,23 +416,113 @@ const m6Cover = theme => {
       if (buyButton) {buyButton.disabled=false;buyButton.textContent="RIPROVA ACQUISTO";}
     } finally {S.busy=false;}
   }
-  function showReveal() {
-    if (!S.reveal) return;
-    const skin=S.reveal.skin;
-    const rarity=skin.rarity || "common";
-    overlay(`<div class="mp-m2-shade" onclick="mpM2FinishReveal()"></div><div class="mp-m2-reveal" role="dialog" aria-modal="true" aria-label="Apertura pacchetto">
-      <button class="mp6-reveal-x" onclick="mpM2FinishReveal()" aria-label="Chiudi">✕</button><p class="mp-m2-kicker">MATCHPULSE / PACK REVEAL</p>
-      <div class="mp-m2-reveal-scene ${S.revealOpened?"is-open":""}">
-        <div class="mp-m2-reveal-sealed"><span>✦</span><strong>ULTIMATE PACK</strong><small>TOCCA PER APRIRE</small></div>
-        <div class="mp-m2-reveal-skin">${m6Artwork(skin)}${badge(rarity)}</div>
+  
+function showReveal() {
+  if (!S.reveal) return;
+
+  const { skin, pack } = S.reveal;
+  const demo = Boolean(S.reveal.demo);
+  const collab = pack?.id === "pack_collaborazioni";
+
+  const cover = collab
+    ? `<div class="mp6-pack-collab-images">
+        ${["onepiece","dragonball","cyberpunk","formula1"]
+          .map(t => `<img src="${m6Cover(t)}" alt="">`)
+          .join("")}
+       </div>`
+    : `<img class="mp6-pack-open-cover"
+        src="${m6Cover(
+          pack?.theme && pack.theme !== "any"
+            ? pack.theme : "matchpulse"
+        )}" alt="">`;
+
+  overlay(`
+    <div class="mp-m2-shade"
+      onclick="mpM2FinishReveal()"></div>
+
+    <div class="mp-m2-reveal" role="dialog"
+      aria-modal="true" aria-label="Apertura pacchetto">
+
+      <button class="mp6-reveal-x"
+        onclick="mpM2FinishReveal()"
+        aria-label="Chiudi">✕</button>
+
+      <p class="mp-m2-kicker">
+        ${demo
+          ? "ANTEPRIMA GRATUITA"
+          : "MATCHPULSE / APERTURA REALE"}
+      </p>
+
+      <div class="mp-m2-reveal-scene">
+        <div class="mp-m2-reveal-sealed">
+          ${cover}
+          <span>✦</span>
+          <strong>${esc(pack?.title || "MATCHPULSE PACK")}</strong>
+          <small>TOCCA PER APRIRE</small>
+        </div>
+
+        <div class="mp-m2-reveal-skin">
+          ${m6Artwork(skin)}
+          ${badge(skin.rarity || "common")}
+        </div>
       </div>
-      <div class="mp-m2-reveal-footer"><h2>${S.revealOpened?esc(skin.title):"COSA HAI TROVATO?"}</h2>
-      <p>${S.revealOpened ? esc(THEMES[skin.theme]?.name||skin.theme) : "Una skin è già stata assegnata al tuo inventario."}</p>
-      ${S.revealOpened ? `<button class="mp-m2-confirm-buy" onclick="mpM6Equip('${esc(skin.id)}')">EQUIPAGGIA ORA</button>
-        <button class="mp-m2-cancel" onclick="mpM2FinishReveal()">VAI ALL'INVENTARIO</button>` :
-        `<button class="mp-m2-confirm-buy" onclick="mpM2RevealOpen()">APRI IL PACCHETTO ✦</button>`}
-      </div></div>`);
+
+      <div class="mp-m2-reveal-footer">
+        <h2>${esc(pack?.title || "NUOVA ESTETICA")}</h2>
+        <p>${demo
+          ? "Estrazione dimostrativa: non spendi token e non ottieni l’oggetto."
+          : "La ricompensa è stata assegnata al tuo inventario."}
+        </p>
+        <button class="mp-m2-confirm-buy"
+          onclick="mpM2RevealOpen()">
+          APRI IL PACCHETTO ✦
+        </button>
+      </div>
+    </div>`);
+}
+
+function previewReward(pack, forcedSkinId = "") {
+  if (!pack) return;
+
+  let skin = forcedSkinId ? findSkin(forcedSkinId) : null;
+
+  if (!skin) {
+    const pool = eligibleSkins(pack);
+    const tiers = packOdds(pack);
+
+    let n = Math.random() *
+      tiers.reduce((a, x) => a + x.percent, 0);
+
+    let rarity = tiers[tiers.length - 1]?.rarity;
+
+    for (const tier of tiers) {
+      n -= tier.percent;
+
+      if (n <= 0) {
+        rarity = tier.rarity;
+        break;
+      }
+    }
+
+    const options = pool.filter(
+      x => x.rarity === rarity
+    );
+
+    skin = options[
+      Math.floor(Math.random() * options.length)
+    ];
   }
+
+  if (!skin) {
+    toastMessage("Nessuna estetica disponibile per questa anteprima.");
+    return;
+  }
+
+  S.reveal = { skin, pack, demo: true };
+  S.revealOpened = false;
+  showReveal();
+}
+
   function decorateCards() {
     const skin = findSkin(equippedId());
     const apply = root => {
@@ -481,41 +636,93 @@ const m6Cover = theme => {
     await equip(equippedId()===id ? null : id);drawStore();
   };
   
+
+window.mpM2PreviewPack = id =>
+  previewReward(findPack(id));
+
+window.mpM2PreviewReward = (skinId, packId) => {
+  const skin = findSkin(skinId);
+  if (!skin) return;
+
+  previewReward(
+    findPack(packId) || findPack("pack_classic"),
+    skin.id
+  );
+};
+
 window.mpM2RevealOpen = () => {
   if (!S.reveal || S.revealOpened) return;
 
-  const scene = document.querySelector('.mp-m2-reveal-scene');
+  const opened = S.reveal;
+  const scene = document.querySelector(
+    ".mp-m2-reveal-scene"
+  );
+  if (!scene) return;
+
   S.revealOpened = true;
 
-  if (!scene) {
-    showReveal();
-    return;
-  }
-
-  const button = scene.closest('.mp-m2-reveal')
-    ?.querySelector('.mp-m2-confirm-buy');
+  const button = document.querySelector(
+    ".mp-m2-reveal-footer .mp-m2-confirm-buy"
+  );
 
   if (button) {
     button.disabled = true;
-    button.textContent = 'APERTURA IN CORSO…';
+    button.textContent = "APERTURA IN CORSO…";
   }
 
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
-      if (scene.isConnected) {
-        scene.classList.add('is-open');
+      if (scene.isConnected && S.reveal === opened) {
+        scene.classList.add("is-open");
       }
     });
   });
 
   setTimeout(() => {
-    if (S.revealOpened && S.reveal && scene.isConnected) {
-      showReveal();
-    }
+    if (S.reveal !== opened || !scene.isConnected) return;
+
+    const footer = document.querySelector(
+      ".mp-m2-reveal-footer"
+    );
+    if (!footer) return;
+
+    const title = esc(opened.skin.title);
+    const theme = esc(
+      THEMES[opened.skin.theme]?.name ||
+      opened.skin.theme
+    );
+
+    footer.innerHTML = opened.demo
+      ? `<h2>${title}</h2>
+         <p>${theme} · SIMULAZIONE: nessun acquisto o token speso.</p>
+         <button class="mp-m2-confirm-buy"
+           onclick="mpM2FinishReveal()">
+           CHIUDI ANTEPRIMA
+         </button>`
+      : `<h2>${title}</h2>
+         <p>${theme} · Estetica aggiunta al tuo inventario.</p>
+         <button class="mp-m2-confirm-buy"
+           onclick="mpM6Equip('${esc(opened.skin.id)}')">
+           EQUIPAGGIA ORA
+         </button>
+         <button class="mp-m2-cancel"
+           onclick="mpM2FinishReveal()">
+           VAI ALL'INVENTARIO
+         </button>`;
   }, 1000);
 };
 
-  window.mpM2FinishReveal=()=>{closeOverlay();S.tab="inventory";if(route==="store") drawStore();};
+window.mpM2FinishReveal = () => {
+  const demo = Boolean(S.reveal?.demo);
+
+  closeOverlay();
+
+  if (!demo) {
+    S.tab = "inventory";
+    if (route === "store") drawStore();
+  }
+};
+
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.querySelector('.mp-m2-modal-host'))window.mpM2Close();});
   window.mpM2AfterWalletChange = () => { S.lastLoad=0; void load(true); };
   window.mpM2Inspect=()=>({

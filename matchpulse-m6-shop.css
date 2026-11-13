@@ -82,3 +82,127 @@
 .mp6-cosmetic-top .mp6-art-frame img{object-fit:contain!important}
 .mp6-store .mp6-collection-tile img{object-fit:cover!important}
 .mp6-art-frame .mp6-art-type{pointer-events:none}
+
+
+/* TRE PACCHETTI — LAYOUT E GRAFICA */
+
+.mp6-pack-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.mp6-pack-actions button {
+  min-height: 39px;
+}
+
+.mp6-pack-collab-images {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 2px;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.mp6-pack-tilt .mp6-pack-collab-images img,
+.mp-m2-reveal-sealed .mp6-pack-collab-images img {
+  position: static !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  filter: brightness(.74) saturate(1.2);
+}
+
+/* STESSA GRAFICA NEL PREVIEW E NELL'APERTURA REALE */
+
+.mp-m2-reveal-sealed {
+  isolation: isolate;
+  overflow: hidden;
+  border: 2px solid #f3d78b;
+  box-shadow:
+    0 0 25px #b66cff88,
+    0 0 65px #a13fff55,
+    0 20px 55px #000a;
+}
+
+.mp-m2-reveal-sealed .mp6-pack-open-cover {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(.65) saturate(1.3);
+}
+
+.mp-m2-reveal-sealed > span,
+.mp-m2-reveal-sealed > strong,
+.mp-m2-reveal-sealed > small {
+  position: relative;
+  z-index: 3;
+  text-shadow: 0 2px 8px #000, 0 0 14px #000;
+}
+
+.mp-m2-reveal-sealed > strong {
+  max-width: 94%;
+  font-size: 13px;
+  line-height: 1.2;
+  text-align: center;
+}
+
+/* Bagliore al momento dell'apertura */
+
+.mp-m2-reveal-scene.is-open::after {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  z-index: 5;
+  pointer-events: none;
+  background: radial-gradient(
+    circle,
+    #fffbdfff 0%,
+    #f5c86dbb 13%,
+    #b65cff55 30%,
+    transparent 62%
+  );
+  animation: mp6-pack-burst 1s ease-out forwards;
+}
+
+@keyframes mp6-pack-burst {
+  0% {
+    opacity: 0;
+    transform: scale(.25);
+  }
+  28% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.7);
+  }
+}
+
+@media(max-width:540px) {
+  .mp6-pack-actions {
+    width: 100%;
+  }
+
+  .mp6-pack-actions button {
+    flex: 1 1 100px;
+  }
+
+  .mp6-pack-footer {
+    align-items: flex-start;
+  }
+}
+
+@media(prefers-reduced-motion:reduce) {
+  .mp-m2-reveal-scene.is-open::after {
+    animation: none;
+    opacity: 0;
+  }
+}
