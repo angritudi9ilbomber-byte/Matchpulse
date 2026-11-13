@@ -16,7 +16,7 @@ begin
  if to_regclass('public.matchpulse_m2_inventory') is null then
    raise exception 'Prima installa il Negozio M2.';
  end if;
-end
+end;
 $check$;
 
 alter table public.matchpulse_m1_challenges
@@ -60,7 +60,7 @@ begin
     execute format('alter table %s drop constraint %I',
       v_check.table_ref, v_check.conname);
   end loop;
-end
+end;
 $adjust_checks$;
 
 alter table public.matchpulse_m1_claims
@@ -166,7 +166,7 @@ begin
  where id=v_id;
 
  return v_id;
-end
+end;
 $$;
 
 -- Unico riscatto atomico. Controlla ruolo, periodo, soglie, inventario e premi
@@ -328,8 +328,8 @@ begin
    'challenge_id',v_ch.id,'challenge',v_ch.id,
    'pack_id',v_pack,'skin_awarded',v_awarded,'already_owned',v_already
  );
-end
-$;
+end;
+$$;
 
 -- COMPATIBILITÀ COMPLETA:
 -- anche il vecchio client continua a invocare mp_m1_claim(text).
@@ -337,11 +337,11 @@ $;
 -- cosmetici e le condizioni Gol E/O Assist, senza cambiare firma o output tokens.
 create or replace function public.mp_m1_claim(p_challenge_id text)
 returns jsonb language plpgsql security definer set search_path=''
-as $
+as $$
 begin
   return public.mp_m1_claim_rewards(p_challenge_id);
-end
-$;
+end;
+$$;
 
 -- L'implementazione originale rimane storicizzata, ma non deve
 -- essere accessibile direttamente, perché ignora reward_config e goal_logic.
@@ -350,7 +350,7 @@ begin
   if to_regprocedure('public.mp_m1_claim_base(text)') is not null then
     execute 'revoke all on function public.mp_m1_claim_base(text) from public,anon,authenticated';
   end if;
-end
+end;
 $revoke_legacy_base$;
 
 -- Apertura gratuita, estrae con le stesse fasce di rarità del negozio M6.
@@ -423,7 +423,7 @@ begin
 
  return jsonb_build_object(
    'skin_id',v_skin,'pack_id',v_pack.id,'replayed',false);
-end
+end;
 $$;
 
 -- Il vecchio endpoint è ora un alias sicuro della nuova RPC.
