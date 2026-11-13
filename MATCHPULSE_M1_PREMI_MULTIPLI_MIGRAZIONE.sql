@@ -199,6 +199,8 @@ declare
  v_skin_id text;
 begin
  if v_user is null then raise exception 'Accesso richiesto'; end if;
+ -- Mantiene l'attivazione programmata del vecchio sistema, se presente.
+ perform public.mp_m1_publish_due();
  v_y:=extract(year from v_today)::int-
    case when extract(month from v_today)<9 then 1 else 0 end;
  v_season:=v_y::text||'-'||(v_y+1)::text;
