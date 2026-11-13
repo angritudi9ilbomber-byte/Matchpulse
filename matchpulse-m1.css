@@ -202,3 +202,21 @@ body {
 .mp-m1-records>h2 {font-size:23px;font-weight:1000;letter-spacing:-.04em;margin:6px 0 14px;}
 .mp-m1-records .goals-page-card {border-color:var(--m1-line) !important;
   background:linear-gradient(130deg,rgba(32,36,63,.92),rgba(13,17,34,.96)) !important;}
+
+/* ===============================================================
+   PREMI M1 V2 - miniature e pacchetti ottenuti dalle Sfide
+   =============================================================== */
+.mp-m1-prizes{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap;max-width:55%}
+.mp-m1-prize{display:inline-flex;align-items:center;gap:5px;padding:5px 7px;border-radius:8px;background:rgba(205,166,255,.11);border:1px solid rgba(205,166,255,.27);color:#ffe29b;font-size:11px;font-weight:800;line-height:1.2}
+.mp-m1-prize img{width:24px;height:28px;object-fit:contain;flex-shrink:0;border-radius:4px}
+.mp-m1-bonus{border:1px solid rgba(205,166,255,.3);border-radius:15px;padding:12px;margin-bottom:16px;background:rgba(58,35,99,.35)}
+.mp-m1-bonus h3{margin:0 0 10px;font-size:13px;color:#f4d994}
+.mp-m1-bonus-item{display:flex;align-items:center;gap:9px;margin-top:7px}
+.mp-m1-bonus-item img{width:42px;height:45px;object-fit:cover;border-radius:6px}
+.mp-m1-bonus-item strong{flex:1;font-size:12px}
+.mp-m1-bonus-item button{border:1px solid #a574e9;border-radius:9px;background:#6625a5;color:white;font-weight:800;font-size:11px;padding:9px}
+@media(max-width:500px){
+  .mp-m1-prizes{justify-content:flex-start;max-width:100%}
+  .mp-m1-prize{font-size:10px}
+  .mp-m1-bonus-item{flex-wrap:wrap}
+}

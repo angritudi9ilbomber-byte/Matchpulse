@@ -1,0 +1,4 @@
+-- DEPRECATO: NON ESEGUIRE.
+-- La migrazione principale ora reindirizza in modo sicuro
+-- mp_m1_claim(text) a mp_m1_claim_rewards(text).
+-- Questa seconda migrazione non serve più e non contiene comandi SQL.

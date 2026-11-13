@@ -1,0 +1,29 @@
+MATCHPULSE — PREMI MULTIPLI E MODALITÀ GOL/ASSIST
+Branch: feat/matchpulse-founders-rewards (NON pubblicato su main)
+
+NOVITÀ
+1) Editor Founder: token (anche 0), pacchetto, skin/decorazione ed emblema combinabili.
+2) Miniature dei premi e pacchetti vinti apribili gratuitamente nelle Sfide.
+3) Gol + Assist: raggiungere ENTRAMBE le soglie impostate.
+4) Gol O Assist: basta raggiungere UNA delle due soglie.
+5) "Contributi totali (somma)" resta come vecchia modalità separata.
+6) Acquisto/inventario e CSS delle 16 carte non modificati.
+
+ATTIVAZIONE (NON ANCORA ESEGUITA):
+- Eseguire backup del database MatchPulse corretto.
+- Verificare che siano installati il Founder immediato e M2/M6.
+- Prima del merge: eseguire MATCHPULSE_M1_PREMI_MULTIPLI_MIGRAZIONE.sql sul progetto corretto dopo backup.
+- La migrazione aggiorna il vecchio mp_m1_claim(text) come alias di mp_m1_claim_rewards(text): la versione attuale resta compatibile e non serve revocare il vecchio endpoint.
+- La precedente migrazione di post-merge è deprecata: NON ESEGUIRLA.
+- Verificare che siano state create le 3 RPC:
+  mp_m1_founder_save_v2, mp_m1_claim_rewards, mp_m1_open_reward_pack.
+- Testare con account Founder e account amico: goal manuale con 0 token e pacchetto,
+  goal con skin/emblema già posseduto, goal con 10 gol E 10 assist,
+  goal con 10 gol O 10 assist, tentativo di doppio riscatto.
+- Solo dopo i test, integrare il branch in main.
+
+ATTENZIONE: il backend non è stato aggiornato automaticamente.
+La connessione Supabase disponibile a ChatGPT NON è il progetto MatchPulse:
+non eseguire questa migrazione in un progetto diverso.
+Le funzioni SQL sono predisposte ma non testate sul database live.
+Fino al merge e alla migrazione, la versione live rimane invariata.

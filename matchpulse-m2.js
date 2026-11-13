@@ -422,6 +422,7 @@ function showReveal() {
 
   const { skin, pack } = S.reveal;
   const demo = Boolean(S.reveal.demo);
+  const gift = Boolean(S.reveal.gift);
   const collab = pack?.id === "pack_collaborazioni";
 
   const cover = collab
@@ -450,6 +451,7 @@ function showReveal() {
       <p class="mp-m2-kicker">
         ${demo
           ? "ANTEPRIMA GRATUITA"
+          : gift ? "PACCHETTO VINTO CON LE SFIDE"
           : "MATCHPULSE / APERTURA REALE"}
       </p>
 
@@ -636,6 +638,20 @@ function previewReward(pack, forcedSkinId = "") {
     await equip(equippedId()===id ? null : id);drawStore();
   };
   
+
+// Pacchetti ottenuti completando le Sfide (nessun acquisto, nessuna spesa).
+window.mpM2RevealWonPack = async result => {
+  if (!result?.skin_id || !result?.pack_id) return;
+  await load(true);
+  const skin=findSkin(result.skin_id);
+  if (!skin) {
+    toastMessage("Premio ottenuto, ma non riesco a mostrare l'anteprima.");
+    return;
+  }
+  S.reveal={skin,pack:findPack(result.pack_id),gift:true,demo:false};
+  S.revealOpened=false;
+  showReveal();
+};
 
 window.mpM2PreviewPack = id =>
   previewReward(findPack(id));
