@@ -25,7 +25,7 @@
   };
   const store = {
     tab: "weekly", ready: false, busy: false, loading: false,
-    error: "", userId: null, lastLoad: 0, catalogue: [],
+    error: "", userId: null, lastLoad: 0, catalogue: [], bonusPacks: [],
     events: [], locks: [], manual: [], claims: [], ledger: []
   };
 
@@ -126,6 +126,12 @@ if (publishError) throw publishError;
       if (answers[i].error) throw answers[i].error;
       store[cols[i] === "challenges" ? "catalogue" : cols[i]] = answers[i].data || [];
     }
+    const ctx=timeContext();
+    const bonus=await db.from("matchpulse_m1_bonus_packs").select("*")
+      .eq("user_id",store.userId).eq("season_id",ctx.season)
+      .is("opened_at",null).order("created_at");
+    if(bonus.error)throw bonus.error;
+    store.bonusPacks=bonus.data||[];
   }
   async function load(force = false) {
     if (store.loading || store.busy) return;
@@ -197,6 +203,76 @@ if (publishError) throw publishError;
     return store.ledger.filter(x => x.user_id === store.userId && x.season_id === ctx.season)
       .reduce((sum,x) => sum + (Number(x.amount) || 0), 0);
   }
+
+  const MP_SKIN_ART={
+    mp_gold_dynasty:"fc_comune.webp",mp_icebreak:"fc_rara.webp",
+    mp_neon_pulse:"fc_epica.webp",mp_blackout:"fc_leggendaria.webp",
+    op_straw:"onepiece.png",op_nakama:"op_rara.webp",
+    op_ocean_epic:"op_epica.webp",op_gear:"op_leggendaria.webp",
+    db_kame:"dragonball.png",db_saiyan:"db_rara.webp",
+    db_aura_epic:"db_epica.webp",db_ultra:"db_leggendaria.webp",
+    cp_night:"cyberpunk.png",cp_edge:"cp_rara.webp",
+    cp_neon_epic:"cp_epica.webp",cp_samurai:"cp_leggendaria.webp",
+    f1_grid:"formula1.png",f1_pole:"f1_rara.webp",
+    f1_racing_epic:"f1_epica.webp",f1_champ:"f1_leggendaria.webp"
+  };
+  const MP_REWARD_PACKS={
+    pack_classic:["Classico","fc_epica.webp"],
+    pack_fc_originals:["FC Originals","fc_leggendaria.webp"],
+    pack_collaborazioni:["Collaborazioni","op_leggendaria.webp"]
+  };
+  function prizeArt(id){
+    const file=MP_SKIN_ART[id];
+    if(!file)return "";
+    const folder=["op_straw","db_kame","cp_night","f1_grid"].includes(id)
+      ?"mp-m4-art/":"mp-m5-art/";
+    return folder+file;
+  }
+  function rewardDetails(ch){
+    const r=ch.reward_config||{};
+    const tokens=Number.isFinite(Number(r.tokens))?Math.max(0,Number(r.tokens)):digits(ch.reward);
+    return {tokens,pack:r.pack_id||"",skin:r.skin_id||"",emblem:r.emblem_id||""};
+  }
+  function rewardDisplay(ch){
+    const r=rewardDetails(ch), out=[];
+    if(r.tokens)out.push('<span class="mp-m1-prize">✦ '+r.tokens+' token</span>');
+    if(r.pack){
+      const meta=MP_REWARD_PACKS[r.pack]||[r.pack,"fc_epica.webp"];
+      out.push('<span class="mp-m1-prize"><img src="mp-m5-art/'+html(meta[1])+'" alt="">'+html(meta[0])+'</span>');
+    }
+    for(const [key,kind] of [["skin","Skin"],["emblem","Emblema"]]){
+      if(!r[key])continue;
+      const item=window.mpM6Catalog?.().skins?.find(x=>x.id===r[key]);
+      const src=prizeArt(r[key]);
+      out.push('<span class="mp-m1-prize">'+(src?'<img src="'+src+'" alt="">':'')+html(item?.title||kind+" "+r[key])+'</span>');
+    }
+    return out.join("")||'<span class="mp-m1-prize">Premio da configurare</span>';
+  }
+  function dualProgress(ch,ctx){
+    const role=ch.metric.startsWith("role_"),events=eligibleEvents(ch,ctx)
+      .filter(m=>!role||m.role===roleLock(ctx));
+    const goals=events.reduce((a,m)=>a+digits(m.goals),0);
+    const assists=events.reduce((a,m)=>a+digits(m.assists),0);
+    const gt=Math.max(1,digits(ch.goals_target||ch.target));
+    const at=Math.max(1,digits(ch.assists_target||ch.target));
+    const goalRatio=Math.min(1,goals/gt),assistRatio=Math.min(1,assists/at);
+    const both=ch.goal_logic==="both";
+    return {
+      ready:both?goals>=gt&&assists>=at:goals>=gt||assists>=at,
+      percent:Math.floor((both?(goalRatio+assistRatio)/2:Math.max(goalRatio,assistRatio))*100),
+      label:goals+" / "+gt+" gol "+(both?"E":"O")+" "+assists+" / "+at+" assist"
+    };
+  }
+  function wonPackList(){
+    const list=store.bonusPacks||[];
+    if(!list.length)return "";
+    return '<section class="mp-m1-bonus"><h3>🎁 PACCHETTI VINTI · '+list.length+'</h3>'+
+      list.map(p=>{
+        const pack=MP_REWARD_PACKS[p.pack_id]||[p.pack_id,"fc_epica.webp"];
+        return '<div class="mp-m1-bonus-item"><img src="mp-m5-art/'+html(pack[1])+'" alt=""><strong>Pacchetto '+html(pack[0])+'</strong>'+
+          '<button type="button" onclick="mpM1OpenRewardPack(\''+html(p.id)+'\')">APRI GRATIS</button></div>';
+      }).join('')+'</section>';
+  }
   function challengeCards(scope, ctx) {
     const lockedRole = roleLock(ctx);
     const list = store.catalogue.filter(ch => ch.active !== false && ch.scope === scope
@@ -207,20 +283,23 @@ if (publishError) throw publishError;
       const value = progress(ch, ctx);
       const goal = Math.max(1, digits(ch.target));
       const done = isClaimed(ch, ctx);
-      const ratio = Math.min(100, Math.floor(value / goal * 100));
+      const dual=ch.goal_logic==="both"||ch.goal_logic==="either"
+        ?dualProgress(ch,ctx):null;
+      const reached=dual?dual.ready:value>=goal;
+      const ratio=dual?dual.percent:Math.min(100,Math.floor(value/goal*100));
       return `<article class="mp-m1-challenge ${done ? "is-claimed" : ""}">
         <div class="mp-m1-challenge-head">
           <div><strong>${html(ch.title)}</strong><p>${html(ch.description)}</p></div>
-          <span class="mp-m1-reward">✦ ${digits(ch.reward)} token</span>
+          <div class="mp-m1-prizes">${rewardDisplay(ch)}</div>
         </div>
         <div class="mp-m1-progress-line"><span style="width:${ratio}%"></span></div>
         <div class="mp-m1-challenge-foot">
-          <span class="mp-m1-count">${Math.min(value, goal)} / ${goal}</span>
+          <span class="mp-m1-count">${dual?html(dual.label):Math.min(value,goal)+" / "+goal}</span>
           ${ch.metric === "manual" && !done ? `<div class="mp-m1-stepper">
             <button type="button" ${store.busy || !value ? "disabled" : ""} onclick="mpM1Adjust('${ch.id}',-1)" aria-label="Sottrai una azione">−</button>
             <button type="button" ${store.busy || value >= goal ? "disabled" : ""} onclick="mpM1Adjust('${ch.id}',1)" aria-label="Aggiungi una azione">+</button>
             </div>` : ""}
-          <button class="mp-m1-redeem" type="button" ${store.busy || done || value < goal ? "disabled" : ""}
+          <button class="mp-m1-redeem" type="button" ${store.busy || done || !reached ? "disabled" : ""}
             onclick="mpM1Claim('${ch.id}')">${done ? "Riscattato ✓" : "Riscatta"}</button>
         </div>
       </article>`;
@@ -245,7 +324,7 @@ if (publishError) throw publishError;
         `<button type="button" role="tab" aria-selected="${store.tab === id}" class="${store.tab === id ? "active" : ""}" onclick="mpM1Tab('${id}')">${label}</button>`).join("")}</div>
       ${store.error ? `<div class="mp-m1-error"><strong>Configurazione sfide necessaria</strong><p>${html(store.error)}</p><button type="button" onclick="mpM1Retry()">Riprova</button></div>` : ""}
       ${store.loading && !store.ready ? '<div class="mp-m1-loading">Caricamento delle sfide…</div>' : ""}
-      ${store.ready ? `<div class="mp-m1-challenges-list">${challengeCards(store.tab,ctx)}</div>` : ""}
+      ${store.ready ? wonPackList()+`<div class="mp-m1-challenges-list">${challengeCards(store.tab,ctx)}</div>` : ""}
       ${store.ready && store.tab === "role" ? `<div class="mp-m1-hint">Ruolo di questa settimana: <strong>${html(ROLE_LABELS[roleLock(ctx)])}</strong>. Rimane bloccato fino al prossimo lunedì per evitare riscatti multipli.</div>` : ""}
       ${store.ready && store.tab === "milestone" ? '<div class="mp-m1-hint">Le azioni speciali si registrano con i pulsanti + e −. I traguardi si riscattano una sola volta per stagione.</div>' : ""}
         </section>`;
@@ -286,10 +365,25 @@ if (publishError) throw publishError;
     if (error) throw error;
   });
   window.mpM1Claim = id => perform(async () => {
-    const {data, error} = await client().rpc("mp_m1_claim", {p_challenge_id: id});
-    if (error) throw error;
-    if (typeof toast === "function") toast(`+${data?.tokens || 0} token riscattati!`);
+    const {data,error}=await client().rpc("mp_m1_claim_rewards",{p_challenge_id:id});
+    if(error)throw error;
+    const parts=[];
+    if(data?.tokens)parts.push(data.tokens+" token");
+    if(data?.skin_awarded)parts.push("skin/emblema");
+    if(data?.pack_id)parts.push("pacchetto gratuito");
+    if(data?.already_owned?.length)parts.push("cosmetico già posseduto");
+    if(typeof toast==="function")toast("Riscattato: "+(parts.join(", ")||"premio registrato"));
   });
+  window.mpM1OpenRewardPack=id=>{
+    let opened=null;
+    void perform(async()=>{
+      const {data,error}=await client().rpc("mp_m1_open_reward_pack",{p_reward_id:id});
+      if(error)throw error;
+      opened=data;
+    }).then(()=>{
+      if(opened)void window.mpM2RevealWonPack?.(opened);
+    });
+  };
   window.mpM1Retry = () => load(true);
   function renderChallenges() {
     renderChallengesUI();
@@ -466,12 +560,16 @@ if (publishError) throw publishError;
     ['wins','Vittorie'],
     ['goals','Gol'],
     ['assists','Assist'],
-    ['contributions','Gol + assist'],
+    ['contributions','Contributi totali (somma)'],
+    ['goals_both','Gol + Assist (entrambi)'],
+    ['goals_either','Gol O Assist (alternativi)'],
     ['role_played','Partite nel ruolo'],
     ['role_wins','Vittorie nel ruolo'],
     ['role_goals','Gol nel ruolo'],
     ['role_assists','Assist nel ruolo'],
-    ['role_contributions','Gol + assist nel ruolo'],
+    ['role_contributions','Contributi totali nel ruolo (somma)'],
+    ['role_goals_both','Gol + Assist nel ruolo (entrambi)'],
+    ['role_goals_either','Gol O Assist nel ruolo (alternativi)'],
     ['manual','Manuale +1 / −1']
   ];
 
@@ -490,33 +588,16 @@ if (publishError) throw publishError;
         .select('*').order('sort_order'),
       db().rpc('mp_m1_founder_players'),
       db().from('matchpulse_m2_skins')
-        .select('id,title,price').order('sort_order'),
+        .select('id,title,price,theme,rarity,active').order('sort_order'),
       db().from('matchpulse_m2_packs')
-        .select('id,title,price').order('sort_order')
+        .select('id,title,price,active').order('sort_order')
     ]);
 
     for(const r of [goals,players,skins,packs]){
       if(r.error)throw r.error;
     }
 
-    const {data:pending,error:pendingError} =
-  await db().rpc('mp_m1_founder_pending');
-
-if(pendingError)throw pendingError;
-
-const drafts=new Map(
-  (pending||[]).map(v=>[v.challenge_id,v])
-);
-
-F.goals=(goals.data||[])
-  .filter(g=>!g.founder_deleted)
-  .map(g=>{
-  const draft=drafts.get(g.id);
-
-  return draft
-    ? {...g,...draft,id:g.id,scheduled:true}
-    : g;
-});
+    F.goals=(goals.data||[]).filter(g=>!g.founder_deleted);
     F.players=players.data||[];
     F.products=[
       ...(skins.data||[]).map(p=>({...p,type:'skin'})),
@@ -555,6 +636,11 @@ F.goals=(goals.data||[])
     }
 
     const ch=selectedGoal()||{};
+    const rc=ch.reward_config||{};
+    const editMetric=(ch.goal_logic==="both"||ch.goal_logic==="either")?
+      (ch.metric.startsWith("role_")?"role_":"")+"goals_"+ch.goal_logic:ch.metric;
+    const isDual=editMetric==="goals_both"||editMetric==="goals_either"||
+      editMetric==="role_goals_both"||editMetric==="role_goals_either";
     const player=selectedPlayer();
     const product=F.products.find(p=>p.type+'|'+p.id===F.product);
 
@@ -622,8 +708,9 @@ F.goals=(goals.data||[])
         </label>
 
         <label>Modalità di avanzamento
-          <select name="metric" id="mfMetric" style="${inputStyle}">
-            ${opts(metrics,ch.metric||'played')}
+          <select name="metric" id="mfMetric" style="${inputStyle}"
+            onchange="mpM1FounderMetric()">
+            ${opts(metrics,editMetric||'played')}
           </select>
         </label>
 
@@ -635,12 +722,47 @@ F.goals=(goals.data||[])
           </label>
 
           <label>Token premio
-            <input name="reward" type="number" min="1" max="2000"
+            <input name="reward" type="number" min="0" max="2000"
               required style="${inputStyle}"
-              value="${esc(ch.reward||10)}">
+              value="${esc(rc.tokens??ch.reward??10)}">
           </label>
         </div>
 
+        <div id="mfDualGoals" style="display:${isDual?'grid':'none'};grid-template-columns:1fr 1fr;gap:9px">
+          <label>Gol richiesti
+            <input name="goals_target" type="number" min="1" max="1000"
+              style="${inputStyle}" value="${esc(ch.goals_target||10)}">
+          </label>
+          <label>Assist richiesti
+            <input name="assists_target" type="number" min="1" max="1000"
+              style="${inputStyle}" value="${esc(ch.assists_target||10)}">
+          </label>
+        </div>
+        <strong>🎁 RICOMPENSE AGGIUNTIVE (COMBINABILI)</strong>
+        <label>Pacchetto gratuito
+          <select name="pack_id" style="${inputStyle}">
+            ${opts([["","Nessun pacchetto"],...F.products
+              .filter(p=>p.type==="pack"&&p.active!==false)
+              .map(p=>[p.id,p.title])],rc.pack_id||"")}
+          </select>
+        </label>
+        <label>Skin o decorazione
+          <select name="skin_id" style="${inputStyle}">
+            ${opts([["","Nessuna skin"],...F.products
+              .filter(p=>p.type==="skin"&&p.active!==false&&
+                !(p.rarity==="common"&&p.theme!=="matchpulse"))
+              .map(p=>[p.id,p.title])],rc.skin_id||"")}
+          </select>
+        </label>
+        <label>Emblema
+          <select name="emblem_id" style="${inputStyle}">
+            ${opts([["","Nessun emblema"],...F.products
+              .filter(p=>p.type==="skin"&&p.rarity==="common"&&p.theme!=="matchpulse")
+              .map(p=>[p.id,p.title])],rc.emblem_id||"")}
+          </select>
+        </label>
+        <small>Puoi assegnare 0 token e soltanto un cosmetico o un pacchetto.
+          Il pacchetto arriverà nelle Sfide e si aprirà senza spesa.</small>
         <label style="display:flex;align-items:center;gap:8px">
           <input name="active" type="checkbox"
             ${ch.active===false?'':'checked'}>
@@ -768,10 +890,17 @@ F.goals=(goals.data||[])
     paint();
   };
 
+  window.mpM1FounderMetric=()=>{
+    const v=document.getElementById("mfMetric")?.value||"";
+    const dual=v.endsWith("_both")||v.endsWith("_either");
+    const el=document.getElementById("mfDualGoals");
+    if(el)el.style.display=dual?"grid":"none";
+  };
   window.mpM1FounderScope=()=>{
     document.getElementById('mfMetric').value=
       document.getElementById('mfScope').value==='role'
         ?'role_played':'played';
+    window.mpM1FounderMetric();
   };
 
   window.mpM1FounderSave=async event=>{
@@ -783,9 +912,32 @@ F.goals=(goals.data||[])
     o.id=F.editing||null;
     o.active=form.elements.active.checked;
     o.sort_order=selectedGoal()?.sort_order??500;
+    const selectedMetric=o.metric;
+    o.goal_logic=selectedMetric.endsWith("_both")?"both":
+      selectedMetric.endsWith("_either")?"either":"legacy";
+    if(o.goal_logic!=="legacy"){
+      o.metric=selectedMetric.startsWith("role_")?
+        "role_contributions":"contributions";
+    }
+    const tokens=Number(o.reward);
+    if(!Number.isInteger(tokens)||tokens<0||tokens>2000){
+      alert("Token premio non validi.");return;
+    }
+    o.reward_config={
+      tokens,
+      pack_id:o.pack_id||null,
+      skin_id:o.skin_id||null,
+      emblem_id:o.emblem_id||null
+    };
+    o.reward=Math.max(1,tokens);
+    if(!o.reward_config.tokens&&!o.reward_config.pack_id&&
+       !o.reward_config.skin_id&&!o.reward_config.emblem_id){
+      alert("Seleziona almeno una ricompensa.");return;
+    }
+    if(o.goal_logic==="legacy"){o.goals_target=null;o.assists_target=null;}
 
     try{
-      const {data,error}=await db().rpc('mp_m1_founder_save',{
+      const {data,error}=await db().rpc('mp_m1_founder_save_v2',{
         p_goal:o
       });
       if(error)throw error;
