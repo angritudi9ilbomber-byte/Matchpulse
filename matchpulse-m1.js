@@ -116,6 +116,10 @@
   }
   async function fetchAll() {
     const db = client();
+    const { error: publishError } =
+  await db.rpc('mp_m1_publish_due');
+
+if (publishError) throw publishError;
     const cols = ["challenges", "events", "locks", "manual", "claims", "ledger"];
     const answers = await Promise.all(cols.map(k => db.from(AUTH_TABLES[k]).select("*")));
     for (let i = 0; i < answers.length; i++) {
@@ -495,7 +499,22 @@
       if(r.error)throw r.error;
     }
 
-    F.goals=goals.data||[];
+    const {data:pending,error:pendingError} =
+  await db().rpc('mp_m1_founder_pending');
+
+if(pendingError)throw pendingError;
+
+const drafts=new Map(
+  (pending||[]).map(v=>[v.challenge_id,v])
+);
+
+F.goals=(goals.data||[]).map(g=>{
+  const draft=drafts.get(g.id);
+
+  return draft
+    ? {...g,...draft,id:g.id,scheduled:true}
+    : g;
+});
     F.players=players.data||[];
     F.products=[
       ...(skins.data||[]).map(p=>({...p,type:'skin'})),
@@ -620,12 +639,23 @@
         </label>
 
         <button type="submit" style="${buttonStyle}">
-          SALVA OBIETTIVO
+          SALVA / PROGRAMMA LUNEDÌ
         </button>
       </form>
 
       <hr style="width:100%;border-color:#69537b">
 
+      <hr style="width:100%;border-color:#69537b">
+
+<strong>✦ MONITORAGGIO GIOCATORI</strong>
+
+<button type="button"
+  onclick="mpM1FounderMonitorOpen()"
+  style="${buttonStyle}">
+  APRI MONITORAGGIO OBIETTIVI
+</button>
+
+<div id="mpM1FounderMonitor"></div>
       <strong>✦ GESTIONE TOKEN</strong>
 
       <label>Account
@@ -681,7 +711,7 @@
 
       <button type="button" onclick="mpM1FounderPauseAll()"
         style="${buttonStyle};background:#7b253b">
-        DISATTIVA TUTTI I VECCHI OBIETTIVI
+        PROGRAMMA STOP SETTIMANALI E DI RUOLO
       </button>
 
       <small>Questa operazione conserva lo storico delle ricompense
@@ -754,7 +784,11 @@
       F.editing=data;
       await refresh();
       window.mpM1Retry?.();
-      alert('Obiettivo salvato.');
+      alert(
+  o.scope==='milestone'
+    ? 'Traguardo aggiornato.'
+    : 'Modifica programmata per lunedì alle 00:00.'
+);
     }catch(e){
       message(e);
     }
@@ -836,7 +870,9 @@
       await refresh();
       window.mpM1Retry?.();
 
-      alert(data+' obiettivi disattivati.');
+      alert(
+  data+' obiettivi programmati per la disattivazione di lunedì.'
+);
     }catch(e){
       message(e);
     }
@@ -844,5 +880,332 @@
 
   window.MP_M1_FOUNDER_READY=true;
   if(entry())window.mpM1FounderMount();
+})();
+
+
+/* MATCHPULSE — FOUNDER MONITOR SFIDE */
+(function(){
+  'use strict';
+
+  if(window.MP_M1_FOUNDER_MONITOR_READY)return;
+  window.MP_M1_FOUNDER_MONITOR_READY=true;
+
+  const E=s=>String(s??'').replace(/[&<>"']/g,c=>({
+    '&':'&amp;','<':'&lt;','>':'&gt;',
+    '"':'&quot;',"'":'&#39;'
+  }[c]));
+
+  const R={
+    ATT:'Attaccante',
+    ALA:'Ala',
+    COC:'Trequartista',
+    CC:'Centrocampista',
+    CDC:'Mediano',
+    DC:'Difensore',
+    TERZINO:'Terzino'
+  };
+
+  const count=n=>
+    Math.max(0,Math.floor(Number(n)||0));
+
+  function mondayDate(offset=0){
+    const p=Object.fromEntries(
+      new Intl.DateTimeFormat('en-GB',{
+        timeZone:'Europe/Rome',
+        year:'numeric',
+        month:'2-digit',
+        day:'2-digit'
+      }).formatToParts(new Date())
+        .map(x=>[x.type,x.value])
+    );
+
+    const d=new Date(
+      Date.UTC(+p.year,+p.month-1,+p.day,12)
+    );
+
+    d.setUTCDate(
+      d.getUTCDate()
+      -((d.getUTCDay()+6)%7)
+      -offset*7
+    );
+
+    return d.toISOString().slice(0,10);
+  }
+
+  function progress(goal,p,info){
+    const ms=(info.matches||[])
+      .filter(m=>m.user_id===p.user_id);
+
+    const filtered=
+      String(goal.metric).startsWith('role_')
+        ?ms.filter(m=>m.role===p.role)
+        :ms;
+
+    const num=fn=>
+      filtered.reduce((acc,m)=>acc+fn(m),0);
+
+    if(goal.metric==='manual'){
+      return count(
+        (info.manual||[]).find(x=>
+          x.user_id===p.user_id &&
+          x.challenge_id===goal.id
+        )?.progress
+      );
+    }
+
+    switch(goal.metric){
+      case 'played':
+      case 'role_played':
+        return filtered.length;
+
+      case 'wins':
+      case 'role_wins':
+        return num(m=>
+          m.outcome==='Vittoria'?1:0
+        );
+
+      case 'goals':
+      case 'role_goals':
+        return num(m=>count(m.goals));
+
+      case 'assists':
+      case 'role_assists':
+        return num(m=>count(m.assists));
+
+      case 'contributions':
+      case 'role_contributions':
+        return num(m=>
+          count(m.goals)+count(m.assists)
+        );
+
+      default:
+        return 0;
+    }
+  }
+
+  function render(info,week){
+    const el=document.getElementById(
+      'mpM1FounderMonitor'
+    );
+
+    if(!el)return;
+
+    const people=info.players||[];
+    const goals=info.goals||[];
+    const claims=info.claims||[];
+
+    const names=new Map(
+      people.map(p=>[p.user_id,p.name])
+    );
+
+    const goalNames=new Map(
+      goals.map(g=>[g.id,g.title])
+    );
+
+    const recent=claims.slice().sort(
+      (a,b)=>String(b.claimed_at)
+        .localeCompare(String(a.claimed_at))
+    );
+
+    const card=p=>{
+      const list=goals.filter(g=>
+        g.scope==='role' &&
+        g.role===p.role
+      );
+
+      const finished=list.filter(g=>
+        claims.some(c=>
+          c.user_id===p.user_id &&
+          c.challenge_id===g.id
+        )
+      ).length;
+
+      return `
+      <section style="
+        padding:12px;
+        margin:10px 0;
+        background:#171225;
+        border:1px solid #54456b;
+        border-radius:12px">
+
+        <strong>
+          ${E(p.name)} ·
+          ${E(R[p.role]||p.role||'Ruolo non impostato')}
+        </strong>
+
+        <p style="margin:3px 0 9px;font-size:12px;opacity:.75">
+          ${finished}/${list.length} riscattati
+          ${p.role_locked?'':'· ruolo indicativo, non ancora bloccato'}
+        </p>
+
+        ${list.length
+          ?list.map(g=>{
+            const claim=claims.find(c=>
+              c.user_id===p.user_id &&
+              c.challenge_id===g.id
+            );
+
+            const value=progress(g,p,info);
+            const target=count(g.target);
+
+            const status=claim
+              ?'✅ RISCATTATO'
+              :value>=target
+                ?'🟡 COMPLETATO, NON RISCATTATO'
+                :'IN CORSO';
+
+            return `
+              <div style="
+                padding:7px 0;
+                border-top:1px solid #423450;
+                font-size:13px">
+
+                <div>
+                  <strong>${E(g.title)}</strong>
+                  · ${E(g.reward)} token
+                </div>
+
+                <div style="opacity:.85">
+                  ${Math.min(value,target)}/${target}
+                  · ${status}
+                </div>
+              </div>
+            `;
+          }).join('')
+          :'<p style="font-size:12px">Nessun obiettivo di ruolo assegnato.</p>'
+        }
+      </section>`;
+    };
+
+    const options=
+      Array.from({length:13},(_,i)=>mondayDate(i))
+      .map(w=>`
+        <option value="${w}" ${w===week?'selected':''}>
+          Settimana del ${w.split('-').reverse().join('/')}
+        </option>
+      `).join('');
+
+    el.innerHTML=`
+      <section style="margin-top:12px;display:grid;gap:10px">
+
+        <h3 style="margin:0">Monitoraggio giocatori</h3>
+
+        <label>
+          Settimana
+
+          <select
+            onchange="mpM1FounderMonitorWeek(this.value)"
+            style="
+              display:block;
+              width:100%;
+              padding:10px;
+              background:#241a37;
+              color:white;
+              border:1px solid #75638a;
+              border-radius:8px">
+            ${options}
+          </select>
+        </label>
+
+        <button type="button"
+          onclick="mpM1FounderMonitorWeek('${E(week)}')">
+          ↻ AGGIORNA RISCATTI
+        </button>
+
+        <div style="
+          padding:10px;
+          background:#201a30;
+          border-radius:10px">
+
+          <strong>Ultimi obiettivi riscattati</strong>
+
+          ${recent.length
+            ?recent.map(c=>`
+              <p style="font-size:12px;margin:6px 0">
+                ✅ ${E(names.get(c.user_id)||'Giocatore')}
+                ha riscattato
+                <strong>
+                  ${E(goalNames.get(c.challenge_id)||c.challenge_id)}
+                </strong>
+                (+${E(c.tokens)} token)
+                · ${E(new Date(c.claimed_at).toLocaleString(
+                  'it-IT',{timeZone:'Europe/Rome'}
+                ))}
+              </p>
+            `).join('')
+            :'<p style="font-size:12px">Nessun riscatto in questa settimana.</p>'
+          }
+        </div>
+
+        ${people.length
+          ?people.map(card).join('')
+          :'<p>Nessun giocatore trovato nel Club.</p>'
+        }
+
+        <small>
+          I progressi si aggiornano quando i giocatori
+          sincronizzano le proprie partite. Lo stato
+          RISCATTATO indica un premio effettivamente ottenuto.
+        </small>
+
+      </section>`;
+  }
+
+  window.mpM1FounderMonitorWeek=async week=>{
+    const el=document.getElementById(
+      'mpM1FounderMonitor'
+    );
+
+    if(!el)return;
+
+    el.textContent='Caricamento dei progressi…';
+
+    try{
+      const db=window.matchpulseSupabase;
+
+      if(!db){
+        throw Error('Supabase non disponibile');
+      }
+
+      const {data,error}=await db.rpc(
+        'mp_m1_founder_report',
+        {p_week:week}
+      );
+
+      if(error)throw error;
+
+      render(data||{},week);
+
+    }catch(e){
+      el.textContent=
+        'Impossibile caricare il monitoraggio: '+
+        (e?.message||String(e));
+    }
+  };
+
+  window.mpM1FounderMonitorOpen=()=>
+    window.mpM1FounderMonitorWeek(mondayDate());
+
+  // Se MatchPulse rimane aperto oltre la mezzanotte,
+  // controlla il cambio di settimana e aggiorna le Sfide.
+  let lastWeek=mondayDate();
+
+  function checkWeek(){
+    const next=mondayDate();
+
+    if(next!==lastWeek){
+      lastWeek=next;
+      window.mpM1Retry?.();
+    }
+  }
+
+  document.addEventListener(
+    'visibilitychange',
+    ()=>{
+      if(!document.hidden)checkWeek();
+    }
+  );
+
+  setInterval(checkWeek,60000);
 })();
 

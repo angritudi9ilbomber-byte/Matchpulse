@@ -480,7 +480,41 @@ const m6Cover = theme => {
     }
     await equip(equippedId()===id ? null : id);drawStore();
   };
-  window.mpM2RevealOpen=()=>{if(!S.reveal) return;S.revealOpened=true;showReveal();};
+  
+window.mpM2RevealOpen = () => {
+  if (!S.reveal || S.revealOpened) return;
+
+  const scene = document.querySelector('.mp-m2-reveal-scene');
+  S.revealOpened = true;
+
+  if (!scene) {
+    showReveal();
+    return;
+  }
+
+  const button = scene.closest('.mp-m2-reveal')
+    ?.querySelector('.mp-m2-confirm-buy');
+
+  if (button) {
+    button.disabled = true;
+    button.textContent = 'APERTURA IN CORSO…';
+  }
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      if (scene.isConnected) {
+        scene.classList.add('is-open');
+      }
+    });
+  });
+
+  setTimeout(() => {
+    if (S.revealOpened && S.reveal && scene.isConnected) {
+      showReveal();
+    }
+  }, 1000);
+};
+
   window.mpM2FinishReveal=()=>{closeOverlay();S.tab="inventory";if(route==="store") drawStore();};
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.querySelector('.mp-m2-modal-host'))window.mpM2Close();});
   window.mpM2AfterWalletChange = () => { S.lastLoad=0; void load(true); };

@@ -50,6 +50,16 @@
         <select id="mp6FounderRarity"><option value="auto">Rarità secondo probabilità reali</option><option value="common">Forza Comune</option><option value="rare">Forza Rara</option><option value="epic">Forza Epica</option><option value="legendary">Forza Leggendaria</option></select>
         <button onclick="mpM6FounderSimulate()">APRI PACCHETTO DI PROVA ∞</button></div></div>
      <div class="mp6-founder-panel"><strong>03 / INVENTARIO VIRTUALE</strong><p id="mp6FounderOwned"></p><button class="is-danger" onclick="mpM6FounderReset()">RESET SOLO LAB</button></div>
+     <div class="mp6-founder-panel">
+  <strong>04 / INVENTARIO REALE</strong>
+  <p>Elimina tutte le skin e gli emblemi
+  acquistati nei test dalla stagione corrente.
+  Non modifica i token o le partite.</p>
+  <button class="is-danger"
+    onclick="mpM6FounderClearMyInventory()">
+    AZZERA IL MIO INVENTARIO
+  </button>
+</div>
      <div id="mp6FounderReveal"></div><p id="mp6FounderStatus" role="status" aria-live="polite">Il saldo reale non viene toccato.</p>
      <button class="mp6-founder-done" onclick="mpM6FounderClose()">CHIUDI LABORATORIO</button></section>`;
    document.body.append(host);refreshInventory();host.querySelector('header button').focus();
@@ -84,5 +94,44 @@ if (liveSpot && !S.admin) {
  window.mpM6FounderClearReveal=()=>{const r=document.getElementById('mp6FounderReveal');if(r)r.innerHTML='';};
  window.mpM6FounderReset=()=>{S.owned.clear();S.revealed=[];window.mpM6FounderClearReveal();refreshInventory();notice('Laboratorio virtuale azzerato. Account reale invariato.');};
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&S.founderOpen&&!document.querySelector('.mp6-preview-overlay'))close();});
+
+window.mpM6FounderClearMyInventory = async () => {
+  if (!S.admin) return;
+
+  if (!confirm(
+    'ATTENZIONE: eliminare tutte le skin e gli emblemi ' +
+    'acquistati nella stagione corrente? ' +
+    'L’operazione non rimborsa i token.'
+  )) return;
+
+  try {
+    const client = window.matchpulseSupabase;
+
+    if (!client) {
+      throw new Error('Supabase non disponibile.');
+    }
+
+    const { data, error } = await client.rpc(
+      'mp_m2_founder_reset_own_inventory'
+    );
+
+    if (error) throw error;
+
+    alert(
+      'Inventario azzerato. ' +
+      (data?.removed ?? 0) +
+      ' cosmetici rimossi.'
+    );
+
+    window.location.reload();
+
+  } catch (error) {
+    alert(
+      'Reset non riuscito: ' +
+      (error?.message || String(error))
+    );
+  }
+};
+
  window.MP_M6_FOUNDER_READY=true;window.mpM6FounderMount();
 })();
