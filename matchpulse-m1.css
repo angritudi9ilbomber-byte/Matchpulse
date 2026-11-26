@@ -224,3 +224,21 @@ body {
 /* Pack v3: icona neutra nelle sfide, senza anteprima cosmetica. */
 .mp-m1-pack-ico{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;width:24px;height:28px;border-radius:6px;background:linear-gradient(135deg,#4c2a91,#241b57);border:1px solid rgba(233,193,255,.42);font-size:18px;line-height:1}
 .mp-m1-bonus-item .mp-m1-pack-ico{width:42px;height:45px;font-size:28px;border-radius:8px}
+
+/* M7.3 — Founder control center, mobile-first. Existing RPCs unchanged. */
+.mp-founder-hub{background:#1c1530;border:1px solid #925dc4;border-radius:16px;padding:14px;margin:14px 0;display:grid;gap:14px;min-width:0}
+.mp-founder-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.mp-founder-tabs>button{min-width:0;min-height:54px;padding:9px!important;border:1px solid #63517e!important;border-radius:10px!important;background:#171226!important;color:#d9c9ee!important;text-align:left!important;display:grid;gap:3px}
+.mp-founder-tabs>button>strong{font-size:13px;line-height:1.2}
+.mp-founder-tabs>button>small{font-size:10px;line-height:1.25;color:#c5b4db;font-weight:400}
+.mp-founder-tabs>button[aria-pressed=true]{background:linear-gradient(135deg,#6827aa,#913bce)!important;border-color:#c49af5!important;color:#fff!important}
+.mp-founder-pane{min-width:0;display:grid;gap:12px;padding-top:10px;border-top:1px solid #69537b}
+.mp-founder-pane[hidden]{display:none!important}
+.mp-founder-pane>h3{margin:0;color:#f4eaff;font-size:17px}
+.mp-founder-pane label{display:grid;gap:4px;min-width:0;font-size:14px}
+.mp-founder-pane input,.mp-founder-pane select,.mp-founder-pane textarea{min-width:0;max-width:100%;color-scheme:dark;font-size:16px!important}
+.mp-founder-pane select{appearance:auto}
+.mp-founder-pane input[type=checkbox]{appearance:auto!important;width:22px!important;height:22px!important;min-height:22px!important;flex:0 0 22px;accent-color:#a04de0}
+.mp-founder-pane #mfGoalForm>label:last-of-type{justify-content:flex-start!important}
+.mp-founder-pane small{font-size:12px;line-height:1.45;color:#d5c6e8}
+@media(min-width:700px){.mp-founder-tabs{grid-template-columns:repeat(5,minmax(0,1fr))}}

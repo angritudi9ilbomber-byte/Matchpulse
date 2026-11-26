@@ -525,7 +525,7 @@ if (publishError) throw publishError;
   const F={
     admin:false,checking:false,open:false,loaded:false,
     goals:[],players:[],products:[],
-    editing:'',player:'',product:''
+    editing:'',player:'',product:'',tab:'goals',clubNames:new Map(),monitorLoaded:false
   };
 
   const db=()=>window.matchpulseSupabase;
@@ -582,15 +582,46 @@ if (publishError) throw publishError;
   const selectedPlayer=()=>F.players.find(x=>x.id===F.player);
   const message=e=>alert(e?.message||String(e));
 
+  const founderTabs=[
+    ['goals','Sfide','Crea e modifica obiettivi'],
+    ['monitor','Giocatori','Controlla progressi e riscatti'],
+    ['tokens','Token','Gestisci i saldi reali'],
+    ['prices','Negozio','Modifica i prezzi'],
+    ['schedule','Programmazione','Stop degli obiettivi']
+  ];
+  async function clubNames(){
+    try{
+      if(typeof window.mpGetMyClub!=='function'&&typeof mpGetMyClub!=='function')return F.clubNames;
+      const club=await (window.mpGetMyClub||mpGetMyClub)();
+      if(!club?.club_id)return new Map();
+      const {data,error}=await db().from('matchpulse_club_members')
+        .select('user_id,player_name').eq('club_id',club.club_id);
+      if(error)throw error;
+      return new Map((data||[]).filter(p=>p.user_id&&String(p.player_name||'').trim())
+        .map(p=>[String(p.user_id),String(p.player_name).trim()]));
+    }catch(error){
+      console.warn('Founder: nomi Club non disponibili',error);
+      return F.clubNames;
+    }
+  }
+  window.mpM1FounderDisplayName=(id,fallback)=>{
+    const actual=F.clubNames.get(String(id));
+    return actual || fallback || 'Account non associato al Club';
+  };
+  window.mpM1FounderRefreshNames=async()=>{
+    F.clubNames=await clubNames();
+    return F.clubNames;
+  };
   async function refresh(){
-    const [goals,players,skins,packs]=await Promise.all([
+    const [goals,players,skins,packs,names]=await Promise.all([
       db().from('matchpulse_m1_challenges')
         .select('*').order('sort_order'),
       db().rpc('mp_m1_founder_players'),
       db().from('matchpulse_m2_skins')
         .select('id,title,price,theme,rarity,active').order('sort_order'),
       db().from('matchpulse_m2_packs')
-        .select('id,title,price,active').order('sort_order')
+        .select('id,title,price,active').order('sort_order'),
+      clubNames()
     ]);
 
     for(const r of [goals,players,skins,packs]){
@@ -598,7 +629,8 @@ if (publishError) throw publishError;
     }
 
     F.goals=(goals.data||[]).filter(g=>!g.founder_deleted);
-    F.players=players.data||[];
+    F.clubNames=names;
+    F.players=(players.data||[]).map(p=>({...p,displayName:window.mpM1FounderDisplayName(p.id,p.name)}));
     F.products=[
       ...(skins.data||[]).map(p=>({...p,type:'skin'})),
       ...(packs.data||[]).map(p=>({...p,type:'pack'}))
@@ -624,7 +656,7 @@ if (publishError) throw publishError;
       slot.innerHTML=`
         <button type="button" onclick="mpM1FounderToggle()"
           style="${buttonStyle};width:100%;margin:12px 0">
-          ✦ FOUNDER · GESTISCI SFIDE E TOKEN
+          ✦ FOUNDER · CENTRO DI CONTROLLO
         </button>`;
       return;
     }
@@ -645,12 +677,11 @@ if (publishError) throw publishError;
     const product=F.products.find(p=>p.type+'|'+p.id===F.product);
 
     slot.innerHTML=`
-    <section style="background:#1c1530;border:1px solid #925dc4;
-      border-radius:16px;padding:14px;margin:14px 0;display:grid;gap:14px">
+    <section class="mp-founder-hub">
 
       <div style="display:flex;align-items:center;
         justify-content:space-between;gap:8px">
-        <strong>✦ FOUNDER · SFIDE</strong>
+        <strong>✦ CENTRO FOUNDER</strong>
         <button type="button" style="${buttonStyle}"
           onclick="mpM1FounderToggle()">Chiudi</button>
       </div>
@@ -659,6 +690,11 @@ if (publishError) throw publishError;
         Gestione riservata. Le modifiche sono condivise con tutti i giocatori.
       </p>
 
+      <nav class="mp-founder-tabs" aria-label="Sezioni Founder">
+        ${founderTabs.map(([id,label,description])=>`<button type="button" data-founder-tab="${id}" aria-pressed="${F.tab===id}" onclick="mpM1FounderTab('${id}')"><strong>${label}</strong><small>${description}</small></button>`).join('')}
+      </nav>
+      <section class="mp-founder-pane" data-founder-pane="goals" ${F.tab==='goals'?'':'hidden'}>
+      <h3>Gestione sfide</h3>
       <label>Obiettivo da modificare
         <select style="${inputStyle}"
           onchange="mpM1FounderChoose(this.value)">
@@ -774,11 +810,9 @@ if (publishError) throw publishError;
         </button>
       </form>
 
-      <hr style="width:100%;border-color:#69537b">
-
-      <hr style="width:100%;border-color:#69537b">
-
-<strong>✦ MONITORAGGIO GIOCATORI</strong>
+      </section>
+      <section class="mp-founder-pane" data-founder-pane="monitor" ${F.tab==='monitor'?'':'hidden'}>
+<h3>Monitoraggio giocatori</h3>
 
 <button type="button"
   onclick="mpM1FounderMonitorOpen()"
@@ -787,7 +821,9 @@ if (publishError) throw publishError;
 </button>
 
 <div id="mpM1FounderMonitor"></div>
-      <strong>✦ GESTIONE TOKEN</strong>
+      </section>
+      <section class="mp-founder-pane" data-founder-pane="tokens" ${F.tab==='tokens'?'':'hidden'}>
+      <h3>Gestione token</h3>
 
       <label>Account
         <select style="${inputStyle}"
@@ -795,7 +831,7 @@ if (publishError) throw publishError;
           ${F.players.map(p=>`
             <option value="${esc(p.id)}"
               ${p.id===F.player?'selected':''}>
-              ${esc(p.name)} · ${esc(p.balance)} token
+              ${esc(p.displayName)} · ${esc(p.balance)} token
             </option>`).join('')}
         </select>
       </label>
@@ -813,9 +849,9 @@ if (publishError) throw publishError;
       <small>Inserendo 0 azzeri il saldo disponibile.
         Inventario e acquisti restano conservati.</small>
 
-      <hr style="width:100%;border-color:#69537b">
-
-      <strong>✦ PREZZI DEL NEGOZIO</strong>
+      </section>
+      <section class="mp-founder-pane" data-founder-pane="prices" ${F.tab==='prices'?'':'hidden'}>
+      <h3>Prezzi del negozio</h3>
 
       <label>Prodotto
         <select style="${inputStyle}"
@@ -838,8 +874,9 @@ if (publishError) throw publishError;
         SALVA PREZZO
       </button>
 
-      <hr style="width:100%;border-color:#69537b">
-
+      </section>
+      <section class="mp-founder-pane" data-founder-pane="schedule" ${F.tab==='schedule'?'':'hidden'}>
+      <h3>Programmazione obiettivi</h3>
       <button type="button" onclick="mpM1FounderPauseAll()"
         style="${buttonStyle};background:#7b253b">
         PROGRAMMA STOP SETTIMANALI E DI RUOLO
@@ -847,6 +884,7 @@ if (publishError) throw publishError;
 
       <small>Questa operazione conserva lo storico delle ricompense
         e non cancella le partite.</small>
+      </section>
     </section>`;
   }
 
@@ -873,6 +911,19 @@ if (publishError) throw publishError;
   window.mpM1FounderToggle=()=>{
     F.open=!F.open;
     paint();
+  };
+
+  window.mpM1FounderTab=id=>{
+    if(!founderTabs.some(([key])=>key===id))return;
+    F.tab=id;
+    const slot=entry();
+    if(!slot)return;
+    slot.querySelectorAll('[data-founder-tab]').forEach(button=>{
+      button.setAttribute('aria-pressed',String(button.dataset.founderTab===id));
+    });
+    slot.querySelectorAll('[data-founder-pane]').forEach(pane=>{
+      pane.hidden=pane.dataset.founderPane!==id;
+    });
   };
 
   window.mpM1FounderChoose=id=>{
@@ -960,7 +1011,8 @@ if (publishError) throw publishError;
       return;
     }
 
-    if(!confirm('Impostare questo saldo a '+value+' token?'))return;
+    const player=selectedPlayer();
+    if(!confirm('Impostare il saldo di '+(player?.displayName||player?.name||'questo account')+' a '+value+' token?'))return;
 
     try{
       const {error}=await db().rpc('mp_m1_founder_set_balance',{
@@ -1190,7 +1242,7 @@ window.mpM1FounderDelete = async () => {
     const claims=info.claims||[];
 
     const names=new Map(
-      people.map(p=>[p.user_id,p.name])
+      people.map(p=>[p.user_id,window.mpM1FounderDisplayName?.(p.user_id,p.name)||p.name])
     );
 
     const goalNames=new Map(
@@ -1224,7 +1276,7 @@ window.mpM1FounderDelete = async () => {
         border-radius:12px">
 
         <strong>
-          ${E(p.name)} ·
+          ${E(names.get(p.user_id)||p.name)} ·
           ${E(R[p.role]||p.role||'Ruolo non impostato')}
         </strong>
 
@@ -1369,6 +1421,7 @@ window.mpM1FounderDelete = async () => {
 
       if(error)throw error;
 
+      await window.mpM1FounderRefreshNames?.();
       render(data||{},week);
 
     }catch(e){

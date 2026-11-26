@@ -99,7 +99,7 @@
   async function loadScripts() {
     for (const url of [
       'app.js?v=20261127-m7.2-views',
-      'matchpulse-m1.js?v=20261113-pack-no-spoiler-v3',
+      'matchpulse-m1.js?v=20261127-m7.3-founder',
       'matchpulse-m2.js?v=20261127-m7-career',
       'matchpulse-m3.js?v=20261127-m7-career',
       'matchpulse-premium-r1.js?v=20261127-m7-career',
