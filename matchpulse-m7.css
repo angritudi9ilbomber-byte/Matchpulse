@@ -68,3 +68,30 @@ body.mp7-dialog-open{position:fixed!important;top:var(--mp7-scroll-top,0px)!impo
  .mp-r1-home>.mp-m3-season-ribbon .mp-m3-ribbon-emblem{width:44px;height:44px}
 }
 @media(prefers-reduced-motion:reduce){.mp7-old-card:not(.mp7-fallback-card){display:none!important}.mp7-new-card,.mp7-promotion-rays{animation:none!important;opacity:1!important;transform:none!important;filter:none!important}.mp7-promotion-rays{opacity:.08!important}}
+
+/* M7.1 — Club: full-width grid track for size-contained M6 cosmetics.
+   Promo snapshots and all per-skin editor coordinates remain untouched. */
+body .mp-club-fifa-wrap.featured-card-wrap {
+  grid-template-columns: minmax(0, 1fr) !important;
+  justify-items: center !important;
+  box-sizing: border-box !important;
+}
+body .mp-club-fifa-wrap.featured-card-wrap > .player-card.mp6-rendered[data-mp6-look] {
+  width: min(100%, 330px) !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  justify-self: center !important;
+  margin-inline: auto !important;
+}
+body .mp-club-fifa-wrap.featured-card-wrap > .player-card.mp6-rendered[data-mp6-look] > .player-top {
+  z-index: 15 !important;
+}
+body .mp-club-fifa-wrap.featured-card-wrap > .player-card.mp6-rendered[data-mp6-look] .card-overall-label {
+  display: block !important;
+  white-space: nowrap !important;
+}
+@media (max-width: 760px) {
+  body .mp-club-fifa-wrap.featured-card-wrap > .player-card.mp6-rendered[data-mp6-look] {
+    width: min(100%, 320px) !important;
+  }
+}

@@ -25954,13 +25954,16 @@ plusCount:
     const selectedId =
       mpPromoSelectedId();
 
+    // Keep V8 metadata: the live base card is not a frozen promo.
     const baseStats =
-      typeof getCardStats ===
-      "function"
-        ? mpPromoCleanStats(
-            getCardStats()
-          )
-        : mpPromoCleanStats({});
+      typeof getCardStats === "function"
+        ? getCardStats()
+        : null;
+
+    const baseOvr =
+      baseStats && typeof calculateOVR === "function"
+        ? calculateOVR(baseStats)
+        : null;
 
     const profile =
       typeof getPlayerProfile ===
@@ -26013,7 +26016,7 @@ plusCount:
                 profile.role || "CC"
               )}
               ·
-              ${mpPromoOvr(baseStats)} OVR
+              ${Number.isFinite(baseOvr) ? baseOvr : "—"} OVR
             </p>
           </div>
 
