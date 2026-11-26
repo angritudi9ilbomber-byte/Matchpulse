@@ -51,7 +51,8 @@
  }
  function applyAll(){
    document.querySelectorAll('.player-card').forEach(card=>{
-     if(card.closest('.mp-m4-preview-host,.mp6-preview-overlay'))return;
+     if(card.closest('.mp-m4-preview-host,.mp6-preview-overlay,.mp7-promotion'))return;
+     if(window.mpM7IsCareerCard?.(card)){setBadge(card,null);return;}
      if(card.closest('.mp-m2-product,.mp-m2-reveal'))return;
      const insideClub=Boolean(card.closest('.mp-club-page,#mpClubMemberModal,.mp-club-showcase-card,.mp-club-member-card,.mp-club-home-card'));
      let id=null;
@@ -185,6 +186,7 @@
    }catch(e){alert(e?.message||'Equipaggiamento stemma non riuscito');}
    finally{state.busy=false;schedule();}
  };
+ window.mpM7BadgeRefresh=applyAll;
  window.mpM4Preview=preview;
  window.mpM4ClosePreview=closePreview;
  window.mpM4Inspect=()=>({version:'M4.0-slot',ready:state.ready,error:state.error,

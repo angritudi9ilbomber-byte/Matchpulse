@@ -88,8 +88,8 @@
       featured.classList.add('mp-r1-featured');
       featured.insertAdjacentHTML('afterbegin',`<div class="mp-r1-card-eyebrow"><span>✦</span> LA TUA CARTA <strong>LIVE</strong></div>`);
       const btn=document.createElement('button');btn.type='button';btn.className='mp-r1-card-cta';
-      btn.innerHTML=`<span>✧</span> PERSONALIZZA CARTA <span aria-hidden="true">→</span>`;
-      btn.setAttribute('aria-label','Vai al Negozio per scegliere una skin');
+      btn.innerHTML=`<span>✧</span> PERSONALIZZA PROFILO <span aria-hidden="true">→</span>`;
+      btn.setAttribute('aria-label','Personalizza il profilo nel Negozio');
       btn.onclick=()=>setRoute('store');featured.appendChild(btn);
     }
     const data=lastMatchInfo();
@@ -101,24 +101,16 @@
     last.innerHTML=`<div class="mp-r1-panel-head"><span class="mp-r1-kicker">ULTIMA PARTITA</span><button type="button" onclick="setRoute('history')">Storico →</button></div>
       ${data.last?`<div class="mp-r1-lastmatch-body"><div class="mp-r1-score"><small>${esc(data.date)}</small><strong>${esc(data.last.result||'—')}</strong><span>${esc(data.last.outcome||'Risultato registrato')}</span></div><div class="mp-r1-match-figures"><span>⚽ GOL <b>${Number(data.last.goals)||0}</b></span><span>↗ ASSIST <b>${Number(data.last.assists)||0}</b></span><span>★ VOTO <b>${esc(data.last.rating||'—')}</b></span></div></div>`:`<p class="mp-r1-empty">La tua prossima partita è tutta da scrivere.</p>`}`;
     home.appendChild(last);
-    const collection=document.createElement('section');collection.className='mp-r1-collections mp-r1-shop-promo';
-collection.innerHTML=`<div class="mp-r1-panel-head"><span class="mp-r1-kicker">PERSONALIZZA LA TUA CARTA</span><button type="button" onclick="setRoute('store')">Apri Negozio →</button></div>
-  <div class="mp-r1-shop-hero">
-    <div class="mp-r1-shop-copy">
-      <strong>Più skin, più stili, più identità.</strong>
-      <p>Sblocca skin, cornici ed emblemi dal Negozio MatchPulse e rendi la tua carta davvero unica.</p>
-      <div class="mp-r1-shop-pills">
-        <span>✦ Completa le Sfide</span>
-        <span>✦ Guadagna token</span>
-        <span>✦ Equipaggia la tua preferita</span>
-      </div>
-    </div>
-    <div class="mp-r1-shop-actions">
-      <button type="button" class="primary" onclick="setRoute('store')">VAI AL NEGOZIO</button>
-      <button type="button" class="secondary" onclick="setRoute('challenges')">GUADAGNA TOKEN</button>
-    </div>
-  </div>`;
-home.appendChild(collection);
+    const mini=home.querySelector('.home-mini-grid');
+    const average=[...(mini?.querySelectorAll('.home-mini-card')||[])].find(el=>el.querySelector('.mini-label')?.textContent.trim().toUpperCase()==='VALUTAZIONE MEDIA');
+    const value=average?.querySelector('.mini-value')?.textContent.trim() || '—';
+    const avg=document.createElement('div');avg.className='mp7-average';
+    const caption=document.createElement('span');caption.textContent='Valutazione media';
+    const rating=document.createElement('strong');rating.textContent=data.total?value:'—';
+    avg.append(caption,rating);stats.append(avg);
+    mini?.remove();
+    home.querySelector('.mp-m1-section-caption')?.remove();
+    home.querySelector('.player-profile-summary')?.remove();
     const ribbon=home.querySelector('.mp-m3-season-ribbon');
     if(ribbon)ribbon.classList.add('mp-r1-ribbon');
     // Manteniamo i widget originari per compatibilità; il riepilogo nuovo

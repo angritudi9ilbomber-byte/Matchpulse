@@ -22,7 +22,9 @@
     'mp_gold_dynasty':['matchpulse','fc-dynasty'],
     'mp_icebreak':['matchpulse','fc-ice'],
     'mp_neon_pulse':['matchpulse','fc-neon'],
-    'mp_blackout':['matchpulse','fc-blackout']
+    'mp_blackout':['matchpulse','fc-blackout'],
+    'op_ocean_epic':['onepiece','op-ocean-epic'], 'db_aura_epic':['dragonball','db-aura-epic'],
+    'cp_neon_epic':['cyberpunk','cp-neon-epic'], 'f1_racing_epic':['formula1','f1-racing-epic']
   };
   const S={selected:null, archives:[], loading:false, error:'',
     clubSkinByUser:new Map(), catalog:new Map(), lastClubLoad:0, clubLoading:null,
@@ -34,11 +36,11 @@
   const prettyDate = value => value?new Date(value).toLocaleDateString('it-IT',{day:'2-digit',month:'short',year:'numeric'}):'—';
   const meta = id => {
     const local=SKIN_IDS[id];const s=S.catalog.get(id);
-    return local?{id,theme:local[0],css_theme:local[1],title:s?.title||local[1]}:null;
+    return local?{id,theme:local[0],css_theme:local[1],title:s?.title||local[1]}:s?.css_theme?{id,theme:s.theme,css_theme:s.css_theme,title:s.title}:null;
   };
   function applySkin(el,skinId){
     if(!el || el.closest('.mp-promo-card, [data-promo-card="true"], .mp-m2-product, .mp-promo-v3-card'))return;
-    const skin=meta(skinId);
+    const skin=window.mpM7IsCareerCard?.(el)?null:meta(skinId);
     if(!skin){
       if(el.hasAttribute('data-m3-skin')){
         el.removeAttribute('data-m3-skin');el.removeAttribute('data-m3-theme');
@@ -52,13 +54,13 @@
     el.classList.add('mp-m3-art-card');
   }
   function applyOwnSkins(){
-    // M2 sceglie già la skin SOLO sulle carte base, non sulle promo.
-    document.querySelectorAll('.player-card.mp-m2-card-equipped[data-m2-skin]').forEach(card=>{
-      const skinId=Object.keys(SKIN_IDS).find(x=>SKIN_IDS[x][1]===card.dataset.m2Skin);
-      applySkin(card,skinId);
-    });
-    document.querySelectorAll('.player-card.mp-m3-art-card:not(.mp-m2-card-equipped)').forEach(card=>{
-      if(!card.closest('.mp-club-page, #mpClubMemberModal'))applySkin(card,null);
+    MAIN.querySelectorAll('.premium-home .player-card').forEach(card=>{
+      const slug=card.dataset.m2Skin;
+      const own=window.mpM7OwnSkin?.();
+      const id=own?.skin?.css_theme===slug?own.id:
+        Object.keys(SKIN_IDS).find(x=>SKIN_IDS[x][1]===slug)||
+        [...S.catalog.values()].find(x=>x.css_theme===slug)?.id;
+      applySkin(card,slug?id:null);
     });
   }
   function memberIdOf(el){
@@ -70,20 +72,29 @@
     return Array.isArray(members) && members.some(m=>m?.user_id===userId && m?.card_stats?.promoCard===true);
   }
   function applyClubSkins(){
-    // Anche una mappa vuota deve rimuovere eventuali estetiche non piu' equipaggiate.
+    const own=window.mpM7OwnSkin?.();
+    const choice=uid=>uid&&uid===own?.userId?own.id:S.clubSkinByUser.get(uid);
+    function decorate(el,uid){
+      if(!el||!uid||memberIsPromo(uid))return;
+      for(const key of ['data-m2-skin','data-m2-theme','data-m2-title','data-b-test-skin']){
+        if(el.hasAttribute(key))el.removeAttribute(key);
+      }
+      el.classList.remove('mp-m2-card-equipped');
+      applySkin(el,choice(uid));
+    }
     const candidates=document.querySelectorAll('.mp-club-showcase-card,.mp-club-member-card,.mp-club-home-card');
     candidates.forEach(el=>{
       const uid=el.dataset.m3UserId||memberIdOf(el);
-      if(uid && !memberIsPromo(uid))applySkin(el,S.clubSkinByUser.get(uid));
+      if(uid){decorate(el,uid);el.querySelectorAll('.player-card').forEach(card=>decorate(card,uid));}
     });
     const modal=document.getElementById('mpClubMemberModal');
     if(modal){
       const userId=modal.dataset.mpSharedUser || S.selectedClubMember ||
-        (typeof MP_CLUB_SELECTED_MEMBER!=='undefined' ? MP_CLUB_SELECTED_MEMBER?.user_id : null);
-      if(userId && !memberIsPromo(userId))modal.querySelectorAll('.player-card, .mp-club-profile-card-base-home, .mp-club-showcase-card').forEach(el=>
-        applySkin(el,S.clubSkinByUser.get(userId)));
+        (typeof MP_CLUB_SELECTED_MEMBER!=='undefined'?MP_CLUB_SELECTED_MEMBER?.user_id:null);
+      if(userId)modal.querySelectorAll('.player-card,.mp-club-profile-card-base-home,.mp-club-showcase-card').forEach(el=>decorate(el,userId));
     }
   }
+  window.mpM7DecorateClub=()=>{applyOwnSkins();applyClubSkins();};
   function mountSeasonRibbon(){
     if(route!=='home')return;
     const home=MAIN.querySelector('.premium-home, .mp-m1-home');
@@ -318,7 +329,7 @@
       const html=oldCard.call(this,member,ownerId,...rest);
       if(typeof html!=='string'||!member?.user_id||member?.card_stats?.promoCard===true)return html;
       const skinId=S.clubSkinByUser.get(member.user_id);
-      if(!skinId)return html;
+      if(!skinId || window.mpM7View?.('club')==='career')return html;
       const container=document.createElement('div');container.innerHTML=html;
       const card=container.querySelector('.mp-club-showcase-card, .mp-club-member-card, .mp-club-home-card');
       if(card){card.dataset.m3UserId=member.user_id;applySkin(card,skinId);}

@@ -526,26 +526,21 @@ function previewReward(pack, forcedSkinId = "") {
 }
 
   function decorateCards() {
-    const skin = findSkin(equippedId());
-    const apply = root => {
-      if (!root) return;
-      root.querySelectorAll(".player-card").forEach(card => {
-        if (card.closest(".mp-m2-product")) return;
-        if (card.classList.contains("mp-promo-card") || card.dataset.promoCard === "true") return;
-        card.classList.toggle("mp-m2-card-equipped", Boolean(skin) && !["op_straw","db_kame","cp_night","f1_grid"].includes(skin.id));
-        if (skin && !["op_straw","db_kame","cp_night","f1_grid"].includes(skin.id)) {
-          card.setAttribute("data-m2-theme",skin.theme);
-          card.setAttribute("data-m2-skin",skin.css_theme);
-          card.setAttribute("data-m2-title",skin.title);
-        } else {
-          card.removeAttribute("data-m2-theme");
-          card.removeAttribute("data-m2-skin");
-          card.removeAttribute("data-m2-title");
-        }
-      });
-    };
-    if (route === "home") apply(MAIN);
+    const equipped = findSkin(equippedId());
+    if(route !== "home")return;
+    MAIN.querySelectorAll(".player-card").forEach(card=>{
+      if(card.closest(".mp-m2-product,.mp7-promotion,.mp6-preview-overlay")||card.classList.contains("mp-promo-card")||card.dataset.promoCard==="true")return;
+      const skin=window.mpM7IsCareerCard?.(card)?null:equipped;
+      const visible=Boolean(skin)&&!["op_straw","db_kame","cp_night","f1_grid"].includes(skin.id);
+      card.classList.toggle("mp-m2-card-equipped",visible&&!card.classList.contains("mp6-rendered"));
+      for(const [key,value] of [["data-m2-theme",skin?.theme],["data-m2-skin",skin?.css_theme],["data-m2-title",skin?.title]]){
+        if(visible&&value){if(card.getAttribute(key)!==String(value))card.setAttribute(key,value);}
+        else if(card.hasAttribute(key))card.removeAttribute(key);
+      }
+    });
   }
+  window.mpM7DecorateHome=decorateCards;
+  window.mpM7OwnSkin=()=>({userId:S.userId,id:equippedId(),skin:findSkin(equippedId())||null});
   async function equip(skinId) {
     if (S.busy || !S.ready) return;
     S.busy=true;
@@ -574,7 +569,7 @@ function previewReward(pack, forcedSkinId = "") {
   if (originalClubCard) {
     const wrappedClubCard=function(member,ownerId,...rest) {
       const result=originalClubCard.call(this,member,ownerId,...rest);
-      if (member?.user_id !== S.userId || !equippedId() || !S.ready ||
+      if (window.mpM7View?.('club')==='career' || member?.user_id !== S.userId || !equippedId() || !S.ready ||
           member?.card_stats?.promoCard === true || typeof result !== "string") return result;
       const skin=findSkin(equippedId());
       if(!skin) return result;

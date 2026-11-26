@@ -124,7 +124,7 @@ const badgeBase = new URL(
 
  function apply(card){
   if(!card?.classList?.contains('player-card')||isPromo(card))return;
-  const slug=target(card);
+  const slug=window.mpM7IsCareerCard?.(card)?null:target(card);
   if(!slug){if(card.classList.contains('mp6-rendered'))clean(card);return;}
   if(card.dataset.mp6Look!==slug || !card.querySelector(':scope > .mp6-art-layer')){
     clean(card);
@@ -244,7 +244,9 @@ if (common[id]) {
 
   // Se non c'è nessuna skin equipaggiata,
   // usa Verdalia come sfondo dimostrativo.
-  if (!target(clone)) {
+  const equipped=window.mpM7OwnSkin?.()?.skin;
+  if(equipped?.css_theme && fileBySlug[resolve(equipped.css_theme)])clone.dataset.mp6PreviewId=equipped.css_theme;
+  else if (!target(clone)) {
     clone.dataset.mp6PreviewId = 'mp_gold_dynasty';
   }
 

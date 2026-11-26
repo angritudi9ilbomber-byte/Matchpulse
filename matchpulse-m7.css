@@ -1,0 +1,70 @@
+/* MATCHPULSE M7 — Career Premium. Existing card dimensions and presets untouched. */
+.mp-r1-home.mp-m1-home{grid-template-columns:minmax(0,1.02fr) minmax(0,1fr)!important;align-items:start;gap:15px!important}
+.mp-r1-home>.mp-r1-welcome{grid-column:1/-1;grid-row:1}
+.mp-r1-home>.mp-r1-featured{grid-column:1;grid-row:2 / span 3;align-self:start}
+.mp-r1-home>.mp-r1-performance{grid-column:2;grid-row:2}
+.mp-r1-home>.mp-r1-lastmatch{grid-column:2;grid-row:3}
+.mp-r1-home>.mp-m1-home-links{grid-column:2;grid-row:4;grid-template-columns:repeat(2,minmax(0,1fr))!important}
+.mp-r1-home>.mp-m3-season-ribbon{grid-column:1/-1;grid-row:5;min-height:0!important;display:grid!important;grid-template-columns:52px minmax(0,1fr) minmax(150px,220px);align-items:center!important;padding:16px!important;gap:13px!important}
+.mp-r1-home>.mp-m3-season-ribbon button{grid-column:auto}
+.mp-r1-home>.mp-m3-season-ribbon strong{font-size:clamp(20px,4vw,27px)!important}
+.mp-r1-home>.mp-r1-shop-promo,.mp-r1-home>.home-mini-grid,.mp-r1-home>.player-profile-summary,.mp-r1-home>.mp-m1-section-caption{display:none!important}
+.mp7-average{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid #ad8bea35;margin-top:12px;padding-top:10px;color:#c9b8e4;font-size:12px}
+.mp7-average strong{color:#e3c3ff;font-size:18px;font-weight:850;font-variant-numeric:tabular-nums}
+.mp-r1-featured.mp7-arena{position:relative;isolation:isolate;gap:12px!important}
+/* M8 will set --mp7-arena-art to an approved responsive background image. */
+.mp-r1-featured.mp7-arena[data-mp7-arena]::before{
+ background:linear-gradient(to bottom,transparent 55%,#090b18 100%),var(--mp7-arena-art,none),linear-gradient(155deg,#141d38,#0b1023 56%,#090b18)!important;
+ background-position:center!important;background-size:cover!important;background-repeat:no-repeat!important;
+}
+.mp7-identity{position:relative;z-index:4;width:100%;max-width:390px;padding:12px 10px;text-align:center;border-radius:12px;border:1px solid var(--mp7-plate-border,#c398ef);background:var(--mp7-plate-fill,#1f1633d9);color:var(--mp7-title-color,#f3e7ff);font-size:14px;font-weight:900;letter-spacing:.03em}
+.mp7-identity[hidden]{display:none!important}
+.mp7-toggle{display:flex;position:relative;z-index:5;align-items:center;gap:4px;padding:4px;border:1px solid #a87ddb65;border-radius:12px;background:#110d22e8;box-sizing:border-box;width:min(100%,360px);flex-shrink:0}
+.mp7-toggle>button{flex:1;min-width:0;min-height:38px;border:1px solid transparent!important;box-shadow:none!important;border-radius:8px!important;background:transparent!important;color:#c4b8db!important;font-size:12px!important;font-weight:850!important;padding:6px 8px!important;line-height:1.2!important;cursor:pointer}
+.mp7-toggle>button[aria-pressed=true]{background:linear-gradient(125deg,#5921aa,#8a39c5)!important;color:#fff!important;border-color:#a976e3!important}
+.mp7-toggle>button:focus-visible{outline:2px solid #e6c6ff;outline-offset:2px}
+.mp7-club-controls{display:flex;flex-direction:column;align-items:center;gap:10px;padding:14px;margin:12px 0;border:1px solid #a87ddb55;border-radius:16px;background:#17132ae8;text-align:center;color:#e3c8ff}
+.mp7-club-controls>strong{font-size:11px;letter-spacing:.12em}
+.mp7-club-controls>small{font-size:11px;color:#b9accd;line-height:1.4}
+/* iOS: fixed body restores the exact page position when the dialog closes. */
+html.mp7-dialog-open{overflow:hidden!important;overscroll-behavior:none!important}
+body.mp7-dialog-open{position:fixed!important;top:var(--mp7-scroll-top,0px)!important;left:0!important;right:0!important;width:100%!important;overflow:hidden!important;overscroll-behavior:none!important}
+.profile-hub-overlay{box-sizing:border-box!important;position:fixed!important;inset:0!important;z-index:100000!important;display:grid!important;grid-template-rows:minmax(0,1fr)!important;align-items:end!important;justify-items:center!important;padding:calc(env(safe-area-inset-top,0px) + 10px) 12px calc(env(safe-area-inset-bottom,0px) + 10px)!important;overflow:hidden!important;overscroll-behavior:none}
+.profile-hub-panel{box-sizing:border-box!important;width:min(100%,460px)!important;max-height:100%!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;touch-action:pan-y;scrollbar-width:thin;padding-bottom:24px!important}
+.profile-hub-panel .profile-hub-head{position:sticky;top:0;z-index:2;background:#10131f;padding:8px 0;border-radius:12px}
+.mp7-promotion{position:fixed;z-index:100001;inset:0;box-sizing:border-box;display:grid;grid-template-rows:minmax(0,1fr);place-items:center;padding:calc(10px + env(safe-area-inset-top,0px)) 10px calc(10px + env(safe-area-inset-bottom,0px));background:#05040de8;backdrop-filter:blur(8px);--mp7-metal:#d7dfef;--mp7-glow:#a3b8e8}
+.mp7-promotion[data-tier=gold]{--mp7-metal:#f9dc88;--mp7-glow:#d7a94c}
+.mp7-promotion[data-tier=icon]{--mp7-metal:#fff0d0;--mp7-glow:#e8c77d}
+.mp7-promotion-panel{box-sizing:border-box;width:min(100%,480px);max-height:100%;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;position:relative;border:1px solid var(--mp7-metal);border-radius:24px;padding:14px;background:radial-gradient(ellipse at 50% 45%,#4a2d6255,transparent 62%),#111022;color:#fff;text-align:center}
+.mp7-promotion-top{display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--mp7-metal);font-size:10px;font-weight:850;letter-spacing:.12em}
+.mp7-promotion-x{font-size:24px!important;color:white!important;border:1px solid #ffffff44!important;border-radius:10px!important;background:#222038!important;width:38px;height:38px;padding:0!important}
+.mp7-promotion-panel h2{color:var(--mp7-metal);font-size:clamp(20px,6vw,32px);line-height:1.1;margin:7px 0}
+.mp7-promotion-transition{font-size:14px;display:flex;justify-content:center;align-items:center;gap:8px;color:#d4cbeb}
+.mp7-promotion-transition strong{color:var(--mp7-metal)}
+.mp7-promotion-stage{position:relative;display:grid;place-items:center;isolation:isolate;margin:12px auto;min-height:280px;width:100%;overflow:hidden}
+.mp7-promotion-rays{position:absolute;inset:-40%;z-index:-1;background:repeating-conic-gradient(from 15deg,transparent 0deg 12deg,var(--mp7-glow) 12deg 13deg,transparent 13deg 24deg);opacity:.2;mask-image:radial-gradient(ellipse,#000 0%,transparent 55%);animation:mp7-rays 5s ease-out both}
+.mp7-old-card{position:absolute;inset:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;width:52%;height:74%;max-height:350px;border:2px solid #c8a07e;background:linear-gradient(145deg,#b78358,#503b2c);border-radius:20px 20px 44px 44px;box-shadow:0 0 42px #f4c18b55;color:#fff;font-size:22px;font-weight:900;animation:mp7-old 1.45s ease-in both}
+.mp7-old-card strong{font-size:48px;line-height:1}
+.mp7-old-card[data-tier=silver]{background:linear-gradient(145deg,#d9e3ed,#777f90);border-color:#e9f1ff;color:#20283d}
+.mp7-old-card[data-tier=gold]{background:linear-gradient(145deg,#ffe4a0,#a57e35);border-color:#ffe8b1;color:#4a361d}
+.mp7-old-card[data-tier=icon]{background:linear-gradient(145deg,#fff3d4,#c3a86f);border-color:#fff8df;color:#483419}
+.mp7-new-card{width:100%;min-width:0;display:grid;place-items:center;animation:mp7-reveal 1.1s 1.12s both}
+.mp7-new-card>.player-card{max-width:min(100%,290px)!important;margin:0 auto!important;pointer-events:none!important}
+.mp7-fallback-card{position:relative;min-height:240px;animation:none!important}
+.mp7-promotion-panel p{font-size:12px;color:#cfc4e5;margin:8px 0}
+.mp7-promotion-done{width:100%;margin-top:5px;min-height:44px;background:linear-gradient(110deg,#6327b4,#9b42df)!important;border:1px solid #d5a2ff!important;border-radius:12px!important;color:white!important;font-weight:900!important}
+@keyframes mp7-old{0%,30%{opacity:1;transform:scale(1)}65%{opacity:1;transform:scale(1.05);filter:brightness(1.6)}100%{opacity:0;transform:scale(1.18);filter:brightness(2)}}
+@keyframes mp7-reveal{from{opacity:0;transform:scale(.88) translateY(14px);filter:brightness(2)}to{opacity:1;transform:scale(1) translateY(0);filter:brightness(1)}}
+@keyframes mp7-rays{0%{opacity:.04;transform:rotate(0) scale(.8)}35%{opacity:.4}100%{opacity:.13;transform:rotate(35deg) scale(1.1)}}
+@media(max-width:760px){
+ .mp-r1-home.mp-m1-home{grid-template-columns:minmax(0,1fr)!important}
+ .mp-r1-home>.mp-r1-welcome{grid-column:1;grid-row:1}
+ .mp-r1-home>.mp-r1-featured{grid-column:1;grid-row:2}
+ .mp-r1-home>.mp-r1-performance{grid-column:1;grid-row:3}
+ .mp-r1-home>.mp-r1-lastmatch{grid-column:1;grid-row:4}
+ .mp-r1-home>.mp-m1-home-links{grid-column:1;grid-row:5}
+ .mp-r1-home>.mp-m3-season-ribbon{grid-column:1;grid-row:6;grid-template-columns:44px minmax(0,1fr)!important}
+ .mp-r1-home>.mp-m3-season-ribbon button{grid-column:1/-1}
+ .mp-r1-home>.mp-m3-season-ribbon .mp-m3-ribbon-emblem{width:44px;height:44px}
+}
+@media(prefers-reduced-motion:reduce){.mp7-old-card:not(.mp7-fallback-card){display:none!important}.mp7-new-card,.mp7-promotion-rays{animation:none!important;opacity:1!important;transform:none!important;filter:none!important}.mp7-promotion-rays{opacity:.08!important}}

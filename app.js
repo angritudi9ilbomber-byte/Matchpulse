@@ -2326,6 +2326,8 @@ if (num(data.shots) < num(data.shotsOn)) {
   saveMatches(matches);
 
   rebuildCardStatsFromHistory();
+  // M7: presentation-only notification after V8 rebuild.
+  try { window.mpM7OnMatchSaved?.(data); } catch (error) { console.warn("M7 promozione",error); }
 
   toast("Partita salvata");
   setRoute("detail", data.id);
