@@ -25491,7 +25491,10 @@ plusCount:
       `${card.shortName} selezionata`
     );
 
-    renderPromos();
+    window.mpM7PromoSelected?.();
+    if (typeof route !== "undefined" && route === "promos") {
+      (window.renderPromos || renderPromos)();
+    }
 
     await mpPromoSyncSelectedToClub();
   }
@@ -25998,12 +26001,12 @@ plusCount:
 
         <section class="
           mp-base-card-selection
-          ${selectedId === "base"
+          ${(window.mpM7View?.("home") || (selectedId === "base" ? "career" : "promo")) === "career"
             ? "is-selected"
             : ""}
         ">
           <div>
-            <span>CARTA ATTIVA</span>
+            <span>CARRIERA · INDIPENDENTE DALLA PROMO</span>
 
             <h3>Carta base</h3>
 
@@ -26023,15 +26026,11 @@ plusCount:
           <button
             type="button"
             class="
-              ${selectedId === "base"
-                ? "secondary-btn"
-                : "primary-btn"}
+              primary-btn
             "
-            onclick="mpSelectBaseCard()"
+            onclick="window.mpM7ShowCareer ? window.mpM7ShowCareer() : mpSelectBaseCard()"
           >
-            ${selectedId === "base"
-              ? "SELEZIONATA"
-              : "MOSTRA NEL CLUB"}
+            MOSTRA CARRIERA
           </button>
         </section>
 
@@ -26124,7 +26123,7 @@ plusCount:
                           >
                             ${selected
                               ? "SELEZIONATA"
-                              : "MOSTRA NEL CLUB"}
+                              : "MOSTRA IN HOME E CLUB"}
                           </button>
                         </div>
                       </article>
@@ -47682,9 +47681,36 @@ if (previousPlayerRatings) {
 
     mpClubGetCardStats =
       function (...args) {
+        const shared = oldClubStats(...args);
+        const profile = getPlayerProfile();
+        const baseStats = getBaseCardStats();
+        let basePlaystyles = {};
+        try {
+          basePlaystyles = typeof mpGetPsData === "function"
+            ? (mpGetPsData() || {})
+            : JSON.parse(localStorage.getItem("matchpulse_playstyles_v1") || "{}");
+        } catch {}
+        // Preserve the existing shared promo format for older clients;
+        // the independent live career snapshot is used by M7.2.
         return {
-          ...oldClubStats(...args),
-          _mpV8OVR: currentOVR
+          ...shared,
+          _mpV8OVR: currentOVR,
+          mpCareerCardV1: {
+            card_stats: baseStats,
+            ovr: currentOVR,
+            tier: mpClubTierFromOvr(currentOVR),
+            player_name: profile.name,
+            role: profile.role,
+            shirt_number: profile.shirtNumber,
+            preferred_foot: profile.foot,
+            profile_style: profile.playStyle,
+            weak_foot: profile.weakFoot ?? 3,
+            skill_moves: profile.skillMoves ?? 3,
+            photo_x: profile.photoX ?? 50,
+            photo_y: profile.photoY ?? 8,
+            photo_zoom: profile.photoZoom ?? 1.02,
+            playstyles: basePlaystyles
+          }
         };
       };
 

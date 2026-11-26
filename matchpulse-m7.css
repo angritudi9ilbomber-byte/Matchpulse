@@ -95,3 +95,21 @@ body .mp-club-fifa-wrap.featured-card-wrap > .player-card.mp6-rendered[data-mp6-
     width: min(100%, 320px) !important;
   }
 }
+
+/* M7.2 — Independent Career / Promo / Cosmetic display. */
+.mp7-toggle { width:min(100%,390px); }
+.mp7-toggle>button { padding-inline:4px!important; }
+.mp7-home-promo { width:100%; min-width:0; display:grid; justify-items:center; gap:12px; position:relative; z-index:4; }
+.mp7-home-promo[hidden] { display:none!important; }
+body[data-mp7-home-view="promo"] .premium-home .mp7-arena > .player-card { display:none!important; }
+.mp7-home-promo-card { width:100%; min-width:0; display:grid; grid-template-columns:minmax(0,1fr); justify-items:center; }
+.mp7-home-promo-card>.mp-promo-v3-card { width:min(100%,385px)!important; max-width:100%!important; }
+.mp7-home-promo-card>p { color:#c9b8e4; text-align:center; padding:16px; }
+.mp7-promo-picker { box-sizing:border-box; width:min(100%,385px); min-height:44px; padding:8px 12px; color:#fff; background:#1b1530; border:1px solid #a87ddb; border-radius:12px; font:inherit; }
+.mp7-home-promo>.secondary-btn { width:min(100%,385px); }
+.mp7-member-fallback { min-width:0; display:grid; grid-template-columns:minmax(0,1fr); gap:8px; align-content:start; }
+.mp7-member-fallback>small { color:#c9b8e4; text-align:center; font-size:11px; }
+
+body[data-mp7-home-view="promo"] .mp7-arena>.mp-r1-card-cta { display:none!important; }
+.mp7-member-fallback { min-height:170px; padding:24px 12px; place-content:center; text-align:center; border:1px dashed #a87ddb65; border-radius:18px; background:#17132ae8; }
+.mp7-member-fallback>strong { color:#eee4ff; font-size:16px; overflow-wrap:anywhere; }
