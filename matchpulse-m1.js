@@ -586,7 +586,7 @@ if (publishError) throw publishError;
     ['goals','Sfide','Crea e modifica obiettivi'],
     ['monitor','Giocatori','Controlla progressi e riscatti'],
     ['tokens','Token','Gestisci i saldi reali'],
-    ['prices','Negozio','Modifica i prezzi'],
+    ['prices','Negozio','Prezzi e probabilità pacchetti'],
     ['schedule','Programmazione','Stop degli obiettivi']
   ];
   async function clubNames(){
@@ -612,6 +612,17 @@ if (publishError) throw publishError;
     F.clubNames=await clubNames();
     return F.clubNames;
   };
+  const oddsRarities=[['common','Comune'],['rare','Rara'],['epic','Epica'],['legendary','Leggendaria']];
+  function packPercentages(p){
+    const weights=oddsRarities.map(([r])=>Math.max(0,Number(p?.[r+'_weight'])||0));
+    const total=weights.reduce((a,b)=>a+b,0);
+    if(!total)return [0,0,0,0];
+    const raw=weights.map(w=>w*10000/total), rounded=raw.map(Math.floor);
+    const order=raw.map((v,i)=>[i,v-rounded[i]]).sort((a,b)=>b[1]-a[1]);
+    const missing=10000-rounded.reduce((a,b)=>a+b,0);
+    for(let i=0;i<missing;i++)rounded[order[i][0]]++;
+    return rounded.map(v=>v/100);
+  }
   async function refresh(){
     const [goals,players,skins,packs,names]=await Promise.all([
       db().from('matchpulse_m1_challenges')
@@ -620,7 +631,7 @@ if (publishError) throw publishError;
       db().from('matchpulse_m2_skins')
         .select('id,title,price,theme,rarity,active').order('sort_order'),
       db().from('matchpulse_m2_packs')
-        .select('id,title,price,active').order('sort_order'),
+        .select('id,title,price,active,common_weight,rare_weight,epic_weight,legendary_weight').order('sort_order'),
       clubNames()
     ]);
 
@@ -874,6 +885,18 @@ if (publishError) throw publishError;
         SALVA PREZZO
       </button>
 
+      ${product?.type==='pack'?`
+      <section class="mp-founder-odds">
+        <h3>Probabilità del pacchetto</h3>
+        <p>Percentuali di base prima dell'esclusione delle rarità esaurite. Nessun doppione: le probabilità effettive possono variare per inventario.</p>
+        <div class="mp-founder-odds-grid">
+          ${oddsRarities.map(([r,label],i)=>`<label>${label} (%)<input type="number" id="mfOdds_${r}" min="0" max="100" step="0.01" inputmode="decimal" style="${inputStyle}" value="${packPercentages(product)[i]}" oninput="mpM1FounderOddsTotal()"></label>`).join('')}
+        </div>
+        <strong id="mfOddsTotal" role="status">Totale: ${packPercentages(product).reduce((a,b)=>a+b,0).toFixed(2)}%</strong>
+        <button id="mfOddsSave" type="button" style="${buttonStyle}" onclick="mpM1FounderSetOdds()" ${packPercentages(product).every(x=>x===0)?'disabled':''}>SALVA PROBABILITÀ</button>
+        <small>La modifica riguarda le prossime aperture, anche dei pacchetti premio. Non modifica gli oggetti già ottenuti.</small>
+      </section>`:'<small>Seleziona un pacchetto nel menu Prodotto per modificare le probabilità delle rarità.</small>'}
+
       </section>
       <section class="mp-founder-pane" data-founder-pane="schedule" ${F.tab==='schedule'?'':'hidden'}>
       <h3>Programmazione obiettivi</h3>
@@ -1062,6 +1085,38 @@ if (publishError) throw publishError;
     }catch(e){
       message(e);
     }
+  };
+
+  function readOdds(){
+    const inputs=oddsRarities.map(([r])=>document.getElementById('mfOdds_'+r));
+    if(inputs.some(el=>!el||el.value.trim()===''||!el.validity.valid))return null;
+    const points=inputs.map(el=>Math.round(Number(el.value)*100));
+    return points.every(v=>Number.isInteger(v)&&v>=0&&v<=10000)?points:null;
+  }
+  window.mpM1FounderOddsTotal=()=>{
+    const points=readOdds(), total=points?.reduce((a,b)=>a+b,0);
+    const out=document.getElementById('mfOddsTotal'), button=document.getElementById('mfOddsSave');
+    if(out)out.textContent=points?'Totale: '+(total/100).toFixed(2)+'%'+(total===10000?' · valido':' · deve essere 100%'):'Inserisci quattro percentuali valide';
+    if(button)button.disabled=total!==10000;
+  };
+  window.mpM1FounderSetOdds=async()=>{
+    const p=F.products.find(x=>x.type==='pack'&&'pack|'+x.id===F.product);
+    const points=readOdds();
+    if(!p||!points||points.reduce((a,b)=>a+b,0)!==10000){alert('Le quattro percentuali devono sommare al 100%.');return;}
+    if(!confirm('Salvare le nuove probabilità di '+p.title+' per tutti i giocatori?'))return;
+    const button=document.getElementById('mfOddsSave');if(button)button.disabled=true;
+    try{
+      const {error}=await db().rpc('mp_m1_founder_set_pack_odds',{
+        p_pack_id:p.id,p_common:points[0],p_rare:points[1],p_epic:points[2],p_legendary:points[3]
+      });
+      if(error)throw error;
+      await refresh();
+      window.mpM2AfterWalletChange?.();
+      alert('Probabilità aggiornate.');
+    }catch(error){
+      if(error?.code==='PGRST202'||error?.code==='42883')alert('Funzione server non ancora installata. Nessuna probabilità modificata.');
+      else message(error);
+    }finally{window.mpM1FounderOddsTotal();}
   };
 
   window.mpM1FounderPauseAll=async()=>{
