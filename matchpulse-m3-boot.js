@@ -118,7 +118,7 @@
     // Optional cosmetic module: a failure cannot block the core app.
     try{
       await new Promise((resolve,reject)=>{
-        const s=document.createElement('script');s.src='matchpulse-m8-identity.js?v=20261127-founder6';s.async=false;
+        const s=document.createElement('script');s.src='matchpulse-m8-identity.js?v=20261127-pair7';s.async=false;
         s.onload=resolve;s.onerror=reject;document.body.appendChild(s);
       });
     }catch(e){console.warn('MatchPulse M8: anteprima non disponibile',e);}

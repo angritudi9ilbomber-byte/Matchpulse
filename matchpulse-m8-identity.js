@@ -14,6 +14,10 @@ function plateImage(id,lazy=false){
  if(!plateIds.has(key))return '';
  return '<img class="mp8-plate-image" src="mp8-plates/'+key+'.webp?v=hd1" width="1100" height="320" alt="" decoding="async"'+(lazy?' loading="lazy"':'')+'>';
 }
+const completePair=eq=>!!(eq?.plate_id&&eq?.title_id);
+const hasKind=kind=>cat().some(x=>x.kind===kind&&owned(x.id));
+const canEquipPair=()=>hasKind('plate')&&hasKind('title');
+const missingPair=()=>!hasKind('plate')?'Ti manca una targhetta.':!hasKind('title')?'Ti manca un titolo.':'Scegli un titolo e una targhetta.';
 function markup(eq){
  const title=item(eq?.title_id)?.title||'', plate=plateImage(eq?.plate_id);
  if(!plate&&!title)return '';
@@ -24,7 +28,7 @@ function currentRoute(){return typeof route==='string'?route:'';}
 function updateHome(){
  const host=app?.querySelector('.premium-home .mp7-arena'),el=host?.querySelector(':scope > .mp7-identity');
  if(!el)return;
- const content=state&&uid?markup(state.equipped):'';
+ const content=state&&uid&&completePair(state.equipped)?markup(state.equipped):'';
  if(!content){el.hidden=true;return;}
  const switches=host.querySelector(':scope > .mp7-toggle');
  if(switches&&switches.nextElementSibling!==el)switches.insertAdjacentElement('afterend',el);
@@ -35,7 +39,7 @@ window.mpM8SyncIdentity=updateHome;
 window.mpM8OwnPlateMarkup=member=>{
  if(!state||!uid||!member?.user_id)return '';
  const eq=member.user_id===uid?state.equipped:state.club_equipped?.find(x=>x.user_id===member.user_id);
- const content=markup(eq);return content?'<div class="mp8-club-identity">'+content+'</div>':'';
+ const content=completePair(eq)?markup(eq):'';return content?'<div class="mp8-club-identity">'+content+'</div>':'';
 };
 window.mpM8Catalogue=()=>cat().map(x=>({...x}));
 window.mpM8FounderProducts=()=>[...cat().filter(x=>x.kind==='plate').map(x=>({...x,type:'plate'})),...(state?.pack?[{...state.pack,type:'identity_pack',id:'identity_pack',title:'Identity Pack'}]:[])];
@@ -102,7 +106,8 @@ function shopPanel(){
  return ['plate','title'].map(k=>'<h3>'+ (k==='plate'?'Targhette':'Titoli in vendita')+'</h3><div class="mp8-choices">'+visible.filter(x=>x.kind===k).map(x=>card(x,owned(x.id)?'inventory':'buy',owned(x.id)?'POSSEDUTO':x.price+' TOKEN')).join('')+'</div>'+(!visible.some(x=>x.kind===k)?'<p class="mp8-note">Nessun prodotto in vendita in questa categoria.</p>':'')).join('');
 }
 function inventoryPanel(){
- return '<p class="mp8-note">I titoli e le targhette restano nel tuo inventario anche al cambio di stagione.</p><div class="mp8-preview">'+(markup(draft)||'<p>Nessun titolo o targhetta equipaggiato.</p>')+'</div><label>Titolo<select id="mp8-title-select">'+selectItems('title',draft.title_id)+'</select></label><label>Targhetta<select id="mp8-plate-select">'+selectItems('plate',draft.plate_id)+'</select></label><button class="mp8-apply" data-action="equip">SALVA EQUIPAGGIAMENTO</button><button class="mp8-reset" data-action="clear">RIMUOVI ENTRAMBI</button><h3>I tuoi cosmetici · '+(state?.owned||[]).length+'</h3><div class="mp8-choices">'+cat().filter(x=>owned(x.id)).map(x=>card(x,'select',x.id===draft[x.kind+'_id']?'SELEZIONATO':'SELEZIONA')).join('')+'</div>';
+ const allowed=canEquipPair();
+ return '<p class="mp8-note">Per mostrare la tua identità devi possedere e selezionare sia un titolo sia una targhetta. Gli oggetti restano nel tuo inventario anche al cambio di stagione.</p><div class="mp8-preview">'+(completePair(draft)?markup(draft):'<p>Seleziona entrambi per vedere la combinazione.</p>')+'</div><label>Titolo<select id="mp8-title-select">'+selectItems('title',draft.title_id)+'</select></label><label>Targhetta<select id="mp8-plate-select">'+selectItems('plate',draft.plate_id)+'</select></label>'+(!allowed?'<p class="mp8-note">🔒 '+missingPair()+'</p>':'')+'<button class="mp8-apply" data-action="equip" '+(!allowed||!completePair(draft)?'disabled':'')+'>EQUIPAGGIA ENTRAMBI</button><button class="mp8-reset" data-action="clear" '+(!completePair(state?.equipped)?'disabled':'')+'>RIMUOVI ENTRAMBI</button><h3>I tuoi cosmetici · '+(state?.owned||[]).length+'</h3><div class="mp8-choices">'+cat().filter(x=>owned(x.id)).map(x=>card(x,'select',x.id===draft[x.kind+'_id']?'SELEZIONATO':'SELEZIONA')).join('')+'</div>';
 }
 function labPanel(){
  return '<p class="mp8-note">Solo anteprima nel laboratorio. Non modifica saldi, inventario o carta condivisa.</p><div class="mp8-preview">'+(markup(lab)||'<p>Scegli una targhetta e un titolo.</p>')+'</div><label>Titolo<select id="mp8-title-select">'+selectItems('title',lab.title_id,true)+'</select></label><label>Targhetta<select id="mp8-plate-select">'+selectItems('plate',lab.plate_id,true)+'</select></label><div class="mp8-choices">'+cat().filter(x=>x.kind==='plate').map(x=>card(x,'select','PROVA')).join('')+'</div>';
@@ -113,7 +118,7 @@ function storeItem(x,inv=false){
  const equipped=state?.equipped?.[x.kind+'_id']===x.id, mine=owned(x.id);
  const id=esc(x.id),kind=x.kind==='plate'?'Targhetta':'Titolo';
  const art=x.kind==='plate'?'<div class="mp8-plate mp8-art">'+plateImage(x.id,true)+'</div>':'<div class="mp8-title-sample">'+esc(x.title.toUpperCase())+'</div>';
- const action=inv?'<button class="mp6-action" data-mp8-inline="equip" data-id="'+id+'">'+(equipped?'RIMUOVI':'EQUIPAGGIA')+'</button>':mine?'<button class="mp6-action mp6-owned" data-mp8-inline="inventory">GIÀ TUA ✓</button>':'<button class="mp6-action" data-mp8-inline="buy" data-id="'+id+'">ACQUISTA</button>';
+ const action=inv?'<button class="mp6-action" data-mp8-inline="equip" data-id="'+id+'" '+(!equipped&&!canEquipPair()?'disabled':'')+'>'+(equipped?'RIMUOVI ENTRAMBI':canEquipPair()?'ABBINA ED EQUIPAGGIA':x.kind==='plate'?'MANCA IL TITOLO':'MANCA LA TARGHETTA')+'</button>':mine?'<button class="mp6-action mp6-owned" data-mp8-inline="inventory">GIÀ TUA ✓</button>':'<button class="mp6-action" data-mp8-inline="buy" data-id="'+id+'">ACQUISTA</button>';
  return '<article class="mp6-cosmetic mp6-tier-'+esc(x.rarity)+' mp8-inline-item"><div class="mp6-cosmetic-top"><div class="mp8-inline-art">'+art+'</div><span class="mp6-rarity-pill">'+esc(rarity[x.rarity]||x.rarity)+'</span></div><div class="mp6-cosmetic-copy"><small>'+kind.toUpperCase()+'</small><h4>'+esc(x.title)+'</h4><p>'+(inv?(equipped?'Equipaggiato':'Nel tuo inventario'):'Cosmetico permanente per la tua identità.')+'</p><div class="mp6-cosmetic-foot">'+(inv?'':'<b>✦ '+Number(x.price)+'</b>')+'<div class="mp6-cosmetic-buttons"><button class="mp6-action mp6-outline" data-mp8-inline="preview" data-id="'+id+'">ANTEPRIMA</button>'+action+'</div></div></div></article>';
 }
 function storePack(){
@@ -125,12 +130,12 @@ function storeSection(kind,inv=false){
  const entries=cat().filter(x=>x.kind===kind&&(inv?owned(x.id):x.shop_active));
  if(!entries.length&&!inv)return '';
  const label=kind==='plate'?'TARGHETTE':'TITOLI';
- return '<section class="mp6-intro"><small>'+(inv?'INVENTARIO PERMANENTE':'IDENTITÀ / COSMETICI')+'</small><h3>'+label+'</h3><p>'+(inv?'I tuoi oggetti, conservati anche al cambio di stagione.':kind==='plate'?'Personalizza la cornice del tuo titolo.':'Personalizza il titolo sopra la tua carta.')+'</p><div class="mp6-showcase">'+entries.map(x=>storeItem(x,inv)).join('')+'</div>'+(!entries.length?'<p>Nessun oggetto posseduto.</p>':'')+'</section>';
+ return '<section class="mp6-intro"><small>'+(inv?'INVENTARIO PERMANENTE':'IDENTITÀ / COSMETICI')+'</small><h3>'+label+'</h3><p>'+(inv?'I tuoi oggetti, conservati anche al cambio di stagione. Per equipaggiarli servono un titolo e una targhetta.':kind==='plate'?'Personalizza la cornice del tuo titolo.':'Personalizza il titolo sopra la tua carta.')+'</p><div class="mp6-showcase">'+entries.map(x=>storeItem(x,inv)).join('')+'</div>'+(!entries.length?'<p>Nessun oggetto posseduto.</p>':'')+'</section>';
 }
 
 function titlesCollection(){
  const all=cat().filter(x=>x.kind==='title');
- return '<section class="mp6-intro"><small>COLLEZIONE TITOLI</small><h3>TUTTI I TITOLI · '+all.filter(x=>owned(x.id)).length+'/'+all.length+'</h3><p>Parti senza titoli. Sbloccali con le sfide o con un regalo del Founder. Quelli in vendita sono acquistabili.</p><div class="mp6-showcase">'+all.map(x=>owned(x.id)?storeItem(x,true):x.shop_active?storeItem(x,false):'<article class="mp6-cosmetic mp6-tier-'+esc(x.rarity)+' mp8-inline-item mp8-locked"><div class="mp6-cosmetic-top"><div class="mp8-inline-art"><div class="mp8-title-sample">'+esc(x.title.toUpperCase())+'</div></div><span class="mp6-rarity-pill">'+esc(rarity[x.rarity])+'</span></div><div class="mp6-cosmetic-copy"><small>TITOLO</small><h4>'+esc(x.title)+'</h4><p>🔒 Non ancora sbloccato</p></div></article>').join('')+'</div></section>';
+ return '<section class="mp6-intro"><small>COLLEZIONE TITOLI</small><h3>TUTTI I TITOLI · '+all.filter(x=>owned(x.id)).length+'/'+all.length+'</h3><p>Acquista o sblocca i titoli con le sfide e i regali del Founder. Per equipaggiarne uno serve anche una targhetta.</p><div class="mp6-showcase">'+all.map(x=>owned(x.id)?storeItem(x,true):x.shop_active?storeItem(x,false):'<article class="mp6-cosmetic mp6-tier-'+esc(x.rarity)+' mp8-inline-item mp8-locked"><div class="mp6-cosmetic-top"><div class="mp8-inline-art"><div class="mp8-title-sample">'+esc(x.title.toUpperCase())+'</div></div><span class="mp6-rarity-pill">'+esc(rarity[x.rarity])+'</span></div><div class="mp6-cosmetic-copy"><small>TITOLO</small><h4>'+esc(x.title)+'</h4><p>🔒 Non ancora sbloccato</p></div></article>').join('')+'</div></section>';
 }
 
 function mountStore(){
@@ -152,14 +157,21 @@ function detailPanel(){
 async function inlineEquip(id){
  if(busy||!owned(id))return;
  const x=item(id);if(!x)return;
- const eq={...state.equipped};eq[x.kind+'_id']=eq[x.kind+'_id']===id?null:id;
- busy=true;mountStore();
- try{
-  await rpc('mp_m8_equip',{p_plate:eq.plate_id||null,p_title:eq.title_id||null});
-  if(!await refresh({force:true,render:false}))throw Error('Equipaggiamento salvato; aggiorna per visualizzarlo.');
-  if(typeof toast==='function')toast('Equipaggiamento aggiornato');
- }catch(e){alert(e?.message||String(e));}
- finally{busy=false;mountStore();}
+ const eq=state?.equipped||{};
+ if(completePair(eq)&&eq[x.kind+'_id']===id){
+  if(!confirm('Rimuovere titolo e targhetta dalla carta?'))return;
+  busy=true;mountStore();
+  try{await rpc('mp_m8_equip',{p_plate:null,p_title:null});await refresh({force:true,render:false});}
+  catch(e){alert(e?.message||String(e));}finally{busy=false;mountStore();}
+  return;
+ }
+ if(!canEquipPair()){alert(missingPair());return;}
+ await show('inventory',true);
+ if(!host()||!owned(id))return;
+ draft[x.kind+'_id']=id;
+ const other=x.kind==='plate'?'title':'plate';
+ if(!draft[other+'_id']){const options=cat().filter(c=>c.kind===other&&owned(c.id));if(options.length===1)draft[other+'_id']=options[0].id;}
+ paint();
 }
 app?.addEventListener('click',async e=>{
  const b=e.target.closest?.('[data-mp8-inline]');if(!b||busy)return;
@@ -210,6 +222,7 @@ async function buy(product){
 function switchTab(id){if(id==='founder'&&!state?.admin)return;mode=id;reveal=null;if(id==='inventory')draft={...state?.equipped};if(id==='lab')lab={...state?.equipped};paint();}
 async function equip(clear=false){
  if(clear)draft={plate_id:null,title_id:null};
+ else if(!completePair(draft)||!owned(draft.plate_id)||!owned(draft.title_id)){msg(missingPair());return;}
  await run(async()=>{await rpc('mp_m8_equip',{p_plate:draft.plate_id||null,p_title:draft.title_id||null});await refresh({force:true,render:false});draft={...state?.equipped};updateHome();msg('Equipaggiamento sincronizzato.');});
 }
 async function openBonus(id){
@@ -261,7 +274,7 @@ async function show(next='shop',load=true,product=''){
  });
  h.addEventListener('change',e=>{
   const id=e.target.id;if(id==='mp8-founder-item'){founderItem=e.target.value;paint();return;}
-  if(id==='mp8-title-select'||id==='mp8-plate-select'){const q=mode==='lab'?lab:draft;q[id==='mp8-title-select'?'title_id':'plate_id']=e.target.value||null;const preview=h.querySelector('.mp8-preview');if(preview)preview.innerHTML=markup(q)||'<p>Nessun cosmetico selezionato.</p>';}
+  if(id==='mp8-title-select'||id==='mp8-plate-select'){const q=mode==='lab'?lab:draft;q[id==='mp8-title-select'?'title_id':'plate_id']=e.target.value||null;if(mode==='inventory'){paint();}else{const preview=h.querySelector('.mp8-preview');if(preview)preview.innerHTML=markup(q)||'<p>Nessun cosmetico selezionato.</p>';}}
  });
  h.addEventListener('submit',e=>void submit(e));
  if(load){const ok=await refresh({force:true,render:false});if(!ok)msg('Impossibile aggiornare il catalogo. Riprova.');}
