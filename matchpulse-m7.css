@@ -125,3 +125,8 @@ body[data-mp7-home-view="promo"] .mp7-arena>.mp-r1-card-cta { display:none!impor
 @keyframes mp8-violet-pulse{from{opacity:.68}to{opacity:1}}
 @keyframes mp8-violet-twinkle{from{opacity:.38}to{opacity:1}}
 @media(prefers-reduced-motion:reduce){.mp8-violet-breathe,.mp8-violet-stars{animation:none!important}}
+
+/* M8.2 — Real-size stadium alternative, only in Founder preview. */
+.mp8-stadium-layer{overflow:hidden!important;background:linear-gradient(180deg,rgba(8,12,25,.07) 0%,transparent 18%,transparent 84%,rgba(8,12,25,.55) 100%),url("arena-bg.jpg") center center / cover no-repeat!important;mask-image:linear-gradient(to bottom,transparent 0%,#000 5%,#000 94%,transparent 100%);-webkit-mask-image:linear-gradient(to bottom,transparent 0%,#000 5%,#000 94%,transparent 100%)}
+.mp8-arena-active>.player-card{box-shadow:none!important}
+.mp8-violet-active{scroll-margin-top:calc(env(safe-area-inset-top,0px) + 56px)}

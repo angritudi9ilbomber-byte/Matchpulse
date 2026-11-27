@@ -113,12 +113,18 @@
     if(typeof route==='string'&&route==='promos')window.renderPromos?.();
   };
   // M8 prototype: session-only, Founder-authorized; no economy or inventory writes.
-  let violetTest=false, auraCard=null, auraHost=null, auraResize=null;
+  let violetTest=false, arenaTest=false, auraCard=null, auraHost=null, auraResize=null;
   function sizeAura(){
     if(!auraCard?.isConnected||!auraHost?.isConnected)return;
     const card=auraCard.getBoundingClientRect(), host=auraHost.getBoundingClientRect();
     const layer=auraHost.querySelector(':scope > .mp8-violet-layer');
     if(!layer||!card.width||!card.height)return;
+    if(arenaTest){
+      const availableWidth=Math.max(0,host.width-auraHost.clientLeft*2);
+      Object.assign(layer.style,{left:'0px',top:Math.max(0,card.top-host.top-auraHost.clientTop-37)+'px',
+        width:availableWidth+'px',height:(card.height+54)+'px'});
+      return;
+    }
     const padX=Math.min(22,Math.max(7,(host.width-card.width)/2-2));
     const padY=15;
     Object.assign(layer.style,{
@@ -132,14 +138,14 @@
     if(auraHost){
       auraHost.querySelector(':scope > .mp8-violet-layer')?.remove();
       auraHost.querySelector('.mp8-violet-off')?.remove();
-      auraHost.classList.remove('mp8-violet-active');
+      auraHost.classList.remove('mp8-violet-active','mp8-arena-active');
     }
     auraCard=null;auraHost=null;
   }
   function syncAura(){
     const host=app.querySelector('.premium-home .mp7-arena');
     const card=host?.querySelector(':scope > .player-card');
-    if(!violetTest||!card||views.home==='promo'){
+    if((!violetTest&&!arenaTest)||!card||views.home==='promo'){
       if(auraHost)clearAura();
       return;
     }
@@ -148,8 +154,10 @@
     }
     clearAura();auraHost=host;auraCard=card;
     host.classList.add('mp8-violet-active');
+    if(arenaTest)host.classList.add('mp8-arena-active');
     const layer=document.createElement('div');layer.className='mp8-violet-layer';layer.setAttribute('aria-hidden','true');
-    layer.innerHTML=`<svg viewBox="0 0 340 520" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    if(arenaTest)layer.classList.add('mp8-stadium-layer');
+    else layer.innerHTML=`<svg viewBox="0 0 340 520" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <radialGradient id="mp8violetGlow"><stop offset="0" stop-color="#b24aff" stop-opacity=".12"/><stop offset=".68" stop-color="#9838ff" stop-opacity=".52"/><stop offset="1" stop-color="#6e23d8" stop-opacity="0"/></radialGradient>
         <linearGradient id="mp8violetArc" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#5a28d7" stop-opacity=".18"/><stop offset=".27" stop-color="#9b55ff"/><stop offset=".55" stop-color="#f8b8ff"/><stop offset=".78" stop-color="#e94aff"/><stop offset="1" stop-color="#6927d4" stop-opacity=".15"/></linearGradient>
@@ -167,26 +175,29 @@
         <circle cx="13" cy="62" r="1.8"/><circle cx="29" cy="18" r="1.4"/><circle cx="88" cy="8" r="1.5"/><circle cx="247" cy="12" r="2"/><circle cx="323" cy="63" r="1.5"/><circle cx="332" cy="123" r="2"/><circle cx="8" cy="183" r="1.8"/><circle cx="333" cy="257" r="1.5"/><circle cx="8" cy="315" r="2"/><circle cx="325" cy="397" r="1.9"/><circle cx="14" cy="454" r="1.4"/><circle cx="64" cy="496" r="2"/><circle cx="270" cy="500" r="1.5"/><circle cx="321" cy="471" r="1.7"/>
       </g></svg>`;
     host.insertBefore(layer,card);
-    const off=document.createElement('button');off.type='button';off.className='mp8-violet-off';off.textContent='TEST ✕';off.setAttribute('aria-label','Disattiva anteprima Violet Pulse');
-    off.onclick=()=>{violetTest=false;clearAura();};
+    const off=document.createElement('button');off.type='button';off.className='mp8-violet-off';off.textContent='TEST ✕';off.setAttribute('aria-label','Disattiva anteprima '+(arenaTest?'Arena':'Violet Pulse'));
+    off.onclick=()=>{violetTest=false;arenaTest=false;clearAura();};
     host.querySelector('.mp-r1-card-eyebrow')?.append(off);
     if(typeof ResizeObserver==='function'){
       auraResize=new ResizeObserver(sizeAura);auraResize.observe(host);auraResize.observe(card);
     }
     sizeAura();
   }
-  window.mpM8TestVioletPulse=async()=>{
+  async function startCosmeticTest(kind){
     try{
       if(typeof window.mpPromoSecureIsAdmin!=='function'||!(await window.mpPromoSecureIsAdmin(false))){alert('Accesso Founder richiesto.');return;}
       window.mpM6FounderClose?.();
-      violetTest=true;
+      clearAura();
+      violetTest=kind==='violet';arenaTest=kind==='arena';
       if(views.home==='promo'){setView('home','skin');reflect();refreshVisuals();}
       if(typeof route!=='undefined'&&route!=='home')setRoute('home');
       syncAura();
       requestAnimationFrame(()=>{syncAura();const host=app.querySelector('.premium-home .mp7-arena');host?.scrollIntoView({block:'start',behavior:'auto'});});
-    }catch(error){violetTest=false;clearAura();alert('Anteprima non disponibile: '+(error?.message||String(error)));}
-  };
-  window.mpM8StopVioletPulse=()=>{violetTest=false;clearAura();};
+    }catch(error){violetTest=false;arenaTest=false;clearAura();alert('Anteprima non disponibile: '+(error?.message||String(error)));}
+  }
+  window.mpM8TestVioletPulse=()=>startCosmeticTest('violet');
+  window.mpM8TestArena=()=>startCosmeticTest('arena');
+  window.mpM8StopVioletPulse=()=>{violetTest=false;arenaTest=false;clearAura();};
   function refreshVisuals(){
     syncHomePromo();
     syncAura();
@@ -381,6 +392,6 @@
   });
   observer.observe(document.body,{subtree:true,childList:true});
   reflect();remember();sync();refreshVisuals();
-  window.mpM7Inspect=()=>({version:'M7.2',home:views.home,club:views.club,profileLocked:!!lock,promotion:baseline,arenaReady:!!app.querySelector('.mp7-arena'),violetTest});
+  window.mpM7Inspect=()=>({version:'M7.2',home:views.home,club:views.club,profileLocked:!!lock,promotion:baseline,arenaReady:!!app.querySelector('.mp7-arena'),violetTest,arenaTest});
   window.MP_M7_READY=true;
 })();

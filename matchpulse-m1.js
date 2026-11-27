@@ -913,6 +913,8 @@ if (publishError) throw publishError;
         <h3>Founder Lab · M8</h3>
         <small>Violet Pulse: prototipo locale. Non consuma token e non modifica il catalogo o l'inventario.</small>
         <button type="button" style="${buttonStyle}" onclick="mpM8TestVioletPulse()">PROVA VIOLET PULSE SULLA HOME</button>
+        <button type="button" style="${buttonStyle}" onclick="mpM8TestArena()">PROVA ARENA SULLA HOME</button>
+        <small>Confronto: sfondo stadio a tutta larghezza, dietro la carta reale. Le dimensioni restano identiche.</small>
         <small>Per terminare il test premi TEST ✕ nella Home. Il prototipo non viene condiviso con il Club.</small>
       </section>
     </section>`;
