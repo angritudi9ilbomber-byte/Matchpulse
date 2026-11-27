@@ -42,7 +42,7 @@ window.mpM8OwnPlateMarkup=member=>{
  const content=completePair(eq)?markup(eq):'';return content?'<div class="mp8-club-identity">'+content+'</div>':'';
 };
 window.mpM8Catalogue=()=>cat().map(x=>({...x}));
-window.mpM8FounderProducts=()=>[...cat().filter(x=>x.kind==='plate').map(x=>({...x,type:'plate'})),...(state?.pack?[{...state.pack,type:'identity_pack',id:'identity_pack',title:'Identity Pack'}]:[])];
+window.mpM8FounderProducts=()=>[...cat().filter(x=>x.kind==='plate'||x.kind==='title').map(x=>({...x,type:x.kind})),...(state?.pack?[{...state.pack,type:'identity_pack',id:'identity_pack',title:'Identity Pack'}]:[])];
 window.mpM8Label=id=>item(id)?.title||'Cosmetico identità';
 window.mpM8Ready=()=>!!state;
 window.mpM8IsFounder=()=>!!state?.admin;

@@ -99,7 +99,7 @@
   async function loadScripts() {
     for (const url of [
       'app.js?v=20261127-m7.2-views',
-      'matchpulse-m1.js?v=20261127-founder6',
+      'matchpulse-m1.js?v=20261127-founder8',
       'matchpulse-m2.js?v=20261127-founder6',
       'matchpulse-m3.js?v=20261127-m7-career',
       'matchpulse-premium-r1.js?v=20261127-m7-career',
@@ -118,7 +118,7 @@
     // Optional cosmetic module: a failure cannot block the core app.
     try{
       await new Promise((resolve,reject)=>{
-        const s=document.createElement('script');s.src='matchpulse-m8-identity.js?v=20261127-pair7';s.async=false;
+        const s=document.createElement('script');s.src='matchpulse-m8-identity.js?v=20261127-founder8';s.async=false;
         s.onload=resolve;s.onerror=reject;document.body.appendChild(s);
       });
     }catch(e){console.warn('MatchPulse M8: anteprima non disponibile',e);}

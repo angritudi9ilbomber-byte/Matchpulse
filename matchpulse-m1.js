@@ -636,10 +636,10 @@ if (publishError) throw publishError;
     return rounded.map(v=>v/100);
   }
 
-  const shopCategories=[['originals','FC Originals'],['collabs','Collaborazioni'],['emblems','Emblemi'],['plates','Targhette'],['packs','Pacchetti']];
+  const shopCategories=[['originals','FC Originals'],['collabs','Collaborazioni'],['emblems','Emblemi'],['plates','Targhette'],['titles','Titoli'],['packs','Pacchetti']];
   const emblemIds=new Set(['op_straw','db_kame','cp_night','f1_grid']);
   const shopProducts=()=>[...F.products,...(window.mpM8FounderProducts?.()||[])];
-  const categoryOf=p=>p.type==='pack'||p.type==='identity_pack'?'packs':p.type==='plate'?'plates':emblemIds.has(p.id)?'emblems':p.theme==='matchpulse'?'originals':'collabs';
+  const categoryOf=p=>p.type==='pack'||p.type==='identity_pack'?'packs':p.type==='plate'?'plates':p.type==='title'?'titles':emblemIds.has(p.id)?'emblems':p.theme==='matchpulse'?'originals':'collabs';
   const productsInCategory=()=>shopProducts().filter(p=>categoryOf(p)===F.productCategory);
   const productKey=p=>p.type+'|'+p.id;
   const isPack=p=>p?.type==='pack'||p?.type==='identity_pack';
@@ -892,7 +892,7 @@ if (publishError) throw publishError;
       </section>
       <section class="mp-founder-pane" data-founder-pane="prices" ${F.tab==='prices'?'':'hidden'}>
       <h3>Gestione negozio</h3>
-      <small>Seleziona il reparto e poi il prodotto. Qui trovi anche targhette e Identity Pack.</small>
+      <small>Seleziona il reparto e poi il prodotto. Qui trovi anche targhette, titoli e Identity Pack.</small>
       <label>Reparto<select style="${inputStyle}" onchange="mpM1FounderCategory(this.value)">${opts(shopCategories,F.productCategory)}</select></label>
 
       <label>Prodotto
@@ -903,7 +903,7 @@ if (publishError) throw publishError;
       </label>
 
       <label>Prezzo in token
-        <input id="mfPrice" type="number" min="${product?.type==='plate'||product?.type==='identity_pack'?0:1}" max="${product?.type==='plate'||product?.type==='identity_pack'?50000:9999}"
+        <input id="mfPrice" type="number" min="${['plate','title','identity_pack'].includes(product?.type)?0:1}" max="${['plate','title','identity_pack'].includes(product?.type)?50000:9999}"
           style="${inputStyle}" value="${esc(product?.price??'')}" ${product?'':'disabled'}>
       </label>
 
@@ -1136,9 +1136,10 @@ if (publishError) throw publishError;
   window.mpM1FounderSetPrice=async()=>{
     const p=productsInCategory().find(x=>productKey(x)===F.product);
 
-    const price=Number(document.getElementById('mfPrice')?.value);
+    const priceInput=document.getElementById('mfPrice');
+    const price=priceInput?.value.trim()?Number(priceInput.value):NaN;
 
-    const identity=p?.type==='plate'||p?.type==='identity_pack';
+    const identity=['plate','title','identity_pack'].includes(p?.type);
     if(!p||!Number.isInteger(price)||price<(identity?0:1)||price>(identity?50000:9999)){
       alert('Prezzo non valido.');
       return;
@@ -1149,7 +1150,7 @@ if (publishError) throw publishError;
 
     try{
       const active=!!document.getElementById('mfProductActive')?.checked;
-      const result=p.type==='plate'?await db().rpc('mp_m8_founder_item',{p_id:p.id,p_title:p.title,p_rarity:document.getElementById('mfProductRarity').value,p_price:price,p_active:active}):p.type==='identity_pack'?await db().rpc('mp_m8_founder_pack',{p_price:price,p_active:active,p_common:p.common_weight,p_rare:p.rare_weight,p_epic:p.epic_weight,p_legendary:p.legendary_weight}):await db().rpc('mp_m1_founder_set_price',{p_type:p.type,p_id:p.id,p_price:price});
+      const result=p.type==='title'?await db().rpc('mp_m8_founder_item',{p_id:p.id,p_title:p.title,p_rarity:p.rarity,p_price:price,p_active:p.shop_active}):p.type==='plate'?await db().rpc('mp_m8_founder_item',{p_id:p.id,p_title:p.title,p_rarity:document.getElementById('mfProductRarity').value,p_price:price,p_active:active}):p.type==='identity_pack'?await db().rpc('mp_m8_founder_pack',{p_price:price,p_active:active,p_common:p.common_weight,p_rare:p.rare_weight,p_epic:p.epic_weight,p_legendary:p.legendary_weight}):await db().rpc('mp_m1_founder_set_price',{p_type:p.type,p_id:p.id,p_price:price});
       const {error}=result;
       if(error)throw error;
 
