@@ -26,23 +26,26 @@ async function resolveUser(){
     }catch{}
   }
 }
-function spriteStyle(i){return 'background-position:'+(i%3)*50+'% '+(Math.floor(i/3)*100/3)+'%';}
-function markup(o,trial=true){
+function plateImage(id,lazy=false){
+  if(!plates.some(p=>p[0]===id))return '';
+  return '<img class="mp8-plate-image" src="mp8-plates/'+id+'.webp?v=hd1" width="1100" height="320" alt="" decoding="async"'+(lazy?' loading="lazy"':'')+'>';
+}
+function markup(o){
   if(!o?.plate&&!o?.title)return '';
   const idx=plates.findIndex(p=>p[0]===o.plate);
   const title=o.title||'';
   const size=title.length>24?'is-long':title.length>17?'is-medium':'';
-  return '<div class="mp8-identity-content"><div class="mp8-plate '+(idx>=0?'mp8-art':'mp8-text-only')+' '+(o.plate==='divine'?'is-divine':'')+'"'+(idx>=0?' style="'+spriteStyle(idx)+'"':'')+'><span class="mp8-title-text '+size+'">'+esc(title.toUpperCase())+'</span></div>'+(trial?'<small class="mp8-trial-label">ANTEPRIMA LOCALE</small>':'')+'</div>';
+  return '<div class="mp8-identity-content"><div class="mp8-plate '+(idx>=0?'mp8-art':'mp8-text-only')+' '+(o.plate==='divine'?'is-divine':'')+'">'+(idx>=0?plateImage(o.plate):'')+'<span class="mp8-title-text '+size+'">'+esc(title.toUpperCase())+'</span></div></div>';
 }
 function updateHome(){
   read();
   const host=app?.querySelector('.premium-home .mp7-arena');
   const el=host?.querySelector(':scope > .mp7-identity');
   if(!el)return;
-  const show=!!uid&&window.mpM7View?.('home')==='skin'&&!!(selection.plate||selection.title);
+  const show=!!uid&&!!(selection.plate||selection.title);
   if(!show){el.hidden=true;return;}
-  const card=host.querySelector(':scope > .player-card');
-  if(card&&el.nextElementSibling!==card)host.insertBefore(el,card);
+  const switches=host.querySelector(':scope > .mp7-toggle');
+  if(switches&&switches.nextElementSibling!==el)switches.insertAdjacentElement('afterend',el);
   const signature=JSON.stringify(selection);
   if(el.dataset.mp8Signature!==signature){el.innerHTML=markup(selection);el.dataset.mp8Signature=signature;}
   el.classList.add('mp8-home-identity');el.hidden=false;
@@ -50,7 +53,7 @@ function updateHome(){
 window.mpM8SyncIdentity=updateHome;
 window.mpM8OwnPlateMarkup=(member)=>{
   read();
-  if(!uid||member?.user_id!==uid||window.mpM7View?.('club')!=='skin')return '';
+  if(!uid||member?.user_id!==uid)return '';
   const content=markup(selection);
   return content?'<div class="mp8-club-identity">'+content+'</div>':'';
 };
@@ -59,7 +62,7 @@ function close(){document.querySelector('.mp8-dialog-host')?.remove();open=false
 function preview(){
   const host=document.querySelector('.mp8-dialog-host');if(!host)return;
   const box=host.querySelector('.mp8-preview');
-  box.innerHTML=markup(draft,false)||'<p>Nessun titolo o targhetta selezionato.</p>';
+  box.innerHTML=markup(draft)||'<p>Nessun titolo o targhetta selezionato.</p>';
 }
 function pickPlate(id){draft.plate=plates.some(p=>p[0]===id)?id:'';document.querySelectorAll('.mp8-plate-choice').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.plate===draft.plate)));preview();}
 function save(){
@@ -68,12 +71,12 @@ function save(){
   try{localStorage.setItem(key+':'+uid,JSON.stringify(selection));}catch(e){alert('Salvataggio locale non disponibile.');return;}
   close();
   if(typeof setRoute==='function'&&typeof route!=='undefined'&&route!=='home')setRoute('home');
-  requestAnimationFrame(()=>{const toggle=app?.querySelector('.mp7-toggle[data-mp7-scope="home"] [data-view="skin"]');toggle?.click();updateHome();app?.querySelector('.mp7-arena')?.scrollIntoView({block:'start',behavior:'auto'});});
+  requestAnimationFrame(()=>{updateHome();app?.querySelector('.mp7-arena')?.scrollIntoView({block:'start',behavior:'auto'});});
 }
 async function show(){
   close();await resolveUser();read();draft={...selection};
   const host=document.createElement('div');host.className='mp8-dialog-host';
-  host.innerHTML='<section class="mp8-dialog" role="dialog" aria-modal="true" aria-label="Titoli e targhette"><header><div><small>MATCHPULSE / IDENTITÀ</small><h2>Titoli e targhette</h2></div><button type="button" class="mp8-close" aria-label="Chiudi">✕</button></header><p class="mp8-note">Anteprima gratuita sul dispositivo. Acquisti, ricompense e sincronizzazione saranno disponibili dopo l’attivazione del database. Non vengono spesi token.</p><div class="mp8-preview"></div><label>Titolo<select id="mp8-title-select"><option value="">Nessun titolo</option>'+titles.map(t=>'<option value="'+esc(t)+'" '+(t===draft.title?'selected':'')+'>'+esc(t)+'</option>').join('')+'</select></label><div class="mp8-choice-head"><strong>Targhetta</strong><button class="mp8-plate-choice" type="button" data-plate="" aria-pressed="'+String(!draft.plate)+'">Nessuna</button></div><div class="mp8-choices">'+plates.map((p,i)=>'<button type="button" class="mp8-plate-choice" data-plate="'+p[0]+'" aria-pressed="'+String(draft.plate===p[0])+'"><div class="mp8-plate mp8-art" style="'+spriteStyle(i)+'"></div><strong>'+esc(p[1])+'</strong><small>'+esc(p[2])+'</small></button>').join('')+'</div><button class="mp8-apply" type="button">APPLICA ANTEPRIMA SULLA HOME</button><button class="mp8-reset" type="button">RIMUOVI TITOLO E TARGHETTA</button></section>';
+  host.innerHTML='<section class="mp8-dialog" role="dialog" aria-modal="true" aria-label="Titoli e targhette"><header><div><small>MATCHPULSE / IDENTITÀ</small><h2>Titoli e targhette</h2></div><button type="button" class="mp8-close" aria-label="Chiudi">✕</button></header><p class="mp8-note">Anteprima gratuita sul dispositivo. Acquisti, ricompense e sincronizzazione saranno disponibili dopo l’attivazione del database. Non vengono spesi token.</p><div class="mp8-preview"></div><label>Titolo<select id="mp8-title-select"><option value="">Nessun titolo</option>'+titles.map(t=>'<option value="'+esc(t)+'" '+(t===draft.title?'selected':'')+'>'+esc(t)+'</option>').join('')+'</select></label><div class="mp8-choice-head"><strong>Targhetta</strong><button class="mp8-plate-choice" type="button" data-plate="" aria-pressed="'+String(!draft.plate)+'">Nessuna</button></div><div class="mp8-choices">'+plates.map((p,i)=>'<button type="button" class="mp8-plate-choice" data-plate="'+p[0]+'" aria-pressed="'+String(draft.plate===p[0])+'"><div class="mp8-plate mp8-art">'+plateImage(p[0],true)+'</div><strong>'+esc(p[1])+'</strong><small>'+esc(p[2])+'</small></button>').join('')+'</div><button class="mp8-apply" type="button">APPLICA ANTEPRIMA SULLA HOME</button><button class="mp8-reset" type="button">RIMUOVI TITOLO E TARGHETTA</button></section>';
   document.body.append(host);open=true;
   host.querySelector('.mp8-close').onclick=close;
   host.querySelector('#mp8-title-select').onchange=e=>{draft.title=e.target.value;preview();};
@@ -84,7 +87,7 @@ async function show(){
   preview();host.querySelector('.mp8-close').focus({preventScroll:true});
 }
 window.mpM8OpenIdentity=()=>{void show().catch(e=>alert('Anteprima non disponibile: '+(e?.message||String(e))));};
-window.mpM8IdentityInspect=()=>({version:'M8.2-local',plates:plates.length,titles:titles.length,selected:{...selection},shared:false});
+window.mpM8IdentityInspect=()=>({version:'M8.2-HD-local',plates:plates.length,titles:titles.length,selected:{...selection},shared:false});
 document.addEventListener('keydown',e=>{if(open&&e.key==='Escape')close();});
 if(app)new MutationObserver(schedule).observe(app,{subtree:true,childList:true});
 new MutationObserver(schedule).observe(document.body,{attributes:true,attributeFilter:['data-mp7-home-view']});

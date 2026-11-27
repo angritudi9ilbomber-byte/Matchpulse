@@ -63,8 +63,13 @@
         const identity=window.mpM8OwnPlateMarkup?.(row);
         if(identity&&typeof result==='string'){
           const holder=document.createElement('div');holder.innerHTML=result;
-          const wrap=holder.querySelector('.mp-club-fifa-wrap');
-          if(wrap){wrap.insertAdjacentHTML('afterbegin',identity);return holder.innerHTML;}
+          const wrap=holder.querySelector('.mp-club-fifa-wrap,.mp-club-promo-v3');
+          if(wrap){
+            const promoCard=wrap.querySelector(':scope > .mp-promo-v3-card');
+            if(promoCard)promoCard.insertAdjacentHTML('beforebegin',identity);
+            else wrap.insertAdjacentHTML('afterbegin',identity);
+            return holder.innerHTML;
+          }
         }
         return result;
       }
