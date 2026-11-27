@@ -113,36 +113,3 @@ body[data-mp7-home-view="promo"] .premium-home .mp7-arena > .player-card { displ
 body[data-mp7-home-view="promo"] .mp7-arena>.mp-r1-card-cta { display:none!important; }
 .mp7-member-fallback { min-height:170px; padding:24px 12px; place-content:center; text-align:center; border:1px dashed #a87ddb65; border-radius:18px; background:#17132ae8; }
 .mp7-member-fallback>strong { color:#eee4ff; font-size:16px; overflow-wrap:anywhere; }
-
-/* M8.2 — Violet Pulse, isolated Founder prototype; does not change card geometry. */
-.mp8-violet-layer{position:absolute;z-index:2;pointer-events:none;overflow:visible;isolation:isolate}
-.mp8-violet-layer>svg{display:block;width:100%;height:100%;overflow:visible;filter:drop-shadow(0 0 4px #a942ff)}
-.mp8-violet-active>.player-card{box-shadow:none!important}
-.mp8-violet-active>.mp-r1-card-eyebrow>strong{display:none!important}
-.mp8-violet-off{margin-left:auto!important;padding:4px 8px!important;min-height:28px!important;border-radius:6px!important;background:#3d1c65!important;border:1px solid #d88aff!important;color:#f5dcff!important;font-size:10px!important;font-weight:850!important;letter-spacing:.04em!important;cursor:pointer}
-.mp8-violet-breathe{animation:mp8-violet-pulse 3.8s ease-in-out infinite alternate}
-.mp8-violet-stars{animation:mp8-violet-twinkle 4.7s ease-in-out infinite alternate}
-@keyframes mp8-violet-pulse{from{opacity:.68}to{opacity:1}}
-@keyframes mp8-violet-twinkle{from{opacity:.38}to{opacity:1}}
-@media(prefers-reduced-motion:reduce){.mp8-violet-breathe,.mp8-violet-stars{animation:none!important}}
-
-
-/* M8.2 — 12 unique effects; same card dimensions, no stadium layer. */
-.mp8-violet-active{scroll-margin-top:calc(env(safe-area-inset-top,0px) + 56px)}
-.mp8-violet-active>.mp-r1-card-eyebrow{gap:5px!important;left:10px!important;right:10px!important;letter-spacing:.07em!important}
-.mp8-aura-next{margin-left:auto!important;padding:4px 6px!important;max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-height:28px!important;border-radius:6px!important;background:#241a3e!important;border:1px solid #a87ddb!important;color:#f5dcff!important;font-size:10px!important;font-weight:800!important;letter-spacing:0!important}
-.mp8-violet-active .mp8-violet-off{margin-left:0!important;flex-shrink:0}
-.mp8-violet-layer:not([data-aura=violet])>svg{filter:drop-shadow(0 0 3px #aab8ff66)}
-.mp8-effect-back{animation:mp8-violet-pulse 4.5s ease-in-out infinite alternate}
-.mp8-effect-front{animation:mp8-violet-pulse 2.8s ease-in-out infinite alternate}
-.mp8-effect-particles{animation:mp8-drift 5s ease-in-out infinite alternate}
-@keyframes mp8-drift{from{transform:translateY(-3px);opacity:.62}to{transform:translateY(4px);opacity:1}}
-@keyframes mp8-slide{from{transform:translateY(5px);opacity:.55}to{transform:translateY(-5px);opacity:1}}
-@keyframes mp8-electric{0%,100%{opacity:.9}50%{opacity:.55}}
-.mp8-violet-layer[data-aura=emerald] .mp8-effect-front{animation-duration:6s}
-.mp8-violet-layer[data-aura=crimson] .mp8-effect-particles,.mp8-violet-layer[data-aura=saiyan] .mp8-effect-particles,.mp8-violet-layer[data-aura=hyperdrive] .mp8-effect-front{animation:mp8-slide 1.8s ease-in-out infinite alternate}
-.mp8-violet-layer[data-aura=sakura] .mp8-effect-front{animation:mp8-drift 4s ease-in-out infinite alternate}
-.mp8-violet-layer[data-aura=thunder] .mp8-effect-front,.mp8-violet-layer[data-aura=nightcity] .mp8-effect-front{animation:mp8-electric 1.6s ease-in-out infinite}
-.mp8-violet-layer[data-aura=grandline] .mp8-effect-front{animation:mp8-drift 2.8s ease-in-out infinite alternate}
-.mp8-violet-layer[data-aura=cosmic] .mp8-effect-back{animation-duration:7s}
-@media(prefers-reduced-motion:reduce){.mp8-effect-back,.mp8-effect-front,.mp8-effect-particles{animation:none!important}}

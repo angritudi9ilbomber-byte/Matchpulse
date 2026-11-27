@@ -99,14 +99,14 @@
   async function loadScripts() {
     for (const url of [
       'app.js?v=20261127-m7.2-views',
-      'matchpulse-m1.js?v=20261127-m8-auras',
+      'matchpulse-m1.js?v=20261127-m8-cleanup',
       'matchpulse-m2.js?v=20261127-m7-career',
       'matchpulse-m3.js?v=20261127-m7-career',
       'matchpulse-premium-r1.js?v=20261127-m7-career',
       'matchpulse-m4-badge.js?v=20261127-m7-career',
 'matchpulse-m6-card.js?v=20261127-m7-career',
-'matchpulse-m6-founder.js?v=20261127-m8-auras',
-      'matchpulse-m7.js?v=20261127-m8-auras',
+'matchpulse-m6-founder.js?v=20261127-m8-cleanup',
+      'matchpulse-m7.js?v=20261127-m8-cleanup',
 
     ]) {
       await new Promise((resolve,reject)=>{
