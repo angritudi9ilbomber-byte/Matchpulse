@@ -38,6 +38,7 @@ window.mpM8OwnPlateMarkup=member=>{
  const content=markup(eq);return content?'<div class="mp8-club-identity">'+content+'</div>':'';
 };
 window.mpM8Catalogue=()=>cat().map(x=>({...x}));
+window.mpM8FounderProducts=()=>[...cat().filter(x=>x.kind==='plate').map(x=>({...x,type:'plate'})),...(state?.pack?[{...state.pack,type:'identity_pack',id:'identity_pack',title:'Identity Pack'}]:[])];
 window.mpM8Label=id=>item(id)?.title||'Cosmetico identità';
 window.mpM8Ready=()=>!!state;
 window.mpM8IsFounder=()=>!!state?.admin;
@@ -106,11 +107,7 @@ function inventoryPanel(){
 function labPanel(){
  return '<p class="mp8-note">Solo anteprima nel laboratorio. Non modifica saldi, inventario o carta condivisa.</p><div class="mp8-preview">'+(markup(lab)||'<p>Scegli una targhetta e un titolo.</p>')+'</div><label>Titolo<select id="mp8-title-select">'+selectItems('title',lab.title_id,true)+'</select></label><label>Targhetta<select id="mp8-plate-select">'+selectItems('plate',lab.plate_id,true)+'</select></label><div class="mp8-choices">'+cat().filter(x=>x.kind==='plate').map(x=>card(x,'select','PROVA')).join('')+'</div>';
 }
-function founderPanel(){
- if(!state?.admin)return '<p>Accesso riservato al Founder.</p>';
- const c=item(founderItem),p=state.pack;
- return '<p class="mp8-note">Modifiche condivise con tutti i giocatori. Nessun titolo predefinito viene assegnato automaticamente.</p><form id="mp8-item-form" class="mp8-admin-section"><h3>Catalogo e nuovo titolo</h3><label>Prodotto<select id="mp8-founder-item">'+opt('','＋ Crea nuovo titolo',founderItem)+cat().map(x=>opt(x.id,(x.kind==='plate'?'Targhetta · ':'Titolo · ')+x.title,founderItem)).join('')+'</select></label><label>Nome<input name="title" maxlength="42" required value="'+esc(c?.title||'')+'" '+(c?.kind==='plate'?'readonly':'')+'></label><label>Rarità<select name="rarity">'+tiers.map(r=>opt(r,rarity[r],c?.rarity||'common')).join('')+'</select></label><label>Prezzo in token<input name="price" type="number" min="0" max="50000" step="1" required value="'+(c?.price??25)+'"></label><label class="mp8-check"><input name="active" type="checkbox" '+(c?.shop_active?'checked':'')+'> Disponibile nel negozio</label><button class="mp8-apply" type="submit">SALVA PRODOTTO</button></form><form id="mp8-pack-form" class="mp8-admin-section"><h3>Identity Pack</h3><label>Prezzo in token<input name="price" type="number" min="0" max="50000" step="1" required value="'+(p?.price??65)+'"></label><label class="mp8-check"><input name="active" type="checkbox" '+(p?.active?'checked':'')+'> Disponibile nel negozio</label><div class="mp8-odds">'+tiers.map(r=>'<label>'+rarity[r]+' (%)<input type="number" name="'+r+'" min="0" max="100" step="0.01" required value="'+((p?.[r+'_weight']||0)/100)+'"></label>').join('')+'</div><p class="mp8-note">Totale richiesto: 100%. Le rarità esaurite vengono escluse.</p><button class="mp8-apply" type="submit">SALVA PACCHETTO</button></form>';
-}
+function founderPanel(){return '<p>La gestione è nel Centro Founder: Negozio per i prodotti, Titoli per creare e modificare.</p>';}
 
 function storeItem(x,inv=false){
  const equipped=state?.equipped?.[x.kind+'_id']===x.id, mine=owned(x.id);
@@ -140,7 +137,7 @@ function mountStore(){
  if(currentRoute()!=='store'||!app)return;
  for(const slot of app.querySelectorAll('[data-mp8-store]')){
   const tab=slot.dataset.mp8Store;
-  const content=!state?'<p class="mp8-note">Catalogo identità non disponibile. <button class="mp6-action mp6-outline" data-mp8-inline="retry">RIPROVA</button></p>':tab==='packs'?storePack():tab==='plates'?storeSection('plate',false):storeSection('plate',true)+titlesCollection();
+  const content=!state?'<p class="mp8-note">Catalogo identità non disponibile. <button class="mp6-action mp6-outline" data-mp8-inline="retry">RIPROVA</button></p>':tab==='packs'?storePack():tab==='plates'?storeSection('plate',false):tab==='titles'?storeSection('title',false)||'<p class="mp8-note">Nessun titolo attualmente in vendita.</p>':storeSection('plate',true)+titlesCollection();
   if(slot._mp8Content!==content){slot._mp8Content=content;slot.innerHTML=content;}
   slot.querySelectorAll('button[data-mp8-inline="equip"],button[data-mp8-inline="buy"]').forEach(b=>{if(!b.dataset.mp8OriginalDisabled)b.dataset.mp8OriginalDisabled=b.disabled?'yes':'no';b.disabled=busy||b.dataset.mp8OriginalDisabled==='yes';});
  }

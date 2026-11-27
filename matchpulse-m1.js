@@ -534,7 +534,7 @@ if (publishError) throw publishError;
   const F={
     admin:false,checking:false,open:false,loaded:false,
     goals:[],players:[],products:[],
-    editing:'',player:'',product:'',tab:'goals',clubNames:new Map(),monitorLoaded:false
+    editing:'',player:'',product:'',productCategory:'originals',titleId:'',tab:'goals',clubNames:new Map(),monitorLoaded:false
   };
 
   const db=()=>window.matchpulseSupabase;
@@ -597,7 +597,7 @@ if (publishError) throw publishError;
     ['tokens','Token','Gestisci i saldi reali'],
     ['prices','Negozio','Prezzi e probabilità pacchetti'],
     ['schedule','Programmazione','Stop degli obiettivi'],
-    ['identity','Identità','Catalogo, titoli e Identity Pack'],
+    ['identity','Titoli','Crea, modifica ed elimina titoli'],
     ['gifts','Regali','Consegna gratuita a un giocatore'],
     ['lab','Founder Lab','Anteprime e test virtuali']
   ];
@@ -635,6 +635,16 @@ if (publishError) throw publishError;
     for(let i=0;i<missing;i++)rounded[order[i][0]]++;
     return rounded.map(v=>v/100);
   }
+
+  const shopCategories=[['originals','FC Originals'],['collabs','Collaborazioni'],['emblems','Emblemi'],['plates','Targhette'],['packs','Pacchetti']];
+  const emblemIds=new Set(['op_straw','db_kame','cp_night','f1_grid']);
+  const shopProducts=()=>[...F.products,...(window.mpM8FounderProducts?.()||[])];
+  const categoryOf=p=>p.type==='pack'||p.type==='identity_pack'?'packs':p.type==='plate'?'plates':emblemIds.has(p.id)?'emblems':p.theme==='matchpulse'?'originals':'collabs';
+  const productsInCategory=()=>shopProducts().filter(p=>categoryOf(p)===F.productCategory);
+  const productKey=p=>p.type+'|'+p.id;
+  const isPack=p=>p?.type==='pack'||p?.type==='identity_pack';
+  const normalizeProduct=()=>{const all=productsInCategory();if(!all.some(p=>productKey(p)===F.product))F.product=all[0]?productKey(all[0]):'';};
+
   async function refresh(){
     const [goals,players,skins,packs,names]=await Promise.all([
       db().from('matchpulse_m1_challenges')
@@ -664,10 +674,7 @@ if (publishError) throw publishError;
     if(!F.players.some(x=>x.id===F.player))
       F.player=F.players[0]?.id||'';
 
-    if(!F.products.some(p=>p.type+'|'+p.id===F.product)){
-      const p=F.products[0];
-      F.product=p?p.type+'|'+p.id:'';
-    }
+    normalizeProduct();
 
     paint();
   }
@@ -698,7 +705,11 @@ if (publishError) throw publishError;
     const isDual=editMetric==="goals_both"||editMetric==="goals_either"||
       editMetric==="role_goals_both"||editMetric==="role_goals_either";
     const player=selectedPlayer();
-    const product=F.products.find(p=>p.type+'|'+p.id===F.product);
+    normalizeProduct();
+    const product=productsInCategory().find(p=>productKey(p)===F.product);
+    const titles=(window.mpM8Catalogue?.()||[]).filter(x=>x.kind==='title');
+    const chosenTitle=titles.find(x=>x.id===F.titleId);
+    if(F.titleId&&!chosenTitle)F.titleId='';
 
     slot.innerHTML=`
     <section class="mp-founder-hub">
@@ -880,30 +891,30 @@ if (publishError) throw publishError;
 
       </section>
       <section class="mp-founder-pane" data-founder-pane="prices" ${F.tab==='prices'?'':'hidden'}>
-      <h3>Prezzi del negozio</h3>
+      <h3>Gestione negozio</h3>
+      <small>Seleziona il reparto e poi il prodotto. Qui trovi anche targhette e Identity Pack.</small>
+      <label>Reparto<select style="${inputStyle}" onchange="mpM1FounderCategory(this.value)">${opts(shopCategories,F.productCategory)}</select></label>
 
       <label>Prodotto
         <select style="${inputStyle}"
           onchange="mpM1FounderProduct(this.value)">
-          ${F.products.map(p=>`
-            <option value="${esc(p.type+'|'+p.id)}"
-              ${p.type+'|'+p.id===F.product?'selected':''}>
-              ${p.type==='pack'?'PACCHETTO':'SKIN'} · ${esc(p.title)}
-            </option>`).join('')}
+          ${productsInCategory().length?opts(productsInCategory().map(p=>[productKey(p),p.title]),F.product):'<option value="">Nessun prodotto disponibile</option>'}
         </select>
       </label>
 
       <label>Prezzo in token
-        <input id="mfPrice" type="number" min="1" max="9999"
-          style="${inputStyle}" value="${esc(product?.price??80)}">
+        <input id="mfPrice" type="number" min="${product?.type==='plate'||product?.type==='identity_pack'?0:1}" max="${product?.type==='plate'||product?.type==='identity_pack'?50000:9999}"
+          style="${inputStyle}" value="${esc(product?.price??'')}" ${product?'':'disabled'}>
       </label>
 
+      ${product?.type==='plate'?`<label>Rarità<select id="mfProductRarity" style="${inputStyle}">${opts(oddsRarities,product.rarity)}</select></label>`:''}
+      ${product?.type==='plate'||product?.type==='identity_pack'?`<label style="display:flex;align-items:center;gap:8px"><input id="mfProductActive" type="checkbox" ${(product.type==='plate'?product.shop_active:product.active)?'checked':''}> Disponibile nel negozio</label>`:''}
       <button type="button" style="${buttonStyle}"
-        onclick="mpM1FounderSetPrice()">
-        SALVA PREZZO
+        onclick="mpM1FounderSetPrice()" ${product?'':'disabled'}>
+        ${product?.type==='plate'||product?.type==='identity_pack'?'SALVA PRODOTTO':'SALVA PREZZO'}
       </button>
 
-      ${product?.type==='pack'?`
+      ${isPack(product)?`
       <section class="mp-founder-odds">
         <h3>Probabilità del pacchetto</h3>
         <p>Percentuali di base prima dell'esclusione delle rarità esaurite. Nessun doppione: le probabilità effettive possono variare per inventario.</p>
@@ -927,8 +938,18 @@ if (publishError) throw publishError;
         e non cancella le partite.</small>
       </section>
       <section class="mp-founder-pane" data-founder-pane="identity" ${F.tab==='identity'?'':'hidden'}>
-        <h3>Gestione identità</h3><p>Configura prezzi, disponibilità, titoli personalizzati, premi e probabilità dell'Identity Pack.</p>
-        <button type="button" style="${buttonStyle}" onclick="mpM1FounderIdentity()">GESTISCI TITOLI E TARGHETTE</button>
+        <h3>Gestione titoli</h3>
+        <p>Creali qui; puoi assegnarli da Regali o usarli nelle Sfide e nei Traguardi anche se non sono in vendita.</p>
+        ${window.mpM8Ready?.()?`<form onsubmit="mpM1FounderSaveTitle(event)">
+          <label>Titolo<select style="${inputStyle}" onchange="mpM1FounderChooseTitle(this.value)">${opts([['','＋ CREA NUOVO TITOLO'],...titles.map(t=>[t.id,t.title])],F.titleId)}</select></label>
+          <label>Nome<input name="title" maxlength="42" required style="${inputStyle}" value="${esc(chosenTitle?.title||'')}"></label>
+          <label>Rarità<select name="rarity" style="${inputStyle}">${opts(oddsRarities,chosenTitle?.rarity||'common')}</select></label>
+          <label>Prezzo in token<input name="price" type="number" min="0" max="50000" step="1" required style="${inputStyle}" value="${chosenTitle?.price??25}"></label>
+          <label style="display:flex;align-items:center;gap:8px"><input name="active" type="checkbox" ${chosenTitle?.shop_active?'checked':''}> Disponibile nel negozio</label>
+          <small>Se non è in vendita, rimane assegnabile gratuitamente e come ricompensa.</small>
+          <button type="submit" style="${buttonStyle}">SALVA TITOLO</button>
+          ${chosenTitle?`<button type="button" style="${buttonStyle};background:#7b253b" onclick="mpM1FounderDeleteTitle()">ELIMINA TITOLO</button><small>Eliminazione consentita solo per titoli mai assegnati e non collegati a sfide.</small>`:''}
+        </form>`:'<small>Catalogo titoli non disponibile. Riapri il Centro Founder.</small>'}
       </section>
       <section class="mp-founder-pane" data-founder-pane="gifts" ${F.tab==='gifts'?'':'hidden'}>
         <h3>Consegna regali</h3><p>Scegli il giocatore, il reparto e l'oggetto. Nessun costo in token.</p><div id="mp9GiftForm"></div>
@@ -996,6 +1017,24 @@ if (publishError) throw publishError;
     F.product=id;
     paint();
   };
+  window.mpM1FounderCategory=id=>{if(!shopCategories.some(([k])=>k===id))return;F.productCategory=id;F.product='';paint();};
+  window.mpM1FounderChooseTitle=id=>{F.titleId=id;paint();};
+  window.mpM1FounderSaveTitle=async event=>{
+    event.preventDefault();
+    const form=event.currentTarget;if(!form.reportValidity())return;
+    const data=new FormData(form),title=String(data.get('title')||'').trim(),price=Number(data.get('price'));
+    if(!title||!Number.isInteger(price)||price<0||price>50000){alert('Nome o prezzo non valido.');return;}
+    const b=form.querySelector('button[type=submit]');b.disabled=true;
+    try{
+      const {data:id,error}=await db().rpc('mp_m8_founder_item',{p_id:F.titleId||null,p_title:title,p_rarity:data.get('rarity'),p_price:price,p_active:data.has('active')});
+      if(error)throw error;F.titleId=id;await refresh();window.mpM2AfterWalletChange?.();alert('Titolo salvato.');
+    }catch(e){message(e);}finally{b.disabled=false;}
+  };
+  window.mpM1FounderDeleteTitle=async()=>{
+    const t=(window.mpM8Catalogue?.()||[]).find(x=>x.kind==='title'&&x.id===F.titleId);
+    if(!t||!confirm('Eliminare definitivamente il titolo '+t.title+'?'))return;
+    try{const {error}=await db().rpc('mp_m8_founder_delete_title',{p_id:t.id});if(error)throw error;F.titleId='';await refresh();window.mpM2AfterWalletChange?.();alert('Titolo eliminato.');}catch(e){message(e);}
+  };
 
   window.mpM1FounderMetric=()=>{
     const v=document.getElementById("mfMetric")?.value||"";
@@ -1010,7 +1049,7 @@ if (publishError) throw publishError;
     window.mpM1FounderMetric();
   };
 
-  window.mpM1FounderIdentity=()=>window.mpM8OpenFounder?.(F.players.map(p=>({id:p.id,name:p.displayName})));
+
   window.mpM1GiftContext=()=>({players:F.players.map(p=>({id:p.id,name:p.displayName})),products:F.products.map(p=>({...p}))});
   window.mpM1FounderSave=async event=>{
     event.preventDefault();
@@ -1095,13 +1134,12 @@ if (publishError) throw publishError;
   };
 
   window.mpM1FounderSetPrice=async()=>{
-    const p=F.products.find(
-      x=>x.type+'|'+x.id===F.product
-    );
+    const p=productsInCategory().find(x=>productKey(x)===F.product);
 
     const price=Number(document.getElementById('mfPrice')?.value);
 
-    if(!p||!Number.isInteger(price)||price<1||price>9999){
+    const identity=p?.type==='plate'||p?.type==='identity_pack';
+    if(!p||!Number.isInteger(price)||price<(identity?0:1)||price>(identity?50000:9999)){
       alert('Prezzo non valido.');
       return;
     }
@@ -1110,11 +1148,9 @@ if (publishError) throw publishError;
       ' a '+price+' token?'))return;
 
     try{
-      const {error}=await db().rpc('mp_m1_founder_set_price',{
-        p_type:p.type,
-        p_id:p.id,
-        p_price:price
-      });
+      const active=!!document.getElementById('mfProductActive')?.checked;
+      const result=p.type==='plate'?await db().rpc('mp_m8_founder_item',{p_id:p.id,p_title:p.title,p_rarity:document.getElementById('mfProductRarity').value,p_price:price,p_active:active}):p.type==='identity_pack'?await db().rpc('mp_m8_founder_pack',{p_price:price,p_active:active,p_common:p.common_weight,p_rare:p.rare_weight,p_epic:p.epic_weight,p_legendary:p.legendary_weight}):await db().rpc('mp_m1_founder_set_price',{p_type:p.type,p_id:p.id,p_price:price});
+      const {error}=result;
       if(error)throw error;
 
       await refresh();
@@ -1139,15 +1175,13 @@ if (publishError) throw publishError;
     if(button)button.disabled=total!==10000;
   };
   window.mpM1FounderSetOdds=async()=>{
-    const p=F.products.find(x=>x.type==='pack'&&'pack|'+x.id===F.product);
+    const p=productsInCategory().find(x=>isPack(x)&&productKey(x)===F.product);
     const points=readOdds();
     if(!p||!points||points.reduce((a,b)=>a+b,0)!==10000){alert('Le quattro percentuali devono sommare al 100%.');return;}
     if(!confirm('Salvare le nuove probabilità di '+p.title+' per tutti i giocatori?'))return;
     const button=document.getElementById('mfOddsSave');if(button)button.disabled=true;
     try{
-      const {error}=await db().rpc('mp_m1_founder_set_pack_odds',{
-        p_pack_id:p.id,p_common:points[0],p_rare:points[1],p_epic:points[2],p_legendary:points[3]
-      });
+      const {error}=p.type==='identity_pack'?await db().rpc('mp_m8_founder_pack',{p_price:p.price,p_active:p.active,p_common:points[0],p_rare:points[1],p_epic:points[2],p_legendary:points[3]}):await db().rpc('mp_m1_founder_set_pack_odds',{p_pack_id:p.id,p_common:points[0],p_rare:points[1],p_epic:points[2],p_legendary:points[3]});
       if(error)throw error;
       await refresh();
       window.mpM2AfterWalletChange?.();
