@@ -113,3 +113,15 @@ body[data-mp7-home-view="promo"] .premium-home .mp7-arena > .player-card { displ
 body[data-mp7-home-view="promo"] .mp7-arena>.mp-r1-card-cta { display:none!important; }
 .mp7-member-fallback { min-height:170px; padding:24px 12px; place-content:center; text-align:center; border:1px dashed #a87ddb65; border-radius:18px; background:#17132ae8; }
 .mp7-member-fallback>strong { color:#eee4ff; font-size:16px; overflow-wrap:anywhere; }
+
+/* M8.2 — Violet Pulse, isolated Founder prototype; does not change card geometry. */
+.mp8-violet-layer{position:absolute;z-index:2;pointer-events:none;overflow:visible;isolation:isolate}
+.mp8-violet-layer>svg{display:block;width:100%;height:100%;overflow:visible;filter:drop-shadow(0 0 4px #a942ff)}
+.mp8-violet-active>.player-card{box-shadow:none!important}
+.mp8-violet-active>.mp-r1-card-eyebrow>strong{display:none!important}
+.mp8-violet-off{margin-left:auto!important;padding:4px 8px!important;min-height:28px!important;border-radius:6px!important;background:#3d1c65!important;border:1px solid #d88aff!important;color:#f5dcff!important;font-size:10px!important;font-weight:850!important;letter-spacing:.04em!important;cursor:pointer}
+.mp8-violet-breathe{animation:mp8-violet-pulse 3.8s ease-in-out infinite alternate}
+.mp8-violet-stars{animation:mp8-violet-twinkle 4.7s ease-in-out infinite alternate}
+@keyframes mp8-violet-pulse{from{opacity:.68}to{opacity:1}}
+@keyframes mp8-violet-twinkle{from{opacity:.38}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){.mp8-violet-breathe,.mp8-violet-stars{animation:none!important}}

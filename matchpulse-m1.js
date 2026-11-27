@@ -587,7 +587,8 @@ if (publishError) throw publishError;
     ['monitor','Giocatori','Controlla progressi e riscatti'],
     ['tokens','Token','Gestisci i saldi reali'],
     ['prices','Negozio','Prezzi e probabilità pacchetti'],
-    ['schedule','Programmazione','Stop degli obiettivi']
+    ['schedule','Programmazione','Stop degli obiettivi'],
+    ['lab','Founder Lab','Anteprime e test virtuali']
   ];
   async function clubNames(){
     try{
@@ -907,6 +908,12 @@ if (publishError) throw publishError;
 
       <small>Questa operazione conserva lo storico delle ricompense
         e non cancella le partite.</small>
+      </section>
+      <section class="mp-founder-pane" data-founder-pane="lab" ${F.tab==='lab'?'':'hidden'}>
+        <h3>Founder Lab · M8</h3>
+        <small>Violet Pulse: prototipo locale. Non consuma token e non modifica il catalogo o l'inventario.</small>
+        <button type="button" style="${buttonStyle}" onclick="mpM8TestVioletPulse()">PROVA VIOLET PULSE SULLA HOME</button>
+        <small>Per terminare il test premi TEST ✕ nella Home. Il prototipo non viene condiviso con il Club.</small>
       </section>
     </section>`;
   }

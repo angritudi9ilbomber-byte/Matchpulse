@@ -96,6 +96,7 @@ function simulate() {
     AZZERA IL MIO INVENTARIO
   </button>
 </div>
+     <div class="mp6-founder-panel"><strong>05 / M8 · VIOLET PULSE</strong><p>Prova l'aura viola direttamente sulla Home, con la tua carta reale. Nessun acquisto e nessuna modifica all'inventario.</p><button type="button" onclick="mpM8TestVioletPulse()">PROVA AURA SULLA HOME</button></div>
      <div id="mp6FounderReveal"></div><p id="mp6FounderStatus" role="status" aria-live="polite">Il saldo reale non viene toccato.</p>
      <button class="mp6-founder-done" onclick="mpM6FounderClose()">CHIUDI LABORATORIO</button></section>`;
    document.body.append(host);refreshInventory();host.querySelector('header button').focus();

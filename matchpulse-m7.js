@@ -112,8 +112,84 @@
     reflect();syncHomePromo();refreshVisuals();
     if(typeof route==='string'&&route==='promos')window.renderPromos?.();
   };
+  // M8 prototype: session-only, Founder-authorized; no economy or inventory writes.
+  let violetTest=false, auraCard=null, auraHost=null, auraResize=null;
+  function sizeAura(){
+    if(!auraCard?.isConnected||!auraHost?.isConnected)return;
+    const card=auraCard.getBoundingClientRect(), host=auraHost.getBoundingClientRect();
+    const layer=auraHost.querySelector(':scope > .mp8-violet-layer');
+    if(!layer||!card.width||!card.height)return;
+    const padX=Math.min(22,Math.max(7,(host.width-card.width)/2-2));
+    const padY=15;
+    Object.assign(layer.style,{
+      left:(card.left-host.left-auraHost.clientLeft-padX)+'px',
+      top:(card.top-host.top-auraHost.clientTop-padY)+'px',
+      width:(card.width+padX*2)+'px',height:(card.height+padY*2)+'px'
+    });
+  }
+  function clearAura(){
+    auraResize?.disconnect();auraResize=null;
+    if(auraHost){
+      auraHost.querySelector(':scope > .mp8-violet-layer')?.remove();
+      auraHost.querySelector('.mp8-violet-off')?.remove();
+      auraHost.classList.remove('mp8-violet-active');
+    }
+    auraCard=null;auraHost=null;
+  }
+  function syncAura(){
+    const host=app.querySelector('.premium-home .mp7-arena');
+    const card=host?.querySelector(':scope > .player-card');
+    if(!violetTest||!card||views.home==='promo'){
+      if(auraHost)clearAura();
+      return;
+    }
+    if(host===auraHost&&card===auraCard&&host.querySelector(':scope > .mp8-violet-layer')){
+      sizeAura();return;
+    }
+    clearAura();auraHost=host;auraCard=card;
+    host.classList.add('mp8-violet-active');
+    const layer=document.createElement('div');layer.className='mp8-violet-layer';layer.setAttribute('aria-hidden','true');
+    layer.innerHTML=`<svg viewBox="0 0 340 520" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="mp8violetGlow"><stop offset="0" stop-color="#b24aff" stop-opacity=".12"/><stop offset=".68" stop-color="#9838ff" stop-opacity=".52"/><stop offset="1" stop-color="#6e23d8" stop-opacity="0"/></radialGradient>
+        <linearGradient id="mp8violetArc" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#5a28d7" stop-opacity=".18"/><stop offset=".27" stop-color="#9b55ff"/><stop offset=".55" stop-color="#f8b8ff"/><stop offset=".78" stop-color="#e94aff"/><stop offset="1" stop-color="#6927d4" stop-opacity=".15"/></linearGradient>
+        <radialGradient id="mp8violetFoot"><stop stop-color="#fff5ff"/><stop offset=".14" stop-color="#fcaaff" stop-opacity=".95"/><stop offset=".38" stop-color="#cc39ff" stop-opacity=".8"/><stop offset="1" stop-color="#9226ff" stop-opacity="0"/></radialGradient>
+      </defs>
+      <ellipse cx="170" cy="260" rx="170" ry="259" fill="url(#mp8violetGlow)"/>
+      <g class="mp8-violet-breathe" fill="none" stroke="url(#mp8violetArc)">
+        <path d="M170 8 C287 -9 335 78 328 171 C321 258 348 359 313 436 C286 497 219 509 170 512 C65 507 4 452 8 370 C13 268 -10 181 17 102 C43 28 105 3 170 8Z" stroke-width="14" opacity=".21"/>
+        <path d="M170 8 C287 -9 335 78 328 171 C321 258 348 359 313 436 C286 497 219 509 170 512 C65 507 4 452 8 370 C13 268 -10 181 17 102 C43 28 105 3 170 8Z" stroke-width="2.4" opacity=".94"/>
+        <path d="M24 28 C96 -3 270 4 318 58 C358 116 307 227 332 326 C354 422 306 488 170 510 C37 495 -8 438 9 328 C27 231 -11 155 18 98" stroke-width="1.5" opacity=".76"/>
+        <path d="M6 410 C49 481 250 535 332 454 M9 93 C62 11 267 -12 330 86" stroke-width="3" opacity=".65"/>
+      </g>
+      <ellipse cx="170" cy="506" rx="125" ry="16" fill="url(#mp8violetFoot)" class="mp8-violet-breathe"/>
+      <g class="mp8-violet-stars" fill="#ecbaff">
+        <circle cx="13" cy="62" r="1.8"/><circle cx="29" cy="18" r="1.4"/><circle cx="88" cy="8" r="1.5"/><circle cx="247" cy="12" r="2"/><circle cx="323" cy="63" r="1.5"/><circle cx="332" cy="123" r="2"/><circle cx="8" cy="183" r="1.8"/><circle cx="333" cy="257" r="1.5"/><circle cx="8" cy="315" r="2"/><circle cx="325" cy="397" r="1.9"/><circle cx="14" cy="454" r="1.4"/><circle cx="64" cy="496" r="2"/><circle cx="270" cy="500" r="1.5"/><circle cx="321" cy="471" r="1.7"/>
+      </g></svg>`;
+    host.insertBefore(layer,card);
+    const off=document.createElement('button');off.type='button';off.className='mp8-violet-off';off.textContent='TEST ✕';off.setAttribute('aria-label','Disattiva anteprima Violet Pulse');
+    off.onclick=()=>{violetTest=false;clearAura();};
+    host.querySelector('.mp-r1-card-eyebrow')?.append(off);
+    if(typeof ResizeObserver==='function'){
+      auraResize=new ResizeObserver(sizeAura);auraResize.observe(host);auraResize.observe(card);
+    }
+    sizeAura();
+  }
+  window.mpM8TestVioletPulse=async()=>{
+    try{
+      if(typeof window.mpPromoSecureIsAdmin!=='function'||!(await window.mpPromoSecureIsAdmin(false))){alert('Accesso Founder richiesto.');return;}
+      window.mpM6FounderClose?.();
+      violetTest=true;
+      if(views.home==='promo'){setView('home','skin');reflect();refreshVisuals();}
+      if(typeof route!=='undefined'&&route!=='home')setRoute('home');
+      syncAura();
+      requestAnimationFrame(()=>{syncAura();const host=app.querySelector('.premium-home .mp7-arena');host?.scrollIntoView({block:'start',behavior:'auto'});});
+    }catch(error){violetTest=false;clearAura();alert('Anteprima non disponibile: '+(error?.message||String(error)));}
+  };
+  window.mpM8StopVioletPulse=()=>{violetTest=false;clearAura();};
   function refreshVisuals(){
     syncHomePromo();
+    syncAura();
     window.mpM7DecorateHome?.();
     window.mpM7DecorateClub?.();
     window.mpM7BadgeRefresh?.();
@@ -296,7 +372,7 @@
     queued=false;
     const changedHome=mountHome(),changedClub=mountClub();
     if(changedHome||changedClub){reflect();refreshVisuals();}
-    syncLock();remember();
+    syncAura();syncLock();remember();
   }
   function schedule(){if(!queued){queued=true;requestAnimationFrame(sync);}}
   const observer=new MutationObserver(changes=>{
@@ -305,6 +381,6 @@
   });
   observer.observe(document.body,{subtree:true,childList:true});
   reflect();remember();sync();refreshVisuals();
-  window.mpM7Inspect=()=>({version:'M7.2',home:views.home,club:views.club,profileLocked:!!lock,promotion:baseline,arenaReady:!!app.querySelector('.mp7-arena')});
+  window.mpM7Inspect=()=>({version:'M7.2',home:views.home,club:views.club,profileLocked:!!lock,promotion:baseline,arenaReady:!!app.querySelector('.mp7-arena'),violetTest});
   window.MP_M7_READY=true;
 })();
