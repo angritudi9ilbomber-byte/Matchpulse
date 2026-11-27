@@ -99,14 +99,14 @@
   async function loadScripts() {
     for (const url of [
       'app.js?v=20261127-m7.2-views',
-      'matchpulse-m1.js?v=20261127-m8-cleanup',
-      'matchpulse-m2.js?v=20261127-m7-career',
+      'matchpulse-m1.js?v=20261127-m8-identity-local',
+      'matchpulse-m2.js?v=20261127-m8-identity-local',
       'matchpulse-m3.js?v=20261127-m7-career',
       'matchpulse-premium-r1.js?v=20261127-m7-career',
       'matchpulse-m4-badge.js?v=20261127-m7-career',
 'matchpulse-m6-card.js?v=20261127-m7-career',
-'matchpulse-m6-founder.js?v=20261127-m8-cleanup',
-      'matchpulse-m7.js?v=20261127-m8-cleanup',
+'matchpulse-m6-founder.js?v=20261127-m8-identity-local',
+      'matchpulse-m7.js?v=20261127-m8-identity-local',
 
     ]) {
       await new Promise((resolve,reject)=>{
@@ -115,6 +115,13 @@
         document.body.appendChild(s);
       });
     }
+    // Optional cosmetic module: a failure cannot block the core app.
+    try{
+      await new Promise((resolve,reject)=>{
+        const s=document.createElement('script');s.src='matchpulse-m8-identity.js?v=20261127-local';s.async=false;
+        s.onload=resolve;s.onerror=reject;document.body.appendChild(s);
+      });
+    }catch(e){console.warn('MatchPulse M8: anteprima non disponibile',e);}
   }
   (async()=>{
     try {await rollover();}

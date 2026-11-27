@@ -58,7 +58,16 @@
       const isPromo=row?.card_stats?.promoCard===true && !!row?.card_stats?.promoTemplate;
       const note=views.club==='promo'&&!isPromo?'Nessuna promo selezionata':
         views.club!=='promo'&&isPromo?'Carta carriera non ancora sincronizzata':null;
-      if(!note)return oldMemberCard.call(this,row,ownerId,...rest);
+      if(!note){
+        const result=oldMemberCard.call(this,row,ownerId,...rest);
+        const identity=window.mpM8OwnPlateMarkup?.(row);
+        if(identity&&typeof result==='string'){
+          const holder=document.createElement('div');holder.innerHTML=result;
+          const wrap=holder.querySelector('.mp-club-fifa-wrap');
+          if(wrap){wrap.insertAdjacentHTML('afterbegin',identity);return holder.innerHTML;}
+        }
+        return result;
+      }
       const placeholder=document.createElement('article');
       placeholder.className='mp7-member-fallback';
       const name=document.createElement('strong');name.textContent=row?.player_name||'Giocatore';
@@ -118,6 +127,7 @@
     window.mpM7DecorateClub?.();
     window.mpM7BadgeRefresh?.();
     window.mpM6CardSync?.();
+    window.mpM8SyncIdentity?.();
   }
   function toggle(key){
     const wrapper=document.createElement('div');

@@ -315,6 +315,7 @@ function m6PackCard(p) {
       <div class="mp6-founder-entry" id="mp6FounderEntry"></div></header>
       <nav class="mp6-tabs" aria-label="Sezioni del Negozio" role="tablist">${[['skins','COSMETICHE'],['packs','PACCHETTI'],['inventory','INVENTARIO']].map(([id,name])=>
         `<button role="tab" aria-selected="${S.tab===id}" class="${S.tab===id?'active':''}" onclick="mpM2Tab('${id}')">${name}</button>`).join('')}</nav>
+      <button type="button" class="mp8-store-entry" onclick="window.mpM8OpenIdentity?.()">✦ TITOLI E TARGHETTE <small>Anteprima gratuita</small></button>
       ${S.error?`<div class="mp6-error"><b>Negozio non disponibile</b><p>${esc(S.error)}</p><button onclick="mpM2Retry()">RIPROVA</button></div>`:''}
       ${!S.ready?'<p class="mp6-loading">Caricamento catalogo e saldo…</p>':S.tab==='skins'?
         (S.collection?m6CollectionPanel(S.collection):`<section class="mp6-intro"><small>01 / ESTETICHE ESCLUSIVE</small><h3>FC ORIGINALS</h3><p>Quattro estetiche originali di MatchPulse, applicabili a qualsiasi carta senza modificare statistiche e OVR.</p>${m6RarityGuide('fc')}

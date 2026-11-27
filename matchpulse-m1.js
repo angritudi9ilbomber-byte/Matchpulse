@@ -911,6 +911,8 @@ if (publishError) throw publishError;
       </section>
       <section class="mp-founder-pane" data-founder-pane="lab" ${F.tab==='lab'?'':'hidden'}>
         <h3>Founder Lab</h3>
+        <button type="button" style="${buttonStyle}" onclick="window.mpM8OpenIdentity?.()">TITOLI E TARGHETTE · ANTEPRIMA</button>
+        <small>12 targhette e 20 titoli. Anteprima gratuita locale, nessuna variazione di saldo o inventario.</small>
         <small>Laboratorio virtuale per provare le skin e i pacchetti già disponibili, senza modificare i saldi reali.</small>
         <button type="button" style="${buttonStyle}" onclick="setRoute('store')">APRI IL NEGOZIO</button>
         <small>Nel Negozio puoi aprire il Founder Lab esistente.</small>
