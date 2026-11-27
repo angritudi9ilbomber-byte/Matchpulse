@@ -96,7 +96,7 @@ function simulate() {
     AZZERA IL MIO INVENTARIO
   </button>
 </div>
-     <div class="mp6-founder-panel"><strong>05 / M8 · VIOLET PULSE</strong><p>Prova l'aura viola direttamente sulla Home, con la tua carta reale. Nessun acquisto e nessuna modifica all'inventario.</p><button type="button" onclick="mpM8TestVioletPulse()">PROVA AURA SULLA HOME</button><button type="button" onclick="mpM8TestArena()">PROVA ARENA SULLA HOME</button></div>
+     <div class="mp6-founder-panel"><strong>05 / M8 · AURE</strong><p>Prova le 12 aure sulla tua carta reale, senza spese.</p><select id="mp6AuraTest"><option value="emerald" >Emerald Mist · Comune</option><option value="crimson" >Crimson Flame · Comune</option><option value="frost" >Frost · Comune</option><option value="violet" selected>Violet Pulse · Rara</option><option value="sakura" >Sakura Storm · Rara</option><option value="thunder" >Thunder · Rara</option><option value="grandline" >Grand Line · Epica</option><option value="saiyan" >Saiyan Power · Epica</option><option value="nightcity" >Night City · Epica</option><option value="hyperdrive" >Hyperdrive · Leggendaria</option><option value="divine" >Divine Gold · Leggendaria</option><option value="cosmic" >Cosmic Infinity · Leggendaria</option></select><button type="button" onclick="mpM8TestAura(document.getElementById('mp6AuraTest').value)">PROVA AURA SULLA HOME</button></div>
      <div id="mp6FounderReveal"></div><p id="mp6FounderStatus" role="status" aria-live="polite">Il saldo reale non viene toccato.</p>
      <button class="mp6-founder-done" onclick="mpM6FounderClose()">CHIUDI LABORATORIO</button></section>`;
    document.body.append(host);refreshInventory();host.querySelector('header button').focus();

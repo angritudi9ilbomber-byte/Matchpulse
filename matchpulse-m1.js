@@ -911,11 +911,10 @@ if (publishError) throw publishError;
       </section>
       <section class="mp-founder-pane" data-founder-pane="lab" ${F.tab==='lab'?'':'hidden'}>
         <h3>Founder Lab · M8</h3>
-        <small>Violet Pulse: prototipo locale. Non consuma token e non modifica il catalogo o l'inventario.</small>
-        <button type="button" style="${buttonStyle}" onclick="mpM8TestVioletPulse()">PROVA VIOLET PULSE SULLA HOME</button>
-        <button type="button" style="${buttonStyle}" onclick="mpM8TestArena()">PROVA ARENA SULLA HOME</button>
-        <small>Confronto: sfondo stadio a tutta larghezza, dietro la carta reale. Le dimensioni restano identiche.</small>
-        <small>Per terminare il test premi TEST ✕ nella Home. Il prototipo non viene condiviso con il Club.</small>
+        <small>12 aure da provare sulla carta reale. Nessun acquisto e nessuna modifica a token o inventario.</small>
+        <label>Aura da provare<select id="mfAuraTest" style="${inputStyle}"><option value="emerald" >Emerald Mist · Comune</option><option value="crimson" >Crimson Flame · Comune</option><option value="frost" >Frost · Comune</option><option value="violet" selected>Violet Pulse · Rara</option><option value="sakura" >Sakura Storm · Rara</option><option value="thunder" >Thunder · Rara</option><option value="grandline" >Grand Line · Epica</option><option value="saiyan" >Saiyan Power · Epica</option><option value="nightcity" >Night City · Epica</option><option value="hyperdrive" >Hyperdrive · Leggendaria</option><option value="divine" >Divine Gold · Leggendaria</option><option value="cosmic" >Cosmic Infinity · Leggendaria</option></select></label>
+        <button type="button" style="${buttonStyle}" onclick="mpM8TestAura(document.getElementById('mfAuraTest').value)">PROVA AURA SULLA HOME</button>
+        <small>Nella Home premi il nome dell'aura per passare alla successiva, oppure TEST ✕ per terminare. Il test non viene condiviso con il Club.</small>
       </section>
     </section>`;
   }
