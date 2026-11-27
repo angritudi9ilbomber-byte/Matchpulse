@@ -7,7 +7,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const plateIds=new Set(['classic','green','storm','violet','sakura','thunder','grandline','saiyan','nightcity','hyperdrive','divine','cosmic']);
 const rarity={common:'Comune',rare:'Rara',epic:'Epica',legendary:'Leggendaria'};
 const tiers=Object.keys(rarity);
-let uid=null,state=null,inflight=null,epoch=0,mode='shop',draft={plate_id:null,title_id:null},lab={plate_id:null,title_id:null},busy=false,queued=false,lastRoute='',founderPlayers=[],founderItem='',reveal=null;
+let uid=null,state=null,inflight=null,epoch=0,mode='shop',draft={plate_id:null,title_id:null},lab={plate_id:null,title_id:null},busy=false,queued=false,lastRoute='',founderPlayers=[],founderItem='',reveal=null,detailId='';
 const cat=()=>state?.catalog||[], item=id=>cat().find(x=>x.id===id), owned=id=>!!id&&(state?.owned||[]).includes(id);
 function plateImage(id,lazy=false){
  const key=String(id||'').replace(/^plate_/,'');
@@ -52,13 +52,13 @@ async function refresh({render=true,quiet=false,force=false}={}){
    const r=await db()?.auth?.getSession?.();if(r?.error)throw r.error;
    const next=r?.data?.session?.user?.id||null;
    if(version!==epoch)return false;
-   if(next!==uid){uid=next;state=null;updateHome();}
+   if(next!==uid){uid=next;state=null;updateHome();mountStore();}
    if(!next)return false;
    const data=await rpc('mp_m8_state');
    if(version!==epoch||uid!==next)return false;
    if(!data||!Array.isArray(data.catalog)||!Array.isArray(data.owned))throw Error('Catalogo identità non disponibile');
    const prev=JSON.stringify([state?.equipped,state?.club_equipped,state?.catalog]);
-   state=data;updateHome();
+   state=data;updateHome();mountStore();
    const changed=prev!==JSON.stringify([state.equipped,state.club_equipped,state.catalog]);
    if(changed&&currentRoute()==='locker')window.mpM7RerenderClub?.();
    if(render&&currentRoute()==='challenges')window.mpM1RefreshIdentityUI?.();
@@ -70,7 +70,7 @@ async function refresh({render=true,quiet=false,force=false}={}){
 }
 window.mpM8Refresh=refresh;
 function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>{
- queued=false;updateHome();const next=currentRoute();
+ queued=false;updateHome();mountStore();const next=currentRoute();
  if(next!==lastRoute){lastRoute=next;if(['home','locker','store','challenges'].includes(next))void refresh({quiet:true});}
 });}
 function close(){document.querySelector('.mp8-dialog-host')?.remove();reveal=null;}
@@ -109,22 +109,78 @@ function founderPanel(){
  const c=item(founderItem),p=state.pack;
  return '<p class="mp8-note">Modifiche condivise con tutti i giocatori. Nessun titolo predefinito viene assegnato automaticamente.</p><form id="mp8-item-form" class="mp8-admin-section"><h3>Catalogo e nuovo titolo</h3><label>Prodotto<select id="mp8-founder-item">'+opt('','＋ Crea nuovo titolo',founderItem)+cat().map(x=>opt(x.id,(x.kind==='plate'?'Targhetta · ':'Titolo · ')+x.title,founderItem)).join('')+'</select></label><label>Nome<input name="title" maxlength="42" required value="'+esc(c?.title||'')+'" '+(c?.kind==='plate'?'readonly':'')+'></label><label>Rarità<select name="rarity">'+tiers.map(r=>opt(r,rarity[r],c?.rarity||'common')).join('')+'</select></label><label>Prezzo in token<input name="price" type="number" min="0" max="50000" step="1" required value="'+(c?.price??25)+'"></label><label class="mp8-check"><input name="active" type="checkbox" '+(c?.shop_active?'checked':'')+'> Disponibile nel negozio</label><button class="mp8-apply" type="submit">SALVA PRODOTTO</button></form><form id="mp8-grant-form" class="mp8-admin-section"><h3>Assegna un cosmetico</h3><label>Giocatore<select name="user" required>'+opt('','Scegli giocatore','')+founderPlayers.map(x=>opt(x.id,x.name,'')).join('')+'</select></label><label>Premio<select name="item" required>'+opt('','Scegli premio','')+cat().map(x=>opt(x.id,x.title,'')).join('')+'</select></label><button class="mp8-apply" type="submit">ASSEGNA GRATIS</button></form><form id="mp8-pack-form" class="mp8-admin-section"><h3>Identity Pack</h3><label>Prezzo in token<input name="price" type="number" min="0" max="50000" step="1" required value="'+(p?.price??65)+'"></label><label class="mp8-check"><input name="active" type="checkbox" '+(p?.active?'checked':'')+'> Disponibile nel negozio</label><div class="mp8-odds">'+tiers.map(r=>'<label>'+rarity[r]+' (%)<input type="number" name="'+r+'" min="0" max="100" step="0.01" required value="'+((p?.[r+'_weight']||0)/100)+'"></label>').join('')+'</div><p class="mp8-note">Totale richiesto: 100%. Le rarità esaurite vengono escluse.</p><button class="mp8-apply" type="submit">SALVA PACCHETTO</button></form>';
 }
+
+function storeItem(x,inv=false){
+ const equipped=state?.equipped?.[x.kind+'_id']===x.id, mine=owned(x.id);
+ const id=esc(x.id),kind=x.kind==='plate'?'Targhetta':'Titolo';
+ const art=x.kind==='plate'?'<div class="mp8-plate mp8-art">'+plateImage(x.id,true)+'</div>':'<div class="mp8-title-sample">'+esc(x.title.toUpperCase())+'</div>';
+ const action=inv?'<button class="mp6-action" data-mp8-inline="equip" data-id="'+id+'">'+(equipped?'RIMUOVI':'EQUIPAGGIA')+'</button>':mine?'<button class="mp6-action mp6-owned" data-mp8-inline="inventory">GIÀ TUA ✓</button>':'<button class="mp6-action" data-mp8-inline="buy" data-id="'+id+'">ACQUISTA</button>';
+ return '<article class="mp6-cosmetic mp6-tier-'+esc(x.rarity)+' mp8-inline-item"><div class="mp6-cosmetic-top"><div class="mp8-inline-art">'+art+'</div><span class="mp6-rarity-pill">'+esc(rarity[x.rarity]||x.rarity)+'</span></div><div class="mp6-cosmetic-copy"><small>'+kind.toUpperCase()+'</small><h4>'+esc(x.title)+'</h4><p>'+(inv?(equipped?'Equipaggiato':'Nel tuo inventario'):'Cosmetico permanente per la tua identità.')+'</p><div class="mp6-cosmetic-foot">'+(inv?'':'<b>✦ '+Number(x.price)+'</b>')+'<div class="mp6-cosmetic-buttons"><button class="mp6-action mp6-outline" data-mp8-inline="preview" data-id="'+id+'">ANTEPRIMA</button>'+action+'</div></div></div></article>';
+}
+function storePack(){
+ const p=state?.pack;if(!p?.active)return '';
+ const odds=packOdds();
+ return '<article class="mp6-pack"><div class="mp6-pack-picture"><div class="mp8-pack-visual">✦<span>IDENTITY</span><small>MATCHPULSE PACK</small></div></div><div class="mp6-pack-info"><small>IDENTITÀ</small><h3>Identity Pack</h3><p>Una targhetta non ancora posseduta.</p><div class="mp6-odds">'+(odds.length?odds.map(([r,v])=>'<span>'+rarity[r]+' <b>'+v.toLocaleString('it-IT',{maximumFractionDigits:2})+'%</b></span>').join(''):'<span>POOL ESAURITO</span>')+'</div><div class="mp6-pack-footer"><b>✦ '+Number(p.price)+'</b><div class="mp6-pack-actions"><button class="mp6-action mp6-outline" data-mp8-inline="preview" data-id="identity_pack">ANTEPRIMA</button><button class="mp6-action" data-mp8-inline="buy" data-id="identity_pack" '+(!odds.length?'disabled':'')+'>'+(odds.length?'ACQUISTA E APRI':'ESAURITO')+'</button></div></div></div></article>';
+}
+function storeSection(kind,inv=false){
+ const entries=cat().filter(x=>x.kind===kind&&(inv?owned(x.id):x.shop_active));
+ if(!entries.length&&!inv)return '';
+ const label=kind==='plate'?'TARGHETTE':'TITOLI';
+ return '<section class="mp6-intro"><small>'+(inv?'INVENTARIO PERMANENTE':'IDENTITÀ / COSMETICI')+'</small><h3>'+label+'</h3><p>'+(inv?'I tuoi oggetti, conservati anche al cambio di stagione.':kind==='plate'?'Personalizza la cornice del tuo titolo.':'Personalizza il titolo sopra la tua carta.')+'</p><div class="mp6-showcase">'+entries.map(x=>storeItem(x,inv)).join('')+'</div>'+(!entries.length?'<p>Nessun oggetto posseduto.</p>':'')+'</section>';
+}
+function mountStore(){
+ if(currentRoute()!=='store'||!app)return;
+ for(const slot of app.querySelectorAll('[data-mp8-store]')){
+  const tab=slot.dataset.mp8Store;
+  const content=!state?'<p class="mp8-note">Catalogo identità non disponibile. <button class="mp6-action mp6-outline" data-mp8-inline="retry">RIPROVA</button></p>':tab==='packs'?storePack():storeSection('plate',tab==='inventory')+storeSection('title',tab==='inventory');
+  if(slot._mp8Content!==content){slot._mp8Content=content;slot.innerHTML=content;}
+  slot.querySelectorAll('button[data-mp8-inline="equip"],button[data-mp8-inline="buy"]').forEach(b=>{if(!b.dataset.mp8OriginalDisabled)b.dataset.mp8OriginalDisabled=b.disabled?'yes':'no';b.disabled=busy||b.dataset.mp8OriginalDisabled==='yes';});
+ }
+}
+window.mpM8MountStore=mountStore;
+function detailPanel(){
+ if(detailId==='identity_pack')return packPanel();
+ const x=item(detailId);if(!x)return '<p>Articolo non disponibile.</p>';
+ const eq={...state?.equipped,[x.kind+'_id']:x.id};
+ return '<div class="mp8-preview">'+markup(eq)+'</div><h3>'+esc(x.title)+'</h3><p class="mp8-note">'+esc(rarity[x.rarity]||x.rarity)+' · '+(owned(x.id)?'Già nel tuo inventario':x.shop_active?x.price+' token':'Non in vendita')+'</p>'+(owned(x.id)?'<button class="mp8-apply" data-action="inventory">VAI ALL’INVENTARIO</button>':x.shop_active?'<button class="mp8-apply" data-action="buy" data-id="'+esc(x.id)+'">ACQUISTA · '+x.price+' TOKEN</button>':'');
+}
+async function inlineEquip(id){
+ if(busy||!owned(id))return;
+ const x=item(id);if(!x)return;
+ const eq={...state.equipped};eq[x.kind+'_id']=eq[x.kind+'_id']===id?null:id;
+ busy=true;mountStore();
+ try{
+  await rpc('mp_m8_equip',{p_plate:eq.plate_id||null,p_title:eq.title_id||null});
+  if(!await refresh({force:true,render:false}))throw Error('Equipaggiamento salvato; aggiorna per visualizzarlo.');
+  if(typeof toast==='function')toast('Equipaggiamento aggiornato');
+ }catch(e){alert(e?.message||String(e));}
+ finally{busy=false;mountStore();}
+}
+app?.addEventListener('click',async e=>{
+ const b=e.target.closest?.('[data-mp8-inline]');if(!b||busy)return;
+ const action=b.dataset.mp8Inline,id=b.dataset.id;
+ if(action==='retry'){await refresh({force:true});mountStore();}
+ else if(action==='inventory')window.mpM2Tab?.('inventory');
+ else if(action==='equip')void inlineEquip(id);
+ else if(action==='preview'||action==='buy'){await show('detail',true,id);if(action==='buy'&&host()&&detailId===id)void buy(id);}
+});
+
 function paint(){
  const h=host();if(!h)return;
  const section=h.querySelector('.mp8-body'),nav=h.querySelector('.mp8-tabs');
  const tabs=[['shop','Negozio'],['packs','Pacchetti'],['inventory','Inventario']];
  if(state?.admin)tabs.push(['lab','Lab']);
- nav.hidden=mode==='founder';nav.innerHTML=tabs.map(([id,label])=>'<button data-action="tab" data-id="'+id+'" aria-pressed="'+(mode===id)+'">'+label+'</button>').join('');
+ nav.hidden=mode==='founder'||mode==='detail';nav.innerHTML=tabs.map(([id,label])=>'<button data-action="tab" data-id="'+id+'" aria-pressed="'+(mode===id)+'">'+label+'</button>').join('');
  if(!state){section.innerHTML='<p class="mp8-note">Identità non disponibile. Riprova dopo aver verificato la connessione.</p><button class="mp8-apply" data-action="retry">RIPROVA</button>';return;}
  if(reveal){const x=item(reveal);section.innerHTML='<section class="mp8-reveal"><small>NUOVO COSMETICO</small><div class="mp8-preview">'+(x?.kind==='plate'?markup({plate_id:x.id}):markup({title_id:x?.id}))+'</div><h3>'+esc(x?.title||'Cosmetico ottenuto')+'</h3><p>'+esc(rarity[x?.rarity]||'')+'</p><button class="mp8-apply" data-action="inventory">VAI ALL’INVENTARIO</button></section>';return;}
- section.innerHTML=mode==='founder'?founderPanel():mode==='lab'?labPanel():mode==='inventory'?inventoryPanel():mode==='packs'?packPanel():shopPanel();
+ section.innerHTML=mode==='detail'?detailPanel():mode==='founder'?founderPanel():mode==='lab'?labPanel():mode==='inventory'?inventoryPanel():mode==='packs'?packPanel():shopPanel();
  if(busy)h.querySelectorAll('button:not(.mp8-close)').forEach(x=>x.disabled=true);
 }
 async function run(fn){
- if(busy)return;busy=true;const h=host();h?.querySelectorAll('button:not(.mp8-close)').forEach(x=>x.disabled=true);msg('Operazione in corso…');
+ if(busy)return;busy=true;mountStore();const h=host();h?.querySelectorAll('button:not(.mp8-close)').forEach(x=>x.disabled=true);msg('Operazione in corso…');
  try{await fn();if(host()===h){msg('Operazione completata.');}}
  catch(e){msg(e?.message||String(e));}
- finally{busy=false;if(host()===h)paint();}
+ finally{busy=false;mountStore();if(host()===h)paint();}
 }
 function requestId(product){
  const key='matchpulse_m8_pending:'+uid+':'+product;
@@ -179,9 +235,9 @@ async function submit(e){
   await run(async()=>{await rpc('mp_m8_founder_pack',{p_price:Number(data.get('price')),p_active:data.has('active'),p_common:w[0],p_rare:w[1],p_epic:w[2],p_legendary:w[3]});await refresh({force:true,render:false});msg('Identity Pack aggiornato.');});
  }
 }
-async function show(next='shop',load=true){
+async function show(next='shop',load=true,product=''){
  if(busy)return;
- close();mode=next;reveal=null;
+ close();mode=next;reveal=null;detailId=product;
  const h=document.createElement('div');h.className='mp8-dialog-host';
  h.innerHTML='<section class="mp8-dialog" role="dialog" aria-modal="true" aria-label="Identità MatchPulse"><header><div><small>MATCHPULSE / IDENTITÀ</small><h2>'+ (next==='founder'?'Gestione identità':'Titoli e targhette')+'</h2></div><button type="button" class="mp8-close" aria-label="Chiudi">✕</button></header><nav class="mp8-tabs" aria-label="Sezioni identità"></nav><p class="mp8-status" role="status" aria-live="polite"></p><div class="mp8-body"><p>Caricamento…</p></div></section>';
  document.body.append(h);
@@ -191,9 +247,9 @@ async function show(next='shop',load=true){
   const b=e.target.closest('button[data-action]');if(!b||busy)return;
   const {action,id}=b.dataset;
   if(action==='tab')switchTab(id);
-  else if(action==='retry')void show(mode);
+  else if(action==='retry')void show(mode,true,detailId);
   else if(action==='buy')void buy(id);
-  else if(action==='inventory')switchTab('inventory');
+  else if(action==='inventory'){if(currentRoute()==='store'){close();window.mpM2Tab?.('inventory');}else switchTab('inventory');}
   else if(action==='equip')void equip();
   else if(action==='clear')void equip(true);
   else if(action==='select'){const x=item(id);if(x&&(mode==='lab'||owned(id))){const q=mode==='lab'?lab:draft;q[x.kind+'_id']=id;paint();}}
@@ -217,7 +273,7 @@ document.addEventListener('keydown',e=>{if(host()&&e.key==='Escape'&&!busy)close
 if(app)new MutationObserver(schedule).observe(app,{subtree:true,childList:true});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')void refresh({quiet:true});});
 window.addEventListener('focus',()=>void refresh({quiet:true}));
-db()?.auth?.onAuthStateChange?.((_event,session)=>{const next=session?.user?.id||null;if(next!==uid){epoch++;state=null;uid=next;close();updateHome();setTimeout(()=>void refresh({force:true,quiet:true}),0);}});
+db()?.auth?.onAuthStateChange?.((_event,session)=>{const next=session?.user?.id||null;if(next!==uid){epoch++;state=null;uid=next;close();updateHome();mountStore();setTimeout(()=>void refresh({force:true,quiet:true}),0);}});
 setInterval(()=>{if(document.visibilityState==='visible'&&currentRoute()==='locker')void refresh({quiet:true});},30000);
 void refresh({quiet:true});window.MP_M8_IDENTITY_READY=true;
 })();

@@ -315,22 +315,22 @@ function m6PackCard(p) {
       <div class="mp6-founder-entry" id="mp6FounderEntry"></div></header>
       <nav class="mp6-tabs" aria-label="Sezioni del Negozio" role="tablist">${[['skins','COSMETICHE'],['packs','PACCHETTI'],['inventory','INVENTARIO']].map(([id,name])=>
         `<button role="tab" aria-selected="${S.tab===id}" class="${S.tab===id?'active':''}" onclick="mpM2Tab('${id}')">${name}</button>`).join('')}</nav>
-      <button type="button" class="mp8-store-entry" onclick="window.mpM8OpenIdentity?.('${S.tab==='packs'?'packs':S.tab==='inventory'?'inventory':'shop'}')">${S.tab==='packs'?'✦ IDENTITY PACK':S.tab==='inventory'?'✦ INVENTARIO IDENTITÀ':'✦ TITOLI E TARGHETTE'} <small>${S.tab==='inventory'?'Equipaggia':S.tab==='packs'?'Acquista e apri':'Scopri il catalogo'}</small></button>
       ${S.error?`<div class="mp6-error"><b>Negozio non disponibile</b><p>${esc(S.error)}</p><button onclick="mpM2Retry()">RIPROVA</button></div>`:''}
       ${!S.ready?'<p class="mp6-loading">Caricamento catalogo e saldo…</p>':S.tab==='skins'?
         (S.collection?m6CollectionPanel(S.collection):`<section class="mp6-intro"><small>01 / ESTETICHE ESCLUSIVE</small><h3>FC ORIGINALS</h3><p>Quattro estetiche originali di MatchPulse, applicabili a qualsiasi carta senza modificare statistiche e OVR.</p>${m6RarityGuide('fc')}
          <div class="mp6-showcase">${S.skins.filter(s=>s.theme==='matchpulse'&&s.active!==false).sort((a,b)=>RARITIES[a.rarity].rank-RARITIES[b.rarity].rank).map(s=>m6SkinCard(s)).join('')}</div></section>
          <section class="mp6-intro"><small>02 / COLLEZIONI TEMATICHE</small><h3>COLLABORAZIONI</h3><p>Apri una collezione per vedere Comune, Rara, Epica e Leggendaria, con anteprima sulla tua carta.</p>
-         <div class="mp6-collection-tiles">${['onepiece','dragonball','cyberpunk','formula1'].map(m6CollectionTile).join('')}</div></section>`)
+         <div class="mp6-collection-tiles">${['onepiece','dragonball','cyberpunk','formula1'].map(m6CollectionTile).join('')}</div></section><div data-mp8-store="shop"></div>`)
       :S.tab==='packs'?`<section class="mp6-intro"><small>02 / APERTURA PACCHETTI</small><h3>PACCHETTI</h3><p>Probabilità effettive: le rarità esaurite vengono escluse. Nessun doppione.</p>
-        <div class="mp6-packs">${S.packs.filter(p=>p.active!==false).map(m6PackCard).join('')}</div></section>`:
+        <div class="mp6-packs">${S.packs.filter(p=>p.active!==false).map(m6PackCard).join('')}<div data-mp8-store="packs"></div></div></section>`:
         `<section class="mp6-intro"><small>03 / OGGETTI POSSEDUTI</small><h3>IL MIO INVENTARIO</h3><p>${mine.length} di ${total} cosmetici sbloccati nella stagione attuale.</p>
         <div class="mp6-equipped-summary"><span>ESTETICA ATTIVA: <b>${esc(findSkin(equippedId())?.title||'CARTA ORIGINALE')}</b></span><button onclick="mpM6Equip('')" ${!equippedId()?'disabled':''}>RIMUOVI SKIN</button></div>
         <div class="mp6-equipped-summary"><span>EMBLEMA ESTERNO: <b>${esc(findSkin(window.mpM4Inspect?.().emblem)?.title||'NESSUNO')}</b></span><button onclick="mpM6Equip('REMOVE_BADGE')">RIMUOVI EMBLEMA</button></div>
         ${mine.length?`<div class="mp6-showcase">${mine.sort((a,b)=>RARITIES[a.rarity].rank-RARITIES[b.rarity].rank).map(s=>m6SkinCard(s,true)).join('')}</div>`:'<p>Non hai ancora cosmetici acquistati.</p>'}
-        <p class="mp6-inventory-footnote">Oggetti cosmetici disponibili nella stagione in cui sono stati ottenuti. Le promo non vengono modificate.</p></section>`}
+        <p class="mp6-inventory-footnote">Oggetti cosmetici disponibili nella stagione in cui sono stati ottenuti. Le promo non vengono modificate.</p></section><div data-mp8-store="inventory"></div>`}
       </section>`;
     window.mpM6FounderMount?.();
+    window.mpM8MountStore?.();
   }
   function toastMessage(message) {
     if (typeof toast === "function") toast(message);
