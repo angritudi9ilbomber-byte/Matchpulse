@@ -132,6 +132,7 @@ if (publishError) throw publishError;
       .is("opened_at",null).order("created_at");
     if(bonus.error)throw bonus.error;
     store.bonusPacks=bonus.data||[];
+    await window.mpM8Refresh?.({render:false,quiet:true});
   }
   async function load(force = false) {
     if (store.loading || store.busy) return;
@@ -231,13 +232,13 @@ if (publishError) throw publishError;
   function rewardDetails(ch){
     const r=ch.reward_config||{};
     const tokens=Number.isFinite(Number(r.tokens))?Math.max(0,Number(r.tokens)):digits(ch.reward);
-    return {tokens,pack:r.pack_id||"",skin:r.skin_id||"",emblem:r.emblem_id||""};
+    return {tokens,pack:r.identity_pack?"identity_pack":r.pack_id||"",skin:r.skin_id||"",emblem:r.emblem_id||"",title:r.title_id||"",plate:r.plate_id||""};
   }
   function rewardDisplay(ch){
     const r=rewardDetails(ch), out=[];
     if(r.tokens)out.push('<span class="mp-m1-prize">✦ '+r.tokens+' token</span>');
     if(r.pack){
-      const meta=MP_REWARD_PACKS[r.pack]||[r.pack];
+      const meta=r.pack==="identity_pack"?["Identity Pack"]:(MP_REWARD_PACKS[r.pack]||[r.pack]);
       out.push('<span class="mp-m1-prize"><span class="mp-m1-pack-ico" aria-hidden="true">📦</span>Pacchetto '+html(meta[0])+'</span>');
     }
     for(const [key,kind] of [["skin","Skin"],["emblem","Emblema"]]){
@@ -245,6 +246,9 @@ if (publishError) throw publishError;
       const item=window.mpM6Catalog?.().skins?.find(x=>x.id===r[key]);
       const src=prizeArt(r[key]);
       out.push('<span class="mp-m1-prize">'+(src?'<img src="'+src+'" alt="">':'')+html(item?.title||kind+" "+r[key])+'</span>');
+    }
+    for(const [key,kind] of [["title","Titolo"],["plate","Targhetta"]]){
+      if(r[key])out.push('<span class="mp-m1-prize">'+kind+' · '+html(window.mpM8Label?.(r[key])||"Cosmetico identità")+'</span>');
     }
     return out.join("")||'<span class="mp-m1-prize">Premio da configurare</span>';
   }
@@ -265,13 +269,13 @@ if (publishError) throw publishError;
   }
   function wonPackList(){
     const list=store.bonusPacks||[];
-    if(!list.length)return "";
+    if(!list.length)return window.mpM8BonusMarkup?.()||"";
     return '<section class="mp-m1-bonus"><h3>🎁 PACCHETTI VINTI · '+list.length+'</h3>'+
       list.map(p=>{
         const pack=MP_REWARD_PACKS[p.pack_id]||[p.pack_id];
         return '<div class="mp-m1-bonus-item"><span class="mp-m1-pack-ico" aria-hidden="true">📦</span><strong>Pacchetto '+html(pack[0])+'</strong>'+
           '<button type="button" onclick="mpM1OpenRewardPack(\''+html(p.id)+'\')">APRI GRATIS</button></div>';
-      }).join('')+'</section>';
+      }).join('')+'</section>'+(window.mpM8BonusMarkup?.()||'');
   }
   function challengeCards(scope, ctx) {
     const lockedRole = roleLock(ctx);
@@ -330,6 +334,7 @@ if (publishError) throw publishError;
         </section>`;
     window.mpM1FounderMount?.();
   }
+  window.mpM1RefreshIdentityUI=()=>{if(route==='challenges'&&!MAIN.querySelector('.mp-founder-hub'))renderChallengesUI();};
   function refreshHomeWallet() {
     const el = document.querySelector("[data-m1-wallet]");
     if (el) el.textContent = store.ready ? String(wallet(timeContext())) : "—";
@@ -369,7 +374,11 @@ if (publishError) throw publishError;
     if(error)throw error;
     const parts=[];
     if(data?.tokens)parts.push(data.tokens+" token");
-    if(data?.skin_awarded)parts.push("skin/emblema");
+    if(data?.skin_awarded?.length)parts.push("skin/emblema");
+    const rewards=store.catalogue.find(c=>c.id===id)?.reward_config||{};
+    if(rewards.title_id)parts.push("titolo");
+    if(rewards.plate_id)parts.push("targhetta");
+    if(rewards.identity_pack)parts.push("Identity Pack gratuito");
     if(data?.pack_id)parts.push("pacchetto gratuito");
     if(data?.already_owned?.length)parts.push("cosmetico già posseduto");
     if(typeof toast==="function")toast("Riscattato: "+(parts.join(", ")||"premio registrato"));
@@ -588,6 +597,7 @@ if (publishError) throw publishError;
     ['tokens','Token','Gestisci i saldi reali'],
     ['prices','Negozio','Prezzi e probabilità pacchetti'],
     ['schedule','Programmazione','Stop degli obiettivi'],
+    ['identity','Identità','Titoli, targhette e Identity Pack'],
     ['lab','Founder Lab','Anteprime e test virtuali']
   ];
   async function clubNames(){
@@ -640,6 +650,7 @@ if (publishError) throw publishError;
       if(r.error)throw r.error;
     }
 
+    await window.mpM8Refresh?.({render:false,quiet:true});
     F.goals=(goals.data||[]).filter(g=>!g.founder_deleted);
     F.clubNames=names;
     F.players=(players.data||[]).map(p=>({...p,displayName:window.mpM1FounderDisplayName(p.id,p.name)}));
@@ -791,7 +802,7 @@ if (publishError) throw publishError;
           <select name="pack_id" style="${inputStyle}">
             ${opts([["","Nessun pacchetto"],...F.products
               .filter(p=>p.type==="pack"&&p.active!==false)
-              .map(p=>[p.id,p.title])],rc.pack_id||"")}
+              .map(p=>[p.id,p.title]),...(window.mpM8Ready?.()?[["identity_pack","Identity Pack"]]:[])],rc.identity_pack?"identity_pack":rc.pack_id||"")}
           </select>
         </label>
         <label>Skin o decorazione
@@ -809,6 +820,11 @@ if (publishError) throw publishError;
               .map(p=>[p.id,p.title])],rc.emblem_id||"")}
           </select>
         </label>
+        ${window.mpM8Ready?.()?`<label>Titolo
+          <select name="title_id" style="${inputStyle}">${opts([["","Nessun titolo"],...(window.mpM8Catalogue?.()||[]).filter(x=>x.kind==="title").map(x=>[x.id,x.title])],rc.title_id||"")}</select>
+        </label><label>Targhetta
+          <select name="plate_id" style="${inputStyle}">${opts([["","Nessuna targhetta"],...(window.mpM8Catalogue?.()||[]).filter(x=>x.kind==="plate").map(x=>[x.id,x.title])],rc.plate_id||"")}</select>
+        </label>`:''}
         <small>Puoi assegnare 0 token e soltanto un cosmetico o un pacchetto.
           Il pacchetto arriverà nelle Sfide e si aprirà senza spesa.</small>
         <label style="display:flex;align-items:center;gap:8px">
@@ -909,10 +925,14 @@ if (publishError) throw publishError;
       <small>Questa operazione conserva lo storico delle ricompense
         e non cancella le partite.</small>
       </section>
+      <section class="mp-founder-pane" data-founder-pane="identity" ${F.tab==='identity'?'':'hidden'}>
+        <h3>Gestione identità</h3><p>Configura prezzi, disponibilità, titoli personalizzati, premi e probabilità dell'Identity Pack.</p>
+        <button type="button" style="${buttonStyle}" onclick="mpM1FounderIdentity()">GESTISCI TITOLI E TARGHETTE</button>
+      </section>
       <section class="mp-founder-pane" data-founder-pane="lab" ${F.tab==='lab'?'':'hidden'}>
         <h3>Founder Lab</h3>
-        <button type="button" style="${buttonStyle}" onclick="window.mpM8OpenIdentity?.()">TITOLI E TARGHETTE · ANTEPRIMA</button>
-        <small>12 targhette e 20 titoli. Anteprima gratuita locale, nessuna variazione di saldo o inventario.</small>
+        <button type="button" style="${buttonStyle}" onclick="window.mpM8OpenIdentity?.('lab')">TITOLI E TARGHETTE · ANTEPRIMA</button>
+        <small>Prova titoli e targhette senza modificare saldo, inventario o equipaggiamento reale.</small>
         <small>Laboratorio virtuale per provare le skin e i pacchetti già disponibili, senza modificare i saldi reali.</small>
         <button type="button" style="${buttonStyle}" onclick="setRoute('store')">APRI IL NEGOZIO</button>
         <small>Nel Negozio puoi aprire il Founder Lab esistente.</small>
@@ -986,6 +1006,7 @@ if (publishError) throw publishError;
     window.mpM1FounderMetric();
   };
 
+  window.mpM1FounderIdentity=()=>window.mpM8OpenFounder?.(F.players.map(p=>({id:p.id,name:p.displayName})));
   window.mpM1FounderSave=async event=>{
     event.preventDefault();
 
@@ -1010,17 +1031,21 @@ if (publishError) throw publishError;
       tokens,
       pack_id:o.pack_id||null,
       skin_id:o.skin_id||null,
-      emblem_id:o.emblem_id||null
+      emblem_id:o.emblem_id||null,
+      title_id:o.title_id||null,
+      plate_id:o.plate_id||null
     };
     o.reward=Math.max(1,tokens);
     if(!o.reward_config.tokens&&!o.reward_config.pack_id&&
-       !o.reward_config.skin_id&&!o.reward_config.emblem_id){
+       !o.reward_config.skin_id&&!o.reward_config.emblem_id&&!o.reward_config.title_id&&!o.reward_config.plate_id){
       alert("Seleziona almeno una ricompensa.");return;
     }
     if(o.goal_logic==="legacy"){o.goals_target=null;o.assists_target=null;}
 
     try{
-      const {data,error}=await db().rpc('mp_m1_founder_save_v2',{
+      const hasIdentity=!!window.mpM8Ready?.();
+      if(!hasIdentity&&(selectedGoal()?.reward_config?.title_id||selectedGoal()?.reward_config?.plate_id||selectedGoal()?.reward_config?.identity_pack))throw Error('Identità non disponibile. Riprova prima di modificare questa sfida.');
+      const {data,error}=await db().rpc(hasIdentity?'mp_m8_founder_save_goal':'mp_m1_founder_save_v2',{
         p_goal:o
       });
       if(error)throw error;

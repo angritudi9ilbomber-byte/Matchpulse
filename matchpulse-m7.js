@@ -90,6 +90,7 @@
       requestAnimationFrame(()=>window.scrollTo(0,y));
     }
   }
+  window.mpM7RerenderClub=rerenderClub;
   function syncHomePromo(){
     const featured=app.querySelector('.premium-home .featured-card-wrap.mp7-arena');
     if(!featured)return;
