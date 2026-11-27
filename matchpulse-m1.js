@@ -597,7 +597,8 @@ if (publishError) throw publishError;
     ['tokens','Token','Gestisci i saldi reali'],
     ['prices','Negozio','Prezzi e probabilità pacchetti'],
     ['schedule','Programmazione','Stop degli obiettivi'],
-    ['identity','Identità','Titoli, targhette e Identity Pack'],
+    ['identity','Identità','Catalogo, titoli e Identity Pack'],
+    ['gifts','Regali','Consegna gratuita a un giocatore'],
     ['lab','Founder Lab','Anteprime e test virtuali']
   ];
   async function clubNames(){
@@ -929,6 +930,9 @@ if (publishError) throw publishError;
         <h3>Gestione identità</h3><p>Configura prezzi, disponibilità, titoli personalizzati, premi e probabilità dell'Identity Pack.</p>
         <button type="button" style="${buttonStyle}" onclick="mpM1FounderIdentity()">GESTISCI TITOLI E TARGHETTE</button>
       </section>
+      <section class="mp-founder-pane" data-founder-pane="gifts" ${F.tab==='gifts'?'':'hidden'}>
+        <h3>Consegna regali</h3><p>Scegli il giocatore, il reparto e l'oggetto. Nessun costo in token.</p><div id="mp9GiftForm"></div>
+      </section>
       <section class="mp-founder-pane" data-founder-pane="lab" ${F.tab==='lab'?'':'hidden'}>
         <h3>Founder Lab</h3>
         <button type="button" style="${buttonStyle}" onclick="window.mpM8OpenIdentity?.('lab')">TITOLI E TARGHETTE · ANTEPRIMA</button>
@@ -1007,6 +1011,7 @@ if (publishError) throw publishError;
   };
 
   window.mpM1FounderIdentity=()=>window.mpM8OpenFounder?.(F.players.map(p=>({id:p.id,name:p.displayName})));
+  window.mpM1GiftContext=()=>({players:F.players.map(p=>({id:p.id,name:p.displayName})),products:F.products.map(p=>({...p}))});
   window.mpM1FounderSave=async event=>{
     event.preventDefault();
 

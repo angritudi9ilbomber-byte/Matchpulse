@@ -213,6 +213,7 @@ const m6Cover = theme => {
     '?v=fix-m6-assets';
 };
 
+  const m6PackCover=p=>p?.id==='pack_classic'?'mp-m5-art/fc_epica.webp?v=fix-m6-assets':p?.id==='pack_fc_originals'?'mp-m5-art/fc_rara.webp?v=fix-m6-assets':m6Cover(p?.theme||'matchpulse');
   const m6Has=id=>owned(id);
   const m6Active=id=>id==='op_straw'||id==='db_kame'||id==='cp_night'||id==='f1_grid'
     ? window.mpM4Inspect?.().emblem===id : equippedId()===id;
@@ -239,7 +240,7 @@ const m6Cover = theme => {
     const entries=S.skins.filter(x=>x.theme===theme&&x.active!==false).sort((a,b)=>RARITIES[a.rarity].rank-RARITIES[b.rarity].rank);
     const info=M6_COLLECTIONS[theme];
     return `<section class="mp6-focused" data-theme="${theme}">
-      <div class="mp6-focused-heading"><button class="mp6-back" onclick="mpM6Collection('')">← COLLEZIONI</button><div><small>${info.tag}</small><h3>${info.name}</h3><p>${info.description}</p></div></div>
+      <div class="mp6-focused-heading"><button class="mp6-back" onclick="mpM6Collection('${theme==='matchpulse'?'':'collabs'}')">← CATALOGO</button><div><small>${info.tag}</small><h3>${info.name}</h3><p>${info.description}</p></div></div>
       <div class="mp6-showcase">${entries.map(s=>m6SkinCard(s)).join('')||'<p>Catalogo temporaneamente non disponibile.</p>'}</div>
     </section>`;
   }
@@ -257,7 +258,7 @@ function m6PackCard(p) {
           .map(t => `<img src="${m6Cover(t)}" alt="">`)
           .join("")}
        </div>`
-    : `<img src="${m6Cover(kind)}" alt="" loading="lazy">`;
+    : `<img src="${m6PackCover(p)}" alt="" loading="lazy">`;
 
   const label = collab
     ? "QUATTRO UNIVERSI"
@@ -313,17 +314,14 @@ function m6PackCard(p) {
     MAIN.innerHTML=`<section class="mp6-store mp-m2-page"><header class="mp6-hero"><small>MATCHPULSE / COLLEZIONI COSMETICHE</small><h2>LA TUA CARTA.<br><em>IL TUO STILE.</em></h2><p>Estetiche originali e collaborazioni. Nessun aumento di OVR o statistiche.</p>
       <div class="mp6-wallet"><div><small>SALDO STAGIONE ${esc(todayRome().replace('-','/'))}</small><strong>✦ ${S.ready?balance():'—'}</strong></div><button onclick="setRoute('challenges')">GUADAGNA TOKEN ↗</button></div>
       <div class="mp6-founder-entry" id="mp6FounderEntry"></div></header>
-      <nav class="mp6-tabs" aria-label="Sezioni del Negozio" role="tablist">${[['skins','COSMETICHE'],['packs','PACCHETTI'],['inventory','INVENTARIO']].map(([id,name])=>
+      <nav class="mp6-tabs" aria-label="Sezioni del Negozio" role="tablist">${[['skins','CATALOGO'],['packs','PACCHETTI'],['inventory','INVENTARIO']].map(([id,name])=>
         `<button role="tab" aria-selected="${S.tab===id}" class="${S.tab===id?'active':''}" onclick="mpM2Tab('${id}')">${name}</button>`).join('')}</nav>
       ${S.error?`<div class="mp6-error"><b>Negozio non disponibile</b><p>${esc(S.error)}</p><button onclick="mpM2Retry()">RIPROVA</button></div>`:''}
       ${!S.ready?'<p class="mp6-loading">Caricamento catalogo e saldo…</p>':S.tab==='skins'?
-        (S.collection?m6CollectionPanel(S.collection):`<section class="mp6-intro"><small>01 / ESTETICHE ESCLUSIVE</small><h3>FC ORIGINALS</h3><p>Quattro estetiche originali di MatchPulse, applicabili a qualsiasi carta senza modificare statistiche e OVR.</p>${m6RarityGuide('fc')}
-         <div class="mp6-showcase">${S.skins.filter(s=>s.theme==='matchpulse'&&s.active!==false).sort((a,b)=>RARITIES[a.rarity].rank-RARITIES[b.rarity].rank).map(s=>m6SkinCard(s)).join('')}</div></section>
-         <section class="mp6-intro"><small>02 / COLLEZIONI TEMATICHE</small><h3>COLLABORAZIONI</h3><p>Apri una collezione per vedere Comune, Rara, Epica e Leggendaria, con anteprima sulla tua carta.</p>
-         <div class="mp6-collection-tiles">${['onepiece','dragonball','cyberpunk','formula1'].map(m6CollectionTile).join('')}</div></section><div data-mp8-store="shop"></div>`)
+        (S.collection==='plates'?'<section class="mp6-focused"><button class="mp6-back" onclick="mpM6Collection(\'\')">← CATALOGO</button><div data-mp8-store="plates"></div></section>':S.collection==='collabs'?'<section class="mp6-focused"><button class="mp6-back" onclick="mpM6Collection(\'\')">← CATALOGO</button><h3>COLLABORAZIONI</h3><div class="mp6-collection-tiles">'+['onepiece','dragonball','cyberpunk','formula1'].map(m6CollectionTile).join('')+'</div></section>':S.collection?m6CollectionPanel(S.collection):`<section class="mp6-intro"><small>ESPLORA IL NEGOZIO</small><h3>CATALOGO</h3><p>Scegli il reparto che vuoi visitare.</p><div class="mp6-collection-tiles mp8-departments">${m6CollectionTile('matchpulse')}<button class="mp6-collection-tile" onclick="mpM6Collection('collabs')"><img src="${m6Cover('onepiece')}" alt=""><span><small>QUATTRO UNIVERSI</small><strong>COLLABORAZIONI</strong><em>ESPLORA ↗</em></span></button><button class="mp6-collection-tile mp8-plate-department" onclick="mpM6Collection('plates')"><img src="mp8-plates/divine.webp?v=hd1" alt=""><span><small>IDENTITÀ</small><strong>TARGHETTE</strong><em>ESPLORA ↗</em></span></button></div></section>`)
       :S.tab==='packs'?`<section class="mp6-intro"><small>02 / APERTURA PACCHETTI</small><h3>PACCHETTI</h3><p>Probabilità effettive: le rarità esaurite vengono escluse. Nessun doppione.</p>
         <div class="mp6-packs">${S.packs.filter(p=>p.active!==false).map(m6PackCard).join('')}<div data-mp8-store="packs"></div></div></section>`:
-        `<section class="mp6-intro"><small>03 / OGGETTI POSSEDUTI</small><h3>IL MIO INVENTARIO</h3><p>${mine.length} di ${total} cosmetici sbloccati nella stagione attuale.</p>
+        `<section class="mp6-intro"><small>03 / OGGETTI POSSEDUTI</small><h3>IL MIO INVENTARIO</h3><p>${mine.length} di ${total} estetiche stagionali sbloccate.</p><div data-mp9-gifts></div>
         <div class="mp6-equipped-summary"><span>ESTETICA ATTIVA: <b>${esc(findSkin(equippedId())?.title||'CARTA ORIGINALE')}</b></span><button onclick="mpM6Equip('')" ${!equippedId()?'disabled':''}>RIMUOVI SKIN</button></div>
         <div class="mp6-equipped-summary"><span>EMBLEMA ESTERNO: <b>${esc(findSkin(window.mpM4Inspect?.().emblem)?.title||'NESSUNO')}</b></span><button onclick="mpM6Equip('REMOVE_BADGE')">RIMUOVI EMBLEMA</button></div>
         ${mine.length?`<div class="mp6-showcase">${mine.sort((a,b)=>RARITIES[a.rarity].rank-RARITIES[b.rarity].rank).map(s=>m6SkinCard(s,true)).join('')}</div>`:'<p>Non hai ancora cosmetici acquistati.</p>'}
@@ -433,10 +431,7 @@ function showReveal() {
           .join("")}
        </div>`
     : `<img class="mp6-pack-open-cover"
-        src="${m6Cover(
-          pack?.theme && pack.theme !== "any"
-            ? pack.theme : "matchpulse"
-        )}" alt="">`;
+        src="${m6PackCover(pack)}" alt="">`;
 
   overlay(`
     <div class="mp-m2-shade"
@@ -612,7 +607,7 @@ function previewReward(pack, forcedSkinId = "") {
     if (!["skins","packs","inventory"].includes(id)) return;
     S.tab=id;S.collection="";drawStore();
   };
-  window.mpM6Collection = id => { if(id && !M6_COLLECTIONS[id]) return; S.collection=id;drawStore();window.scrollTo(0,0); };
+  window.mpM6Collection = id => { if(id && !M6_COLLECTIONS[id]&&!['plates','collabs'].includes(id)) return; S.collection=id;drawStore();window.scrollTo(0,0); };
   window.mpM6Catalog = () => ({skins:S.skins.map(x=>({...x})), packs:S.packs.map(x=>({...x})),owned:new Set(S.inventory.map(x=>x.skin_id)),wallet:balance(),season:todayRome(),userId:S.userId});
   window.mpM2Theme = id => {
     if (id !== "all" && !THEMES[id]) return;

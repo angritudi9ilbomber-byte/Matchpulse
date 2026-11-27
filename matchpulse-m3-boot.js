@@ -99,8 +99,8 @@
   async function loadScripts() {
     for (const url of [
       'app.js?v=20261127-m7.2-views',
-      'matchpulse-m1.js?v=20261127-m8-live1',
-      'matchpulse-m2.js?v=20261127-m8-store2',
+      'matchpulse-m1.js?v=20261127-m8-gifts',
+      'matchpulse-m2.js?v=20261127-m8-gifts',
       'matchpulse-m3.js?v=20261127-m7-career',
       'matchpulse-premium-r1.js?v=20261127-m7-career',
       'matchpulse-m4-badge.js?v=20261127-m7-career',
@@ -118,10 +118,11 @@
     // Optional cosmetic module: a failure cannot block the core app.
     try{
       await new Promise((resolve,reject)=>{
-        const s=document.createElement('script');s.src='matchpulse-m8-identity.js?v=20261127-store2';s.async=false;
+        const s=document.createElement('script');s.src='matchpulse-m8-identity.js?v=20261127-gifts';s.async=false;
         s.onload=resolve;s.onerror=reject;document.body.appendChild(s);
       });
     }catch(e){console.warn('MatchPulse M8: anteprima non disponibile',e);}
+    try{await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='matchpulse-gifts.js?v=20261127-gifts';s.async=false;s.onload=resolve;s.onerror=reject;document.body.appendChild(s);});}catch(e){console.warn('MatchPulse regali: caricamento non disponibile',e);}
   }
   (async()=>{
     try {await rollover();}

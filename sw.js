@@ -158,7 +158,7 @@ self.addEventListener(
 
                 client.postMessage({
                   type:
-                    "MATCHPULSE_OPEN_PROMOS"
+                    targetUrl.includes("mpOpen=gifts") ? "MATCHPULSE_OPEN_GIFTS" : "MATCHPULSE_OPEN_PROMOS"
                 });
 
 

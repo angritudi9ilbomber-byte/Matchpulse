@@ -40,6 +40,8 @@ window.mpM8OwnPlateMarkup=member=>{
 window.mpM8Catalogue=()=>cat().map(x=>({...x}));
 window.mpM8Label=id=>item(id)?.title||'Cosmetico identità';
 window.mpM8Ready=()=>!!state;
+window.mpM8IsFounder=()=>!!state?.admin;
+window.mpM8RevealGift=async id=>{if(busy)return;await refresh({force:true,render:false});await show('detail',false,id);reveal=id;paint();};
 async function rpc(name,args={}){
  if(!db())throw Error('Connessione non disponibile');
  const {data,error}=await db().rpc(name,args);if(error)throw error;return data;
@@ -92,7 +94,7 @@ function packOdds(){
 function packPanel(){
  const p=state?.pack,odds=packOdds();
  if(!p||!p.active)return '<p class="mp8-note">Identity Pack al momento non in vendita.</p>';
- return '<section class="mp8-pack"><div class="mp8-pack-visual">✦<span>IDENTITY</span><small>MATCHPULSE PACK</small></div><h3>Identity Pack</h3><p>Una targhetta non ancora posseduta. Rarità esaurite escluse.</p><div class="mp8-odds">'+odds.map(([r,v])=>'<span>'+rarity[r]+' <b>'+v.toLocaleString('it-IT',{maximumFractionDigits:2})+'%</b></span>').join('')+'</div><button class="mp8-apply" data-action="buy" data-id="identity_pack" '+(!odds.length?'disabled':'')+'>'+(odds.length?'ACQUISTA E APRI · '+p.price+' TOKEN':'PACCHETTO ESAURITO')+'</button></section>';
+ return '<section class="mp8-pack"><div class="mp8-pack-visual mp8-pack-art">✦<span>IDENTITY</span><small>MATCHPULSE PACK</small></div><h3>Identity Pack</h3><p>Una targhetta non ancora posseduta. Rarità esaurite escluse.</p><div class="mp8-odds">'+odds.map(([r,v])=>'<span>'+rarity[r]+' <b>'+v.toLocaleString('it-IT',{maximumFractionDigits:2})+'%</b></span>').join('')+'</div><button class="mp8-apply" data-action="buy" data-id="identity_pack" '+(!odds.length?'disabled':'')+'>'+(odds.length?'ACQUISTA E APRI · '+p.price+' TOKEN':'PACCHETTO ESAURITO')+'</button></section>';
 }
 function shopPanel(){
  const visible=cat().filter(x=>x.shop_active||owned(x.id));
@@ -107,7 +109,7 @@ function labPanel(){
 function founderPanel(){
  if(!state?.admin)return '<p>Accesso riservato al Founder.</p>';
  const c=item(founderItem),p=state.pack;
- return '<p class="mp8-note">Modifiche condivise con tutti i giocatori. Nessun titolo predefinito viene assegnato automaticamente.</p><form id="mp8-item-form" class="mp8-admin-section"><h3>Catalogo e nuovo titolo</h3><label>Prodotto<select id="mp8-founder-item">'+opt('','＋ Crea nuovo titolo',founderItem)+cat().map(x=>opt(x.id,(x.kind==='plate'?'Targhetta · ':'Titolo · ')+x.title,founderItem)).join('')+'</select></label><label>Nome<input name="title" maxlength="42" required value="'+esc(c?.title||'')+'" '+(c?.kind==='plate'?'readonly':'')+'></label><label>Rarità<select name="rarity">'+tiers.map(r=>opt(r,rarity[r],c?.rarity||'common')).join('')+'</select></label><label>Prezzo in token<input name="price" type="number" min="0" max="50000" step="1" required value="'+(c?.price??25)+'"></label><label class="mp8-check"><input name="active" type="checkbox" '+(c?.shop_active?'checked':'')+'> Disponibile nel negozio</label><button class="mp8-apply" type="submit">SALVA PRODOTTO</button></form><form id="mp8-grant-form" class="mp8-admin-section"><h3>Assegna un cosmetico</h3><label>Giocatore<select name="user" required>'+opt('','Scegli giocatore','')+founderPlayers.map(x=>opt(x.id,x.name,'')).join('')+'</select></label><label>Premio<select name="item" required>'+opt('','Scegli premio','')+cat().map(x=>opt(x.id,x.title,'')).join('')+'</select></label><button class="mp8-apply" type="submit">ASSEGNA GRATIS</button></form><form id="mp8-pack-form" class="mp8-admin-section"><h3>Identity Pack</h3><label>Prezzo in token<input name="price" type="number" min="0" max="50000" step="1" required value="'+(p?.price??65)+'"></label><label class="mp8-check"><input name="active" type="checkbox" '+(p?.active?'checked':'')+'> Disponibile nel negozio</label><div class="mp8-odds">'+tiers.map(r=>'<label>'+rarity[r]+' (%)<input type="number" name="'+r+'" min="0" max="100" step="0.01" required value="'+((p?.[r+'_weight']||0)/100)+'"></label>').join('')+'</div><p class="mp8-note">Totale richiesto: 100%. Le rarità esaurite vengono escluse.</p><button class="mp8-apply" type="submit">SALVA PACCHETTO</button></form>';
+ return '<p class="mp8-note">Modifiche condivise con tutti i giocatori. Nessun titolo predefinito viene assegnato automaticamente.</p><form id="mp8-item-form" class="mp8-admin-section"><h3>Catalogo e nuovo titolo</h3><label>Prodotto<select id="mp8-founder-item">'+opt('','＋ Crea nuovo titolo',founderItem)+cat().map(x=>opt(x.id,(x.kind==='plate'?'Targhetta · ':'Titolo · ')+x.title,founderItem)).join('')+'</select></label><label>Nome<input name="title" maxlength="42" required value="'+esc(c?.title||'')+'" '+(c?.kind==='plate'?'readonly':'')+'></label><label>Rarità<select name="rarity">'+tiers.map(r=>opt(r,rarity[r],c?.rarity||'common')).join('')+'</select></label><label>Prezzo in token<input name="price" type="number" min="0" max="50000" step="1" required value="'+(c?.price??25)+'"></label><label class="mp8-check"><input name="active" type="checkbox" '+(c?.shop_active?'checked':'')+'> Disponibile nel negozio</label><button class="mp8-apply" type="submit">SALVA PRODOTTO</button></form><form id="mp8-pack-form" class="mp8-admin-section"><h3>Identity Pack</h3><label>Prezzo in token<input name="price" type="number" min="0" max="50000" step="1" required value="'+(p?.price??65)+'"></label><label class="mp8-check"><input name="active" type="checkbox" '+(p?.active?'checked':'')+'> Disponibile nel negozio</label><div class="mp8-odds">'+tiers.map(r=>'<label>'+rarity[r]+' (%)<input type="number" name="'+r+'" min="0" max="100" step="0.01" required value="'+((p?.[r+'_weight']||0)/100)+'"></label>').join('')+'</div><p class="mp8-note">Totale richiesto: 100%. Le rarità esaurite vengono escluse.</p><button class="mp8-apply" type="submit">SALVA PACCHETTO</button></form>';
 }
 
 function storeItem(x,inv=false){
@@ -120,7 +122,7 @@ function storeItem(x,inv=false){
 function storePack(){
  const p=state?.pack;if(!p?.active)return '';
  const odds=packOdds();
- return '<article class="mp6-pack"><div class="mp6-pack-picture"><div class="mp8-pack-visual">✦<span>IDENTITY</span><small>MATCHPULSE PACK</small></div></div><div class="mp6-pack-info"><small>IDENTITÀ</small><h3>Identity Pack</h3><p>Una targhetta non ancora posseduta.</p><div class="mp6-odds">'+(odds.length?odds.map(([r,v])=>'<span>'+rarity[r]+' <b>'+v.toLocaleString('it-IT',{maximumFractionDigits:2})+'%</b></span>').join(''):'<span>POOL ESAURITO</span>')+'</div><div class="mp6-pack-footer"><b>✦ '+Number(p.price)+'</b><div class="mp6-pack-actions"><button class="mp6-action mp6-outline" data-mp8-inline="preview" data-id="identity_pack">ANTEPRIMA</button><button class="mp6-action" data-mp8-inline="buy" data-id="identity_pack" '+(!odds.length?'disabled':'')+'>'+(odds.length?'ACQUISTA E APRI':'ESAURITO')+'</button></div></div></div></article>';
+ return '<article class="mp6-pack"><div class="mp6-pack-picture"><div class="mp8-pack-visual mp8-pack-art">✦<span>IDENTITY</span><small>MATCHPULSE PACK</small></div></div><div class="mp6-pack-info"><small>IDENTITÀ</small><h3>Identity Pack</h3><p>Una targhetta non ancora posseduta.</p><div class="mp6-odds">'+(odds.length?odds.map(([r,v])=>'<span>'+rarity[r]+' <b>'+v.toLocaleString('it-IT',{maximumFractionDigits:2})+'%</b></span>').join(''):'<span>POOL ESAURITO</span>')+'</div><div class="mp6-pack-footer"><b>✦ '+Number(p.price)+'</b><div class="mp6-pack-actions"><button class="mp6-action mp6-outline" data-mp8-inline="preview" data-id="identity_pack">ANTEPRIMA</button><button class="mp6-action" data-mp8-inline="buy" data-id="identity_pack" '+(!odds.length?'disabled':'')+'>'+(odds.length?'ACQUISTA E APRI':'ESAURITO')+'</button></div></div></div></article>';
 }
 function storeSection(kind,inv=false){
  const entries=cat().filter(x=>x.kind===kind&&(inv?owned(x.id):x.shop_active));
@@ -128,11 +130,17 @@ function storeSection(kind,inv=false){
  const label=kind==='plate'?'TARGHETTE':'TITOLI';
  return '<section class="mp6-intro"><small>'+(inv?'INVENTARIO PERMANENTE':'IDENTITÀ / COSMETICI')+'</small><h3>'+label+'</h3><p>'+(inv?'I tuoi oggetti, conservati anche al cambio di stagione.':kind==='plate'?'Personalizza la cornice del tuo titolo.':'Personalizza il titolo sopra la tua carta.')+'</p><div class="mp6-showcase">'+entries.map(x=>storeItem(x,inv)).join('')+'</div>'+(!entries.length?'<p>Nessun oggetto posseduto.</p>':'')+'</section>';
 }
+
+function titlesCollection(){
+ const all=cat().filter(x=>x.kind==='title');
+ return '<section class="mp6-intro"><small>COLLEZIONE TITOLI</small><h3>TUTTI I TITOLI · '+all.filter(x=>owned(x.id)).length+'/'+all.length+'</h3><p>Parti senza titoli. Sbloccali con le sfide o con un regalo del Founder. Quelli in vendita sono acquistabili.</p><div class="mp6-showcase">'+all.map(x=>owned(x.id)?storeItem(x,true):x.shop_active?storeItem(x,false):'<article class="mp6-cosmetic mp6-tier-'+esc(x.rarity)+' mp8-inline-item mp8-locked"><div class="mp6-cosmetic-top"><div class="mp8-inline-art"><div class="mp8-title-sample">'+esc(x.title.toUpperCase())+'</div></div><span class="mp6-rarity-pill">'+esc(rarity[x.rarity])+'</span></div><div class="mp6-cosmetic-copy"><small>TITOLO</small><h4>'+esc(x.title)+'</h4><p>🔒 Non ancora sbloccato</p></div></article>').join('')+'</div></section>';
+}
+
 function mountStore(){
  if(currentRoute()!=='store'||!app)return;
  for(const slot of app.querySelectorAll('[data-mp8-store]')){
   const tab=slot.dataset.mp8Store;
-  const content=!state?'<p class="mp8-note">Catalogo identità non disponibile. <button class="mp6-action mp6-outline" data-mp8-inline="retry">RIPROVA</button></p>':tab==='packs'?storePack():storeSection('plate',tab==='inventory')+storeSection('title',tab==='inventory');
+  const content=!state?'<p class="mp8-note">Catalogo identità non disponibile. <button class="mp6-action mp6-outline" data-mp8-inline="retry">RIPROVA</button></p>':tab==='packs'?storePack():tab==='plates'?storeSection('plate',false):storeSection('plate',true)+titlesCollection();
   if(slot._mp8Content!==content){slot._mp8Content=content;slot.innerHTML=content;}
   slot.querySelectorAll('button[data-mp8-inline="equip"],button[data-mp8-inline="buy"]').forEach(b=>{if(!b.dataset.mp8OriginalDisabled)b.dataset.mp8OriginalDisabled=b.disabled?'yes':'no';b.disabled=busy||b.dataset.mp8OriginalDisabled==='yes';});
  }
